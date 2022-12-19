@@ -20,6 +20,110 @@ namespace WorldGeneration
         public int oct;
         public float offset;
     }
+    [BurstCompile]
+    public struct VertexSharingJob : IJobParallelFor
+    {
+        [NativeDisableParallelForRestriction, WriteOnly] public NativeArray<uint> triangles;
+        [ReadOnly] public int chunkSize;
+        [WriteOnly] public Counter counter;
+        [ReadOnly] public float isolevel;
+        [ReadOnly] public NativeArray<uint3> vertexIndices;
+        [NativeDisableParallelForRestriction, ReadOnly] public NativeArray<Vector3> vertices;
+        [ReadOnly, NativeDisableContainerSafetyRestriction] public NativeArray<float> densities;
+
+        public void Execute(int index){
+
+            int3 voxelLocalPosition = ChunkManager.IndexToXyz(index, chunkSize, chunkSize);
+            if(voxelLocalPosition.x + 1 == chunkSize || voxelLocalPosition.y + 1 == chunkSize || voxelLocalPosition.z + 1 == chunkSize) return;
+
+            VoxelCorners<float> densities = GetDensities(voxelLocalPosition);
+
+            int cubeIndex = CalculateCubeIndex(densities, isolevel);
+            if (cubeIndex == 0 || cubeIndex == 255)
+            {
+                return;
+            }
+
+            //VertexList vertexList = GenerateVertexList(densities, corners, edgeIndex, isolevel);
+
+            // Index at the beginning of the row
+            int rowIndex = 15 * cubeIndex;
+
+            for (int i = 0; Tables.TriangleTable[rowIndex + i] != -1 && i < 15; i += 3)
+            {
+                int triangleIndex = counter.Increment() * 3;
+                triangles[triangleIndex + 0] = GetVertexIndex(Tables.TriangleTable[rowIndex + i + 0], voxelLocalPosition);
+                triangles[triangleIndex + 1] = GetVertexIndex(Tables.TriangleTable[rowIndex + i + 1], voxelLocalPosition);
+                triangles[triangleIndex + 2] = GetVertexIndex(Tables.TriangleTable[rowIndex + i + 2], voxelLocalPosition);
+            }
+        }
+        private uint GetVertexIndex(int index, int3 voxelLocalPosition){
+            if(index == 3) return vertexIndices[ChunkManager.XyzToIndex(voxelLocalPosition.x, voxelLocalPosition.y, voxelLocalPosition.z, chunkSize, chunkSize)].x;
+            if(index == 0) return vertexIndices[ChunkManager.XyzToIndex(voxelLocalPosition.x, voxelLocalPosition.y, voxelLocalPosition.z, chunkSize, chunkSize)].y;
+            if(index == 8) return vertexIndices[ChunkManager.XyzToIndex(voxelLocalPosition.x, voxelLocalPosition.y, voxelLocalPosition.z, chunkSize, chunkSize)].z;
+            if(index == 9) return vertexIndices[ChunkManager.XyzToIndex(voxelLocalPosition.x + 1, voxelLocalPosition.y, voxelLocalPosition.z, chunkSize, chunkSize)].z;
+            if(index == 10) return vertexIndices[ChunkManager.XyzToIndex(voxelLocalPosition.x + 1, voxelLocalPosition.y, voxelLocalPosition.z + 1, chunkSize, chunkSize)].z;
+            if(index == 11) return vertexIndices[ChunkManager.XyzToIndex(voxelLocalPosition.x, voxelLocalPosition.y, voxelLocalPosition.z + 1, chunkSize, chunkSize)].z;
+            if(index == 1) return vertexIndices[ChunkManager.XyzToIndex(voxelLocalPosition.x + 1, voxelLocalPosition.y, voxelLocalPosition.z, chunkSize, chunkSize)].x;
+            if(index == 5) return vertexIndices[ChunkManager.XyzToIndex(voxelLocalPosition.x + 1, voxelLocalPosition.y + 1, voxelLocalPosition.z, chunkSize, chunkSize)].x;
+            if(index == 7) return vertexIndices[ChunkManager.XyzToIndex(voxelLocalPosition.x, voxelLocalPosition.y + 1, voxelLocalPosition.z, chunkSize, chunkSize)].x;
+            if(index == 2) return vertexIndices[ChunkManager.XyzToIndex(voxelLocalPosition.x, voxelLocalPosition.y, voxelLocalPosition.z + 1, chunkSize, chunkSize)].y;
+            if(index == 6) return vertexIndices[ChunkManager.XyzToIndex(voxelLocalPosition.x, voxelLocalPosition.y + 1, voxelLocalPosition.z + 1, chunkSize, chunkSize)].y;
+            if(index == 4) return vertexIndices[ChunkManager.XyzToIndex(voxelLocalPosition.x, voxelLocalPosition.y + 1, voxelLocalPosition.z, chunkSize, chunkSize)].y;
+            return 4294967269;
+        }
+        /// <summary>
+        /// Gets the densities for the voxel at a position
+        /// </summary>
+        /// <param name="localPosition">Voxel's local position</param>
+        /// <returns>The densities of that voxel</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private VoxelCorners<float> GetDensities(int3 localPosition)
+        {
+            VoxelCorners<float> densities = new VoxelCorners<float>();
+            for (int i = 0; i < 8; i++)
+            {
+                int3 voxelCorner = localPosition + Tables.CubeCorners[i];
+                int densityIndex = voxelCorner.x * (chunkSize + 1) * (chunkSize + 1) + voxelCorner.y * (chunkSize + 1) + voxelCorner.z;
+                densities[i] = this.densities[densityIndex];
+            }
+
+            return densities;
+        }
+
+        /// <summary>
+        /// Gets the corners for the voxel at a position
+        /// </summary>
+        /// <param name="position">The voxel's position</param>
+        /// <returns>The voxel's corners</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private VoxelCorners<int3> GetCorners(int3 position)
+        {
+            VoxelCorners<int3> corners = new VoxelCorners<int3>();
+            for (int i = 0; i < 8; i++)
+            {
+                corners[i] = position + Tables.CubeCorners[i];
+            }
+
+            return corners;
+        }
+
+        /// <summary>
+        /// Calculates the cube index of a single voxel
+        /// </summary>
+        /// <param name="voxelDensities">The voxel's densities</param>
+        /// <param name="isolevel">The density level where a surface will be created. Densities below this will be inside the surface (solid),
+        /// and densities above this will be outside the surface (air)</param>
+        /// <returns>The calculated cube index</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static byte CalculateCubeIndex(VoxelCorners<float> voxelDensities, float isolevel) {
+            float4 voxelDensitiesPart1 = new float4(voxelDensities.Corner1, voxelDensities.Corner2, voxelDensities.Corner3, voxelDensities.Corner4);
+            float4 voxelDensitiesPart2 = new float4(voxelDensities.Corner5, voxelDensities.Corner6, voxelDensities.Corner7, voxelDensities.Corner8);
+            int4 p1 = math.select(0, new int4(1, 2, 4, 8), voxelDensitiesPart1 < isolevel);
+            int4 p2 = math.select(0, new int4(16, 32, 64, 128), voxelDensitiesPart2 < isolevel);
+            return (byte)(math.csum(p1) | math.csum(p2));
+        }
+    }
     //Marching cubes job from https://github.com/Eldemarkki/Marching-Cubes-Terrain
     [BurstCompile]
     public struct MarchingJob : IJobParallelFor
@@ -43,7 +147,7 @@ namespace WorldGeneration
         /// <summary>
         /// The counter to keep track of the triangle index
         /// </summary>
-        [WriteOnly] public Counter counter;
+        [WriteOnly] public Counter vertexCounter;
 
 
         /// <summary>
@@ -59,8 +163,9 @@ namespace WorldGeneration
         /// <summary>
         /// The generated triangles
         /// </summary>
-        [NativeDisableParallelForRestriction, WriteOnly] public NativeArray<int> triangles;
+        //[NativeDisableParallelForRestriction, WriteOnly] public NativeArray<int> triangles;
         [ReadOnly] public int depthMultiplier;
+        [WriteOnly] public NativeArray<uint3> vertexIndices;
 
         /// <summary>
         /// The execute method required by the Unity Job System's IJobParallelFor
@@ -69,10 +174,7 @@ namespace WorldGeneration
         public void Execute(int index)
         {
             // Voxel's position inside the chunk. Goes from (0, 0, 0) to (chunkSize-1, chunkSize-1, chunkSize-1)
-            int3 voxelLocalPosition = new int3(
-                index / (chunkSize * chunkSize),
-                index / chunkSize % chunkSize,
-                index % chunkSize);
+            int3 voxelLocalPosition = ChunkManager.IndexToXyz(index, chunkSize, chunkSize);
 
             VoxelCorners<float> densities = GetDensities(voxelLocalPosition);
 
@@ -82,28 +184,41 @@ namespace WorldGeneration
                 return;
             }
 
-            VoxelCorners<int3> corners = GetCorners(voxelLocalPosition);
-
-            int edgeIndex = Tables.EdgeTable[cubeIndex];
 
             //VertexList vertexList = GenerateVertexList(densities, corners, edgeIndex, isolevel);
 
             // Index at the beginning of the row
             int rowIndex = 15 * cubeIndex;
-
-            for (int i = 0; Tables.TriangleTable[rowIndex + i] != -1 && i < 15; i += 3)
+            uint3 indices = new uint3(-1);
+            for (int i = 0; Tables.TriangleTable[rowIndex + i] != -1 && i < 15; i += 1)
             {
-                int triangleIndex = counter.Increment() * 3;
-
-                vertices[triangleIndex + 0] = GetVertex(Tables.TriangleTable[rowIndex + i + 0], densities, voxelLocalPosition, isolevel / 255f) * depthMultiplier;
+                var edgeIdx = Tables.TriangleTable[rowIndex + i + 0];
+                if(edgeIdx == 3){
+                    int vertexIndex = vertexCounter.Increment();
+                    vertices[vertexIndex + 0] = GetVertex(edgeIdx, densities, voxelLocalPosition, isolevel / 255f) * depthMultiplier;
+                    indices.x = (uint)vertexIndex;
+                }
+                if(edgeIdx == 0){
+                    int vertexIndex = vertexCounter.Increment();
+                    vertices[vertexIndex + 0] = GetVertex(edgeIdx, densities, voxelLocalPosition, isolevel / 255f) * depthMultiplier;
+                    indices.y = (uint)vertexIndex;
+                }
+                if(edgeIdx == 8){
+                    int vertexIndex = vertexCounter.Increment();
+                    vertices[vertexIndex + 0] = GetVertex(edgeIdx, densities, voxelLocalPosition, isolevel / 255f) * depthMultiplier;
+                    indices.z = (uint)vertexIndex;
+                }
+                
+                /*int triangleIndex = counter.Increment() * 3;
                 triangles[triangleIndex + 0] = triangleIndex + 0;
 
                 vertices[triangleIndex + 1] = GetVertex(Tables.TriangleTable[rowIndex + i + 1], densities, voxelLocalPosition, isolevel / 255f) * depthMultiplier;
                 triangles[triangleIndex + 1] = triangleIndex + 1;
 
                 vertices[triangleIndex + 2] = GetVertex(Tables.TriangleTable[rowIndex + i + 2], densities, voxelLocalPosition, isolevel / 255f) * depthMultiplier;
-                triangles[triangleIndex + 2] = triangleIndex + 2;
+                triangles[triangleIndex + 2] = triangleIndex + 2;*/
             }
+            vertexIndices[index] = indices;
         }
 
         /// <summary>

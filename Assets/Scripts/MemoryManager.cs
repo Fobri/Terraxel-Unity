@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using Unity.Collections;
 using System;
+using Unity.Mathematics;
 
 using Unity.Collections.LowLevel.Unsafe;
 
@@ -12,24 +13,29 @@ public class MemoryManager : IDisposable{
     const int densityMapCount = 32;
     Queue<NativeArray<float>> freeDensityMaps;
     Queue<NativeArray<Vector3>> freeVertexBuffers;
-    Queue<NativeArray<int>> freeIndexBuffers;
+    Queue<NativeArray<uint>> freeIndexBuffers;
+    Queue<NativeArray<uint3>> freeVertexIndexBuffers;
     NativeArray<Vector3>[] vertexBuffers;
-    NativeArray<int>[] indexBuffers;
+    NativeArray<uint>[] indexBuffers;
     NativeArray<float>[] densityBuffers;
+    NativeArray<uint3>[] vertexIndexBuffers;
 
-    public void AllocateDensityMaps(int length){
+    public void AllocateDensityMaps(int densityMapLength, int vertexIndexBufferLength){
         freeDensityMaps = new Queue<NativeArray<float>>();
+        freeVertexIndexBuffers = new Queue<NativeArray<uint3>>();
         for(int i = 0; i < densityMapCount; i++){
-            freeDensityMaps.Enqueue(new NativeArray<float>(length, Allocator.Persistent));
+            freeDensityMaps.Enqueue(new NativeArray<float>(densityMapLength, Allocator.Persistent));
+            freeVertexIndexBuffers.Enqueue(new NativeArray<uint3>(vertexIndexBufferLength, Allocator.Persistent));
         }
+        vertexIndexBuffers = freeVertexIndexBuffers.ToArray();
         densityBuffers = freeDensityMaps.ToArray();
     }
     public void AllocateMeshData(int maxVertexCount, int maxIndexCount){
         freeVertexBuffers = new Queue<NativeArray<Vector3>>();
-        freeIndexBuffers = new Queue<NativeArray<int>>();
+        freeIndexBuffers = new Queue<NativeArray<uint>>();
         for(int i = 0; i < maxBufferCount; i++){
             freeVertexBuffers.Enqueue(new NativeArray<Vector3>(maxVertexCount, Allocator.Persistent));
-            freeIndexBuffers.Enqueue(new NativeArray<int>(maxIndexCount, Allocator.Persistent));
+            freeIndexBuffers.Enqueue(new NativeArray<uint>(maxIndexCount, Allocator.Persistent));
         }
         vertexBuffers = freeVertexBuffers.ToArray();
         indexBuffers = freeIndexBuffers.ToArray();
@@ -38,11 +44,15 @@ public class MemoryManager : IDisposable{
         if(freeDensityMaps.Count == 0) throw new Exception("No free density map available", new InvalidOperationException());
         return freeDensityMaps.Dequeue();
     }
+    public NativeArray<uint3> GetVertexIndexBuffer(){
+        if(freeVertexIndexBuffers.Count == 0) throw new Exception("No free density map available", new InvalidOperationException());
+        return freeVertexIndexBuffers.Dequeue();
+    }
     public NativeArray<Vector3> GetVertexBuffer(){
         if(freeVertexBuffers.Count == 0) throw new Exception("No free vertex buffer available", new InvalidOperationException());
         return freeVertexBuffers.Dequeue();
     }
-    public NativeArray<int> GetIndexBuffer(){
+    public NativeArray<uint> GetIndexBuffer(){
         if(freeIndexBuffers.Count == 0) throw new Exception("No free index buffer available", new InvalidOperationException());
         return freeIndexBuffers.Dequeue();
     }
@@ -50,12 +60,16 @@ public class MemoryManager : IDisposable{
         ClearArray(buffer, buffer.Length);
         freeVertexBuffers.Enqueue(buffer);
     }
-    public void ReturnIndexBuffer(NativeArray<int> buffer){
+    public void ReturnIndexBuffer(NativeArray<uint> buffer){
         ClearArray(buffer, buffer.Length);
         freeIndexBuffers.Enqueue(buffer);
     }
     public void ReturnDensityMap(NativeArray<float> map){
         freeDensityMaps.Enqueue(map);
+    }
+    public void ReturnVertexIndexBuffer(NativeArray<uint3> buffer){
+        ClearArray(buffer, buffer.Length);
+        freeVertexIndexBuffers.Enqueue(buffer);
     }
     public bool VertexBufferAvailable{
         get{
@@ -80,6 +94,9 @@ public class MemoryManager : IDisposable{
             container.Dispose();
         }
         foreach(var container in indexBuffers){
+            container.Dispose();
+        }
+        foreach(var container in vertexIndexBuffers){
             container.Dispose();
         }
     }

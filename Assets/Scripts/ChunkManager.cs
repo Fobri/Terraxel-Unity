@@ -17,12 +17,13 @@ public class ChunkManager : MonoBehaviour, IDisposable
     public GameObject player;
     public static BoundingBox playerBounds;
     public const int chunkResolution = 32;
-    public const int lodLevels = 5;
+    public const int lodLevels = 4;
     public WorldGeneration.NoiseData noiseData;
     static WorldGeneration.NoiseData staticNoiseData;
     public GameObject chunkPrefab;
     static GameObject staticChunkPrefab;
     public static MemoryManager memoryManager;
+    [ShowInInspector]
     static List<ChunkData> chunkDatas;
     static Queue<ChunkData> processQueue;
     Octree chunkTree;
@@ -48,9 +49,11 @@ public class ChunkManager : MonoBehaviour, IDisposable
         public bool dispose;
         public bool depth;
         public bool genTime;
+        public bool vertexCount;
+        public bool indexCount;
         public bool draw{
             get{
-                return position || dirty || dispose || depth || genTime;
+                return position || dirty || dispose || depth || genTime || vertexCount || indexCount;
             }
         }
     }
@@ -58,7 +61,7 @@ public class ChunkManager : MonoBehaviour, IDisposable
         playerBounds = new BoundingBox(player.transform.position, new float3(chunkResolution * (int)math.pow(2, 2)));
         memoryManager = new MemoryManager();
         processQueue = new Queue<ChunkData>();
-        memoryManager.AllocateDensityMaps(GetDensityMapLength());
+        memoryManager.AllocateDensityMaps(GetDensityMapLength(), (chunkResolution + 1)*(chunkResolution + 1)*(chunkResolution + 1));
         memoryManager.AllocateMeshData(chunkResolution * chunkResolution * chunkResolution * 3 * 5, chunkResolution * chunkResolution * chunkResolution * 3 * 5);
         chunkDatas = new List<ChunkData>();
         staticChunkPrefab = chunkPrefab;
@@ -140,9 +143,11 @@ public class ChunkManager : MonoBehaviour, IDisposable
         chunkData.vertices = memoryManager.GetVertexBuffer();
         chunkData.indices = memoryManager.GetIndexBuffer();
         chunkData.dirty = true;
-        chunkData.counter = new Counter(Allocator.Persistent);
+        chunkData.vertexCounter = new Counter(Allocator.Persistent);
+        chunkData.indexCounter = new Counter(Allocator.Persistent);
         var arraySize = chunkResolution * chunkResolution * chunkResolution;
         chunkData.densityMap = memoryManager.GetDensityMap();
+        chunkData.vertexIndexBuffer = memoryManager.GetVertexIndexBuffer();
 
         var noiseJob = new NoiseJob()
         {
@@ -153,11 +158,11 @@ public class ChunkManager : MonoBehaviour, IDisposable
             seed = staticNoiseData.offset,
             surfaceLevel = staticNoiseData.surfaceLevel,
             noiseMap = chunkData.densityMap,
-            size = chunkResolution + 1,
+            size = chunkResolution + 2,
             depthMultiplier = chunkData.depthMultiplier
             //pos = WorldSetup.positions
         };
-        var noiseHandle = noiseJob.Schedule((chunkResolution + 1) * (chunkResolution + 1) * (chunkResolution + 1), 64);
+        var noiseHandle = noiseJob.Schedule((chunkResolution + 2) * (chunkResolution + 2) * (chunkResolution + 2), 64);
 
         
         
@@ -165,14 +170,27 @@ public class ChunkManager : MonoBehaviour, IDisposable
         {
             densities = chunkData.densityMap,
             isolevel = 0f,
-            chunkSize = chunkResolution,
+            chunkSize = chunkResolution + 1,
             vertices = chunkData.vertices,
-            triangles = chunkData.indices,
-            counter = chunkData.counter,
-            depthMultiplier = chunkData.depthMultiplier
+            //triangles = chunkData.indices,
+            vertexCounter = chunkData.vertexCounter,
+            depthMultiplier = chunkData.depthMultiplier,
+            vertexIndices = chunkData.vertexIndexBuffer
+            
         };
-        var marchinJob = marchingJob.Schedule(arraySize, 32, noiseHandle);
-        chunkData.meshJobHandle = marchinJob;
+        var marchingHandle = marchingJob.Schedule((chunkResolution + 1) * (chunkResolution + 1) * (chunkResolution + 1), 32, noiseHandle);
+
+        var vertexSharingJob = new VertexSharingJob()
+        {
+            triangles = chunkData.indices,
+            chunkSize = chunkResolution + 1,
+            counter = chunkData.indexCounter,
+            isolevel = 0f,
+            vertexIndices = chunkData.vertexIndexBuffer,
+            vertices = chunkData.vertices,
+            densities = chunkData.densityMap
+        };
+        chunkData.meshJobHandle = vertexSharingJob.Schedule((chunkResolution + 1) * (chunkResolution + 1) * (chunkResolution + 1), 32, marchingHandle);
     }
 
     int GetDensityMapLength(){
@@ -212,26 +230,30 @@ public class ChunkManager : MonoBehaviour, IDisposable
         if(drawChunkVariables.draw){
             GUI.color = Color.green;
             for(int i = 0; i < chunkDatas.Count; i++){
-                float3 offset = chunkDatas[i].pos + 0.1f;
+                float3 offset = chunkDatas[i].pos + chunkResolution * chunkDatas[i].depthMultiplier / 2;
                 if(drawChunkVariables.depth){
-                    offset += 1f;
-                    Handles.Label(chunkDatas[i].pos, chunkDatas[i].depth.ToString());
+                    offset.y += 4f;
+                    Handles.Label(offset, chunkDatas[i].depth.ToString());
                 }
                 if(drawChunkVariables.dirty){
-                    offset += 1f;
-                    Handles.Label(chunkDatas[i].pos, chunkDatas[i].dirty.ToString());
+                    offset.y += 4f;
+                    Handles.Label(offset, chunkDatas[i].dirty.ToString());
                 }
                 if(drawChunkVariables.dispose){
-                    offset += 1f;
-                    Handles.Label(chunkDatas[i].pos, chunkDatas[i].dispose.ToString());
+                    offset.y += 4f;
+                    Handles.Label(offset, chunkDatas[i].dispose.ToString());
                 }
                 if(drawChunkVariables.genTime){
-                    offset += 1f;
-                    Handles.Label(chunkDatas[i].pos, chunkDatas[i].genTime.ToString());
+                    offset.y += 4f;
+                    Handles.Label(offset, chunkDatas[i].genTime.ToString());
                 }
-                if(drawChunkVariables.position){
-                    offset += 1f;
-                    Handles.Label(chunkDatas[i].pos, chunkDatas[i].pos.ToString());
+                if(drawChunkVariables.vertexCount){
+                    offset.y += 4f;
+                    Handles.Label(offset, chunkDatas[i].vertCount.ToString());
+                }
+                if(drawChunkVariables.indexCount){
+                    offset.y += 4f;
+                    Handles.Label(offset, chunkDatas[i].indexCount.ToString());
                 }
             }
         }
