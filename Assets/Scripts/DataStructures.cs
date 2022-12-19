@@ -10,7 +10,7 @@ namespace DataStructures
     public class ChunkData{
         
         public NativeArray<float> densityMap;
-        public NativeArray<uint3> vertexIndexBuffer;
+        public NativeArray<uint4> vertexIndexBuffer;
         public NativeArray<Vector3> vertices;
         public NativeArray<uint> indices;
         public JobHandle meshJobHandle;

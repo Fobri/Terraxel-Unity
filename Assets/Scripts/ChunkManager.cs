@@ -12,12 +12,13 @@ using Sirenix.OdinInspector;
 using System.Linq;
 using UnityEditor;
 using ReadOnly = Sirenix.OdinInspector.ReadOnlyAttribute;
+using TMPro;
 public class ChunkManager : MonoBehaviour, IDisposable
 {
     public GameObject player;
     public static BoundingBox playerBounds;
     public const int chunkResolution = 32;
-    public const int lodLevels = 4;
+    public const int lodLevels = 6;
     public WorldGeneration.NoiseData noiseData;
     static WorldGeneration.NoiseData staticNoiseData;
     public GameObject chunkPrefab;
@@ -32,6 +33,14 @@ public class ChunkManager : MonoBehaviour, IDisposable
     public bool debugMode;
     [BoxGroup("DEBUG"), HideIf("@!debugMode"), ReadOnly]
     public int chunkCount;
+    [BoxGroup("DEBUG"), HideIf("@!debugMode"), ReadOnly, InfoBox("Memory amount displayed in MB")]
+    public int totalMemoryAllocated;
+    [BoxGroup("DEBUG"), HideIf("@!debugMode"), ReadOnly]
+    public int memoryUsed;
+    [BoxGroup("DEBUG"), HideIf("@!debugMode"), ReadOnly]
+    public int memoryWasted;
+    [BoxGroup("DEBUG"), HideIf("@!debugMode"), ReadOnly]
+    public int vertCount;
     [BoxGroup("DEBUG"), HideIf("@!debugMode"), ReadOnly]
     public int freeBufferCount;
     [BoxGroup("DEBUG"), HideIf("@!debugMode")]
@@ -51,9 +60,10 @@ public class ChunkManager : MonoBehaviour, IDisposable
         public bool genTime;
         public bool vertexCount;
         public bool indexCount;
+        public bool maxVertexCount;
         public bool draw{
             get{
-                return position || dirty || dispose || depth || genTime || vertexCount || indexCount;
+                return position || dirty || dispose || depth || genTime || vertexCount || indexCount || maxVertexCount;
             }
         }
     }
@@ -62,15 +72,23 @@ public class ChunkManager : MonoBehaviour, IDisposable
         memoryManager = new MemoryManager();
         processQueue = new Queue<ChunkData>();
         memoryManager.AllocateDensityMaps(GetDensityMapLength(), (chunkResolution + 1)*(chunkResolution + 1)*(chunkResolution + 1));
-        memoryManager.AllocateMeshData(chunkResolution * chunkResolution * chunkResolution * 3 * 5, chunkResolution * chunkResolution * chunkResolution * 3 * 5);
+        memoryManager.AllocateMeshData();
         chunkDatas = new List<ChunkData>();
         staticChunkPrefab = chunkPrefab;
         staticNoiseData = noiseData;
         chunkTree = new Octree();
         chunkTree.BuildTree();
+        int elemCount = MemoryManager.maxBufferCount * MemoryManager.maxVertexCount;
+        totalMemoryAllocated = elemCount * sizeof(float)*3 + elemCount * sizeof(uint);
+        totalMemoryAllocated = totalMemoryAllocated / 1000000;
         //GenerateWorld();
     }
     void Update(){
+        if(debugMode){
+            memoryUsed = chunkCount * MemoryManager.maxVertexCount * sizeof(float) * 3 + chunkCount * MemoryManager.maxVertexCount * sizeof(uint);
+            memoryUsed = memoryUsed / 1000000;
+            memoryWasted = totalMemoryAllocated - memoryUsed;
+        }
         for(int i = 0; i < chunkDatas.Count; i++){
             var chunk = chunkDatas[i];
             if(chunk.dirty){
@@ -145,7 +163,6 @@ public class ChunkManager : MonoBehaviour, IDisposable
         chunkData.dirty = true;
         chunkData.vertexCounter = new Counter(Allocator.Persistent);
         chunkData.indexCounter = new Counter(Allocator.Persistent);
-        var arraySize = chunkResolution * chunkResolution * chunkResolution;
         chunkData.densityMap = memoryManager.GetDensityMap();
         chunkData.vertexIndexBuffer = memoryManager.GetVertexIndexBuffer();
 
@@ -185,10 +202,7 @@ public class ChunkManager : MonoBehaviour, IDisposable
             triangles = chunkData.indices,
             chunkSize = chunkResolution + 1,
             counter = chunkData.indexCounter,
-            isolevel = 0f,
-            vertexIndices = chunkData.vertexIndexBuffer,
-            vertices = chunkData.vertices,
-            densities = chunkData.densityMap
+            vertexIndices = chunkData.vertexIndexBuffer
         };
         chunkData.meshJobHandle = vertexSharingJob.Schedule((chunkResolution + 1) * (chunkResolution + 1) * (chunkResolution + 1), 32, marchingHandle);
     }
@@ -217,9 +231,11 @@ public class ChunkManager : MonoBehaviour, IDisposable
             index / (width * height));
         return position;
     }
-
+#if UNITY_EDITOR
     private void OnDrawGizmos()
     {
+        if(!debugMode) return;
+        
         if(drawPlayerBounds){
             Gizmos.DrawWireCube(playerBounds.center, playerBounds.bounds);
         }
@@ -229,7 +245,9 @@ public class ChunkManager : MonoBehaviour, IDisposable
         }
         if(drawChunkVariables.draw){
             GUI.color = Color.green;
+            vertCount = 0;
             for(int i = 0; i < chunkDatas.Count; i++){
+                vertCount += chunkDatas[i].vertCount;
                 float3 offset = chunkDatas[i].pos + chunkResolution * chunkDatas[i].depthMultiplier / 2;
                 if(drawChunkVariables.depth){
                     offset.y += 4f;
@@ -255,9 +273,14 @@ public class ChunkManager : MonoBehaviour, IDisposable
                     offset.y += 4f;
                     Handles.Label(offset, chunkDatas[i].indexCount.ToString());
                 }
+                if(drawChunkVariables.maxVertexCount){
+                    offset.y += 4f;
+                    Handles.Label(offset, MemoryManager.maxVertexCount.ToString());
+                }
             }
         }
     }
+#endif
     void RenderOctree(Octree tree)
     {
         if (tree == null)
