@@ -42,6 +42,8 @@ public class ChunkManager : MonoBehaviour, IDisposable
     [BoxGroup("DEBUG"), HideIf("@!debugMode"), ReadOnly]
     public int vertCount;
     [BoxGroup("DEBUG"), HideIf("@!debugMode"), ReadOnly]
+    public int indexCount;
+    [BoxGroup("DEBUG"), HideIf("@!debugMode"), ReadOnly]
     public int freeBufferCount;
     [BoxGroup("DEBUG"), HideIf("@!debugMode")]
     public bool drawPlayerBounds;
@@ -85,11 +87,17 @@ public class ChunkManager : MonoBehaviour, IDisposable
     }
     void Update(){
         if(debugMode){
-            memoryUsed = chunkCount * MemoryManager.maxVertexCount * sizeof(float) * 3 + chunkCount * MemoryManager.maxVertexCount * sizeof(uint);
+            memoryUsed = vertCount * sizeof(float) * 3 + indexCount * sizeof(uint);
             memoryUsed = memoryUsed / 1000000;
             memoryWasted = totalMemoryAllocated - memoryUsed;
         }
+        vertCount = 0;
+        indexCount = 0;
         for(int i = 0; i < chunkDatas.Count; i++){
+            if(debugMode){
+                vertCount += chunkDatas[i].vertCount;
+                indexCount += chunkDatas[i].indexCount;
+            }
             var chunk = chunkDatas[i];
             if(chunk.dirty){
                 if(chunk.meshJobHandle.IsCompleted){
@@ -245,9 +253,7 @@ public class ChunkManager : MonoBehaviour, IDisposable
         }
         if(drawChunkVariables.draw){
             GUI.color = Color.green;
-            vertCount = 0;
             for(int i = 0; i < chunkDatas.Count; i++){
-                vertCount += chunkDatas[i].vertCount;
                 float3 offset = chunkDatas[i].pos + chunkResolution * chunkDatas[i].depthMultiplier / 2;
                 if(drawChunkVariables.depth){
                     offset.y += 4f;
