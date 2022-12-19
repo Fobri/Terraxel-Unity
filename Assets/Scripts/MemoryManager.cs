@@ -9,7 +9,7 @@ using Unity.Collections.LowLevel.Unsafe;
 public class MemoryManager : IDisposable{
     
     public const int maxBufferCount = 128*2;
-    const int densityMapCount = 16;
+    const int densityMapCount = 32;
     Queue<NativeArray<float>> freeDensityMaps;
     Queue<NativeArray<Vector3>> freeVertexBuffers;
     Queue<NativeArray<int>> freeIndexBuffers;

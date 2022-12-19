@@ -86,7 +86,7 @@ namespace WorldGeneration
 
             int edgeIndex = Tables.EdgeTable[cubeIndex];
 
-            VertexList vertexList = GenerateVertexList(densities, corners, edgeIndex, isolevel);
+            //VertexList vertexList = GenerateVertexList(densities, corners, edgeIndex, isolevel);
 
             // Index at the beginning of the row
             int rowIndex = 15 * cubeIndex;
@@ -95,13 +95,13 @@ namespace WorldGeneration
             {
                 int triangleIndex = counter.Increment() * 3;
 
-                vertices[triangleIndex + 0] = vertexList[Tables.TriangleTable[rowIndex + i + 0]] * depthMultiplier;
+                vertices[triangleIndex + 0] = GetVertex(Tables.TriangleTable[rowIndex + i + 0], densities, voxelLocalPosition, isolevel / 255f) * depthMultiplier;
                 triangles[triangleIndex + 0] = triangleIndex + 0;
 
-                vertices[triangleIndex + 1] = vertexList[Tables.TriangleTable[rowIndex + i + 1]] * depthMultiplier;
+                vertices[triangleIndex + 1] = GetVertex(Tables.TriangleTable[rowIndex + i + 1], densities, voxelLocalPosition, isolevel / 255f) * depthMultiplier;
                 triangles[triangleIndex + 1] = triangleIndex + 1;
 
-                vertices[triangleIndex + 2] = vertexList[Tables.TriangleTable[rowIndex + i + 2]] * depthMultiplier;
+                vertices[triangleIndex + 2] = GetVertex(Tables.TriangleTable[rowIndex + i + 2], densities, voxelLocalPosition, isolevel / 255f) * depthMultiplier;
                 triangles[triangleIndex + 2] = triangleIndex + 2;
             }
         }
@@ -168,28 +168,14 @@ namespace WorldGeneration
         /// and densities above this will be outside the surface (air)</param>
         /// <returns>The generated vertex list for the voxel</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private VertexList GenerateVertexList(VoxelCorners<float> voxelDensities, VoxelCorners<int3> voxelCorners,
-            int edgeIndex, float isolevel)
-        {
-            var vertexList = new VertexList();
-
-            for (int i = 0; i < 12; i++)
-            {
-                if ((edgeIndex & (1 << i)) == 0) { continue; }
-
-                int edgeStartIndex = Tables.EdgeIndexTable[2 * i + 0];
-                int edgeEndIndex = Tables.EdgeIndexTable[2 * i + 1];
-
-                int3 corner1 = voxelCorners[edgeStartIndex];
-                int3 corner2 = voxelCorners[edgeEndIndex];
-
-                float density1 = voxelDensities[edgeStartIndex];
-                float density2 = voxelDensities[edgeEndIndex];
-
-                vertexList[i] = VertexInterpolate(corner1, corner2, density1, density2, isolevel);
-            }
-
-            return vertexList;
+        public unsafe float3 GetVertex(int index, VoxelCorners<float> voxelDensities, int3 voxelLocalPosition, float isolevel) {
+            int edgeStartIndex = Tables.EdgeIndexTable[2 * index + 0];
+            int edgeEndIndex = Tables.EdgeIndexTable[2 * index + 1];
+            int3 corner1 = voxelLocalPosition + Tables.CubeCorners[edgeStartIndex];
+            int3 corner2 = voxelLocalPosition + Tables.CubeCorners[edgeEndIndex];
+            float density1 = voxelDensities[edgeStartIndex];
+            float density2 = voxelDensities[edgeEndIndex];
+            return VertexInterpolate(corner1, corner2, density1, density2, isolevel);
         }
 
         /// <summary>
@@ -200,20 +186,12 @@ namespace WorldGeneration
         /// and densities above this will be outside the surface (air)</param>
         /// <returns>The calculated cube index</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private int CalculateCubeIndex(VoxelCorners<float> voxelDensities, float isolevel)
-        {
-            int cubeIndex = 0;
-
-            if (voxelDensities.Corner1 < isolevel) { cubeIndex |= 1; }
-            if (voxelDensities.Corner2 < isolevel) { cubeIndex |= 2; }
-            if (voxelDensities.Corner3 < isolevel) { cubeIndex |= 4; }
-            if (voxelDensities.Corner4 < isolevel) { cubeIndex |= 8; }
-            if (voxelDensities.Corner5 < isolevel) { cubeIndex |= 16; }
-            if (voxelDensities.Corner6 < isolevel) { cubeIndex |= 32; }
-            if (voxelDensities.Corner7 < isolevel) { cubeIndex |= 64; }
-            if (voxelDensities.Corner8 < isolevel) { cubeIndex |= 128; }
-
-            return cubeIndex;
+        public static byte CalculateCubeIndex(VoxelCorners<float> voxelDensities, float isolevel) {
+            float4 voxelDensitiesPart1 = new float4(voxelDensities.Corner1, voxelDensities.Corner2, voxelDensities.Corner3, voxelDensities.Corner4);
+            float4 voxelDensitiesPart2 = new float4(voxelDensities.Corner5, voxelDensities.Corner6, voxelDensities.Corner7, voxelDensities.Corner8);
+            int4 p1 = math.select(0, new int4(1, 2, 4, 8), voxelDensitiesPart1 < isolevel);
+            int4 p2 = math.select(0, new int4(16, 32, 64, 128), voxelDensitiesPart2 < isolevel);
+            return (byte)(math.csum(p1) | math.csum(p2));
         }
     }
     //Chunk noisemap update job, in a ball shape. Could implement more complex logic for this as well.
