@@ -12,13 +12,12 @@ using Sirenix.OdinInspector;
 using System.Linq;
 using UnityEditor;
 using ReadOnly = Sirenix.OdinInspector.ReadOnlyAttribute;
-using TMPro;
 public class ChunkManager : MonoBehaviour, IDisposable
 {
     public GameObject player;
     public static BoundingBox playerBounds;
     public const int chunkResolution = 32;
-    public const int lodLevels = 6;
+    public const int lodLevels = 4;
     public WorldGeneration.NoiseData noiseData;
     static WorldGeneration.NoiseData staticNoiseData;
     public GameObject chunkPrefab;
@@ -27,12 +26,18 @@ public class ChunkManager : MonoBehaviour, IDisposable
     [ShowInInspector]
     static List<ChunkData> chunkDatas;
     static Queue<ChunkData> processQueue;
-    Octree chunkTree;
+    ChunkData chunkTree;
 
     //DEBUG
     public bool debugMode;
     [BoxGroup("DEBUG"), HideIf("@!debugMode"), ReadOnly]
     public int chunkCount;
+    [BoxGroup("DEBUG"), HideIf("@!debugMode"), ReadOnly]
+    public int freeBufferCount;
+    [BoxGroup("DEBUG"), HideIf("@!debugMode"), ReadOnly, InfoBox("This should be the total allocated vertex buffer count. Should be @MemoryManager.maxBufferCount")]
+    public int totalChunksAccountedFor;
+    [BoxGroup("DEBUG"), HideIf("@!debugMode"), ReadOnly, InfoBox("Temporary buffers available. Should be @MemoryManager.densityMapCount")]
+    public int freeDensityMaps;
     [BoxGroup("DEBUG"), HideIf("@!debugMode"), ReadOnly, InfoBox("Memory amount displayed in MB")]
     public int totalMemoryAllocated;
     [BoxGroup("DEBUG"), HideIf("@!debugMode"), ReadOnly]
@@ -43,8 +48,6 @@ public class ChunkManager : MonoBehaviour, IDisposable
     public int vertCount;
     [BoxGroup("DEBUG"), HideIf("@!debugMode"), ReadOnly]
     public int indexCount;
-    [BoxGroup("DEBUG"), HideIf("@!debugMode"), ReadOnly]
-    public int freeBufferCount;
     [BoxGroup("DEBUG"), HideIf("@!debugMode")]
     public bool drawPlayerBounds;
     [BoxGroup("DEBUG"), HideIf("@!debugMode")]
@@ -56,8 +59,7 @@ public class ChunkManager : MonoBehaviour, IDisposable
     [Serializable]
     public class ChunkDebugView{
         public bool position;
-        public bool dirty;
-        public bool dispose;
+        public bool chunkState;
         public bool depth;
         public bool genTime;
         public bool vertexCount;
@@ -65,7 +67,7 @@ public class ChunkManager : MonoBehaviour, IDisposable
         public bool maxVertexCount;
         public bool draw{
             get{
-                return position || dirty || dispose || depth || genTime || vertexCount || indexCount || maxVertexCount;
+                return position || chunkState || depth || genTime || vertexCount || indexCount || maxVertexCount;
             }
         }
     }
@@ -78,18 +80,20 @@ public class ChunkManager : MonoBehaviour, IDisposable
         chunkDatas = new List<ChunkData>();
         staticChunkPrefab = chunkPrefab;
         staticNoiseData = noiseData;
-        chunkTree = new Octree();
+        chunkTree = new ChunkData();
         chunkTree.BuildTree();
         int elemCount = MemoryManager.maxBufferCount * MemoryManager.maxVertexCount;
-        totalMemoryAllocated = elemCount * sizeof(float)*3 + elemCount * sizeof(uint);
+        totalMemoryAllocated = elemCount * sizeof(float)*3 + elemCount * sizeof(ushort);
         totalMemoryAllocated = totalMemoryAllocated / 1000000;
         //GenerateWorld();
     }
     void Update(){
         if(debugMode){
-            memoryUsed = vertCount * sizeof(float) * 3 + indexCount * sizeof(uint);
+            memoryUsed = vertCount * sizeof(float) * 3 + indexCount * sizeof(ushort);
             memoryUsed = memoryUsed / 1000000;
             memoryWasted = totalMemoryAllocated - memoryUsed;
+            freeDensityMaps = memoryManager.GetFreeDensityCount();
+            totalChunksAccountedFor = chunkCount + freeBufferCount;
         }
         vertCount = 0;
         indexCount = 0;
@@ -99,23 +103,22 @@ public class ChunkManager : MonoBehaviour, IDisposable
                 indexCount += chunkDatas[i].indexCount;
             }
             var chunk = chunkDatas[i];
-            if(chunk.dirty){
+            if(chunk.chunkState == ChunkState.DIRTY){
                 if(chunk.meshJobHandle.IsCompleted){
                     chunk.meshJobHandle.Complete();
                     chunk.ApplyMesh();
                 }
                 continue;
             }
-            if(chunk.dispose){
+            else if(chunk.shouldDispose){
                 DisposeChunk(chunk);
             }
         }
-        processQueue = new Queue<ChunkData>(processQueue.Where(x => x.dispose != true));
+        processQueue = new Queue<ChunkData>(processQueue.Where(x => x.shouldDispose == false));
         if(processQueue.Count > 0){
             if(memoryManager.DensityMapAvailable && memoryManager.VertexBufferAvailable){
                 var toBeProcessed = processQueue.Dequeue();
-                if(!toBeProcessed.dispose)
-                    GenerateMesh(toBeProcessed);
+                GenerateMesh(toBeProcessed);
             }
         }
         if(debugMode){
@@ -136,25 +139,47 @@ public class ChunkManager : MonoBehaviour, IDisposable
     }
     public static void DisposeChunk(ChunkData chunk){
         chunkDatas.Remove(chunk);
-        var mesh = chunk.worldObject.GetComponent<MeshFilter>().sharedMesh;
-        //mesh.SetVertexBufferData(new Vector3[0],0,0,0,0,MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);
-        //mesh.SetIndexBufferData(new int[0],0,0,0,MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);
         Destroy(chunk.worldObject);
-        if(chunk.indices.IsCreated)
+        if(chunk.indices.IsCreated){
             memoryManager.ReturnIndexBuffer(chunk.indices);
-        if(chunk.vertices.IsCreated)
+            chunk.indices = default;
+        }
+        if(chunk.vertices.IsCreated){
             memoryManager.ReturnVertexBuffer(chunk.vertices);
-        if(chunk.densityMap != default) memoryManager.ReturnDensityMap(chunk.densityMap);
+            chunk.vertices = default;
+        }
+        if(chunk.densityMap != default){ 
+            memoryManager.ReturnDensityMap(chunk.densityMap);
+            chunk.densityMap = default;
+        }
+        if(chunk.vertexIndexBuffer != default){
+            memoryManager.ReturnVertexIndexBuffer(chunk.vertexIndexBuffer);
+            chunk.vertexIndexBuffer = default;
+        }
     }
-    public static ChunkData GenerateChunk(Vector3 pos, int depth){
+    public static void RegenerateChunk(ChunkData chunk){
+        GameObject newChunk = Instantiate(staticChunkPrefab);
+        newChunk.name = $"Chunk {chunk.WorldPosition.x}, {chunk.WorldPosition.y}, {chunk.WorldPosition.z}";
+        newChunk.transform.position = chunk.WorldPosition;
+        newChunk.GetComponent<MeshFilter>().sharedMesh = new Mesh();
+        chunk.chunkState = ChunkState.INVALID;
+        chunk.shouldDispose = false;
+
+        chunk.worldObject = newChunk;
+        if(memoryManager.DensityMapAvailable && memoryManager.VertexBufferAvailable)
+            GenerateMesh(chunk);
+        else{
+            processQueue.Enqueue(chunk);
+        }
+        chunkDatas.Add(chunk);
+    }
+    public static ChunkData GenerateChunk(Vector3 pos, int depth, BoundingBox bounds){
         GameObject newChunk = Instantiate(staticChunkPrefab);
         newChunk.name = $"Chunk {pos.x}, {pos.y}, {pos.z}";
         newChunk.transform.position = pos;
-
-        ChunkData newChunkData = new ChunkData(pos, newChunk, depth);
+        newChunk.GetComponent<MeshFilter>().sharedMesh = new Mesh();
+        ChunkData newChunkData = new ChunkData(newChunk, bounds, depth);
         
-        //newChunkData.meshData = meshDataArray[idx];
-        //chunkDatas[idx] = newChunkData;
         if(memoryManager.DensityMapAvailable && memoryManager.VertexBufferAvailable)
             GenerateMesh(newChunkData);
         else{
@@ -165,10 +190,10 @@ public class ChunkManager : MonoBehaviour, IDisposable
     }
     static void GenerateMesh(ChunkData chunkData)
     {
+        chunkData.chunkState = ChunkState.DIRTY;
         chunkData.genTime = Time.realtimeSinceStartup;
         chunkData.vertices = memoryManager.GetVertexBuffer();
         chunkData.indices = memoryManager.GetIndexBuffer();
-        chunkData.dirty = true;
         chunkData.vertexCounter = new Counter(Allocator.Persistent);
         chunkData.indexCounter = new Counter(Allocator.Persistent);
         chunkData.densityMap = memoryManager.GetDensityMap();
@@ -179,7 +204,7 @@ public class ChunkManager : MonoBehaviour, IDisposable
             ampl = staticNoiseData.ampl,
             freq = staticNoiseData.freq,
             oct = staticNoiseData.oct,
-            offset = chunkData.pos,
+            offset = chunkData.WorldPosition,
             seed = staticNoiseData.offset,
             surfaceLevel = staticNoiseData.surfaceLevel,
             noiseMap = chunkData.densityMap,
@@ -254,18 +279,14 @@ public class ChunkManager : MonoBehaviour, IDisposable
         if(drawChunkVariables.draw){
             GUI.color = Color.green;
             for(int i = 0; i < chunkDatas.Count; i++){
-                float3 offset = chunkDatas[i].pos + chunkResolution * chunkDatas[i].depthMultiplier / 2;
+                float3 offset = chunkDatas[i].WorldPosition + chunkResolution * chunkDatas[i].depthMultiplier / 2;
                 if(drawChunkVariables.depth){
                     offset.y += 4f;
                     Handles.Label(offset, chunkDatas[i].depth.ToString());
                 }
-                if(drawChunkVariables.dirty){
+                if(drawChunkVariables.chunkState){
                     offset.y += 4f;
-                    Handles.Label(offset, chunkDatas[i].dirty.ToString());
-                }
-                if(drawChunkVariables.dispose){
-                    offset.y += 4f;
-                    Handles.Label(offset, chunkDatas[i].dispose.ToString());
+                    Handles.Label(offset, chunkDatas[i].chunkState.ToString());
                 }
                 if(drawChunkVariables.genTime){
                     offset.y += 4f;

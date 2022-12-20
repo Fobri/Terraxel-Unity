@@ -4,38 +4,42 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using WorldGeneration;
 using UnityEngine.Rendering;
+using System;
 
 namespace DataStructures
 {
-    public class ChunkData{
+    public enum ChunkState { DIRTY, READY, INVALID }
+    public enum OnMeshReady { ALERT_PARENT, DISPOSE_CHILDREN }
+    public class ChunkData : Octree{
         
         public NativeArray<float> densityMap;
-        public NativeArray<uint4> vertexIndexBuffer;
+        public NativeArray<ushort4> vertexIndexBuffer;
         public NativeArray<Vector3> vertices;
-        public NativeArray<uint> indices;
+        public NativeArray<ushort> indices;
         public JobHandle meshJobHandle;
-        public float3 pos;
         public GameObject worldObject;
         public Counter vertexCounter;
         public Counter indexCounter;
-        public bool dirty;
-        public bool dispose;
-        public int depth;
-        public Octree node;
+        public ChunkState chunkState;
+        public OnMeshReady onMeshReady = OnMeshReady.ALERT_PARENT;
+        public bool shouldDispose;
         public float genTime;
         public int vertCount;
         public int indexCount;
         SubMeshDescriptor desc = new SubMeshDescriptor();
-        public ChunkData(float3 pos, GameObject worldObject, int depth){
-            this.pos = pos;
+        public ChunkData(GameObject worldObject, BoundingBox bounds, int depth) 
+        : base(bounds, depth){
             this.worldObject = worldObject;
             meshJobHandle = default;
             desc.topology = MeshTopology.Triangles;
-            worldObject.GetComponent<MeshFilter>().sharedMesh = new Mesh();
-            this.depth = depth;
+            chunkState = ChunkState.INVALID;
+            shouldDispose = false;
+        }
+        //ROOT chunk
+        public ChunkData() : base() {
         }
         public void ApplyMesh(){
-            dirty = false;
+            chunkState = ChunkState.READY;
             var mesh = worldObject.GetComponent<MeshFilter>().sharedMesh;
             var layout = new[]
                 {
@@ -46,16 +50,16 @@ namespace DataStructures
             if (vertexCount > 0)
             {
                 
-                var size = ChunkManager.chunkResolution * math.pow(2, depth) / 2;
-                mesh.bounds = new Bounds(new Vector3(size, size, size), new Vector3(ChunkManager.chunkResolution * math.pow(2, depth), ChunkManager.chunkResolution * math.pow(2, depth), ChunkManager.chunkResolution * math.pow(2, depth)));
+                //var size = ChunkManager.chunkResolution * math.pow(2, depth) / 2;
+                mesh.bounds = new Bounds(new float3(ChunkManager.chunkResolution * depthMultiplier / 2), region.bounds);
                 //Set vertices and indices
                 mesh.SetVertexBufferParams(vertexCount, layout);
-                mesh.SetVertexBufferData(vertices, 0, 0, vertexCount, 0, MeshUpdateFlags.Default);
-                mesh.SetIndexBufferParams(indexCount, IndexFormat.UInt32);
-                mesh.SetIndexBufferData(indices, 0, 0, indexCount, MeshUpdateFlags.Default);
+                mesh.SetVertexBufferData(vertices, 0, 0, vertexCount, 0, MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);
+                mesh.SetIndexBufferParams(indexCount, IndexFormat.UInt16);
+                mesh.SetIndexBufferData(indices, 0, 0, indexCount, MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);
 
                 desc.indexCount = indexCount;
-                mesh.SetSubMesh(0, desc, MeshUpdateFlags.Default);
+                mesh.SetSubMesh(0, desc, MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);
 
                 mesh.RecalculateNormals();
                 //filter.sharedMesh = myMesh;
@@ -72,13 +76,28 @@ namespace DataStructures
             ChunkManager.memoryManager.ReturnDensityMap(densityMap);
             ChunkManager.memoryManager.ReturnVertexIndexBuffer(vertexIndexBuffer);
             densityMap = default;
+            vertexIndexBuffer = default;
+            if(onMeshReady == OnMeshReady.ALERT_PARENT){
+                base.NotifyParentMeshReady();
+            }else if(onMeshReady == OnMeshReady.DISPOSE_CHILDREN){
+                onMeshReady = OnMeshReady.ALERT_PARENT;
+                RemoveChunksRecursive();
+            }
         }
         public void FreeChunk(){
-            dispose = true;
+            shouldDispose = true;
         }
         public int depthMultiplier{
             get{
                 return (int)math.pow(2, depth);
+            }
+        }
+        public bool HasMesh(){
+            return vertices.IsCreated;
+        }
+        public float3 WorldPosition{
+            get{
+                return (float3)region.center - new float3(ChunkManager.chunkResolution * depthMultiplier / 2);
             }
         }
     }

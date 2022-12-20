@@ -23,10 +23,10 @@ namespace WorldGeneration
     [BurstCompile]
     public struct VertexSharingJob : IJobParallelFor
     {
-        [NativeDisableParallelForRestriction, WriteOnly] public NativeArray<uint> triangles;
+        [NativeDisableParallelForRestriction, WriteOnly] public NativeArray<ushort> triangles;
         [ReadOnly] public int chunkSize;
         [WriteOnly] public Counter counter;
-        [ReadOnly] public NativeArray<uint4> vertexIndices;
+        [ReadOnly] public NativeArray<ushort4> vertexIndices;
 
         public void Execute(int index){
 
@@ -52,7 +52,7 @@ namespace WorldGeneration
                 triangles[triangleIndex + 2] = GetVertexIndex(Tables.TriangleTable[rowIndex + i + 2], voxelLocalPosition);
             }
         }
-        private uint GetVertexIndex(int index, int3 voxelLocalPosition){
+        private ushort GetVertexIndex(int index, int3 voxelLocalPosition){
             if(index == 3) return vertexIndices[ChunkManager.XyzToIndex(voxelLocalPosition.x, voxelLocalPosition.y, voxelLocalPosition.z, chunkSize, chunkSize)].x;
             if(index == 0) return vertexIndices[ChunkManager.XyzToIndex(voxelLocalPosition.x, voxelLocalPosition.y, voxelLocalPosition.z, chunkSize, chunkSize)].y;
             if(index == 8) return vertexIndices[ChunkManager.XyzToIndex(voxelLocalPosition.x, voxelLocalPosition.y, voxelLocalPosition.z, chunkSize, chunkSize)].z;
@@ -65,7 +65,7 @@ namespace WorldGeneration
             if(index == 2) return vertexIndices[ChunkManager.XyzToIndex(voxelLocalPosition.x, voxelLocalPosition.y, voxelLocalPosition.z + 1, chunkSize, chunkSize)].y;
             if(index == 6) return vertexIndices[ChunkManager.XyzToIndex(voxelLocalPosition.x, voxelLocalPosition.y + 1, voxelLocalPosition.z + 1, chunkSize, chunkSize)].y;
             if(index == 4) return vertexIndices[ChunkManager.XyzToIndex(voxelLocalPosition.x, voxelLocalPosition.y + 1, voxelLocalPosition.z, chunkSize, chunkSize)].y;
-            return 4294967269;
+            return ushort.MaxValue;
         }
     }
     //Marching cubes job from https://github.com/Eldemarkki/Marching-Cubes-Terrain
@@ -109,7 +109,7 @@ namespace WorldGeneration
         /// </summary>
         //[NativeDisableParallelForRestriction, WriteOnly] public NativeArray<int> triangles;
         [ReadOnly] public int depthMultiplier;
-        [WriteOnly] public NativeArray<uint4> vertexIndices;
+        [WriteOnly] public NativeArray<ushort4> vertexIndices;
 
         /// <summary>
         /// The execute method required by the Unity Job System's IJobParallelFor
@@ -123,8 +123,8 @@ namespace WorldGeneration
             VoxelCorners<float> densities = GetDensities(voxelLocalPosition);
 
             int cubeIndex = CalculateCubeIndex(densities, isolevel);
-            uint4 indices = new uint4(-1);
-            indices.w = (uint)cubeIndex;
+            ushort4 indices = new ushort4(-1);
+            indices.w = (ushort)cubeIndex;
             if (cubeIndex == 0 || cubeIndex == 255)
             {
                 return;
@@ -139,17 +139,17 @@ namespace WorldGeneration
                 if(edgeIdx == 3){
                     int vertexIndex = vertexCounter.Increment();
                     vertices[vertexIndex + 0] = GetVertex(edgeIdx, densities, voxelLocalPosition, isolevel / 255f) * depthMultiplier;
-                    indices.x = (uint)vertexIndex;
+                    indices.x = (ushort)vertexIndex;
                 }
                 if(edgeIdx == 0){
                     int vertexIndex = vertexCounter.Increment();
                     vertices[vertexIndex + 0] = GetVertex(edgeIdx, densities, voxelLocalPosition, isolevel / 255f) * depthMultiplier;
-                    indices.y = (uint)vertexIndex;
+                    indices.y = (ushort)vertexIndex;
                 }
                 if(edgeIdx == 8){
                     int vertexIndex = vertexCounter.Increment();
                     vertices[vertexIndex + 0] = GetVertex(edgeIdx, densities, voxelLocalPosition, isolevel / 255f) * depthMultiplier;
-                    indices.z = (uint)vertexIndex;
+                    indices.z = (ushort)vertexIndex;
                 }
             }
             vertexIndices[index] = indices;
@@ -358,6 +358,24 @@ namespace WorldGeneration
             }
             //total = total % 5f;
             return total;
+        }
+    }
+    public struct ushort4{
+        public ushort x;
+        public ushort y;
+        public ushort z;
+        public ushort w;
+        public ushort4(ushort x, ushort y, ushort z, ushort w){
+            this.x = x; 
+            this.y = y;
+            this.z = z;
+            this.w = w;
+        }
+        public ushort4(int value){
+            this.x = (ushort)value;
+            this.y = (ushort)value;
+            this.z = (ushort)value; 
+            this.w = (ushort)value;
         }
     }
     //Tables used for marching cubes. Taken from https://github.com/Eldemarkki/Marching-Cubes-Terrain

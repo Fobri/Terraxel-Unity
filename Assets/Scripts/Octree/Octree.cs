@@ -2,8 +2,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Unity.Mathematics;
+using DataStructures;
 
-public class Octree
+public abstract class Octree
 {
     public Octree(BoundingBox size, int depth)
     {
@@ -12,9 +13,9 @@ public class Octree
         //objects = objs;
         parent = null;
         this.depth = depth;
-        var multiplier = ChunkManager.chunkResolution * math.pow(2, depth) / 2;
-        chunkData = ChunkManager.GenerateChunk(new Vector3(size.center.x - multiplier,size.center.y - multiplier,size.center.z - multiplier), depth);
-        chunkData.node = this;
+        //var multiplier = ChunkManager.chunkResolution * math.pow(2, depth) / 2;
+        //chunkData = ChunkManager.GenerateChunk(new Vector3(size.center.x - multiplier,size.center.y - multiplier,size.center.z - multiplier), depth);
+        //chunkData.node = this;
     }
 
     public Octree()
@@ -23,13 +24,14 @@ public class Octree
         //objects = new List<BoundingBox>();
         region = new BoundingBox(Vector3.zero, new float3(ChunkManager.chunkResolution * math.pow(2, depth)));
         parent = null;
-        chunkData = ChunkManager.GenerateChunk(new float3(-ChunkManager.chunkResolution * math.pow(2, depth)/2), ChunkManager.lodLevels);
-        chunkData.node = this;
+        //chunkData = ChunkManager.GenerateChunk(new float3(-ChunkManager.chunkResolution * math.pow(2, depth)/2), ChunkManager.lodLevels);
+        //chunkData.node = this;
     }
 
     private Octree CreateNode(BoundingBox region)
     {
-        Octree ret = new Octree(region, depth - 1);
+        var multiplier = ChunkManager.chunkResolution * math.pow(2, depth - 1) / 2;
+        ChunkData ret = ChunkManager.GenerateChunk(new Vector3(region.center.x - multiplier,region.center.y - multiplier,region.center.z - multiplier), depth - 1, region);
         ret.parent = this;
         return ret;
     }
@@ -105,33 +107,34 @@ public class Octree
 
         return octants;
     }
-    public void RemoveChunk(){
-        chunkData.FreeChunk();
-        //chunkData = null;
+    bool HasSubMeshes{
+        get{
+            return children[0] != null;
+        }
     }
     public bool RemoveChunksRecursive(){
+        
         bool hadChildren = false;
         for (int i = 0; i < 8; i++){
             if(children[i] != null){
                 children[i].RemoveChunksRecursive();
-                children[i].RemoveChunk();
+                (children[i] as ChunkData).FreeChunk();
                 hadChildren = true;
                 children[i] = null;
             }
         }
         return hadChildren;
     }
-    /*public void OnMeshReady(){
-        if(parent != null)
-            parent.SubChunkDone();
+    public void NotifyParentMeshReady(){
+        parent?.CheckSubMeshesReady();
     }
-    public void SubChunkDone(){
-        if(subChunksInGeneration == 0) return;
-        subChunksInGeneration--;
-        if(subChunksInGeneration == 0){
-            RemoveChunk();
+    public void CheckSubMeshesReady(){
+        for (int i = 0; i < 8; i++){
+            if(children[i] == null) return;
+            if((children[i] as ChunkData).chunkState == DataStructures.ChunkState.DIRTY || (children[i] as ChunkData).chunkState == DataStructures.ChunkState.INVALID) return;
         }
-    }*/
+        (this as ChunkData).FreeChunk();
+    }
     public void BuildTree()
     {
         //if (objects.Count <= 1)
@@ -139,9 +142,16 @@ public class Octree
 
         //if (region.bounds.x <= 1.0f && region.bounds.y <= 1.0 && region.bounds.z <= 1.0)
         if(!region.IsColliding(ChunkManager.playerBounds) && !region.Contains(ChunkManager.playerBounds)){
-            if(RemoveChunksRecursive()){
+            if(HasSubMeshes){
                 var multiplier = ChunkManager.chunkResolution * math.pow(2, depth) / 2;
-                chunkData = ChunkManager.GenerateChunk(new Vector3(region.center.x - multiplier,region.center.y - multiplier,region.center.z - multiplier), depth);
+                var chunk = this as ChunkData;
+                if(!chunk.HasMesh()){
+                    chunk.onMeshReady = OnMeshReady.DISPOSE_CHILDREN;
+                    ChunkManager.RegenerateChunk(chunk);
+                }else{
+                    chunk.onMeshReady = OnMeshReady.ALERT_PARENT;
+                    RemoveChunksRecursive();
+                }
             }
             return;
         }
@@ -154,7 +164,6 @@ public class Octree
 
         //List<BoundingBox>[] octLists = new List<BoundingBox>[8];
         //Debug.Log(ChunkManager.playerBounds.bounds + " " + ChunkManager.playerBounds.center);
-        subChunksInGeneration = 8;
         octants = CreateOctants(region);
         for (int i = 0; i < 8; i++)
         {
@@ -167,7 +176,7 @@ public class Octree
             children[i].BuildTree();
             //}
         }
-        RemoveChunk();
+        //RemoveChunkMesh();
         /*if(chunkData == null){
             var multiplier = ChunkManager.chunkResolution * math.pow(2, depth) / 2;
             chunkData = ChunkManager.GenerateChunk(new Vector3(region.center.x - multiplier,region.center.y - multiplier,region.center.z - multiplier), depth);
@@ -192,7 +201,6 @@ public class Octree
             //objects.Remove(obj);
 
     }
-    int subChunksInGeneration = 0;
     public BoundingBox region; //Region encapsulating the entire octant
     public BoundingBox[] octants; //This objects 8 suboctants
     //public List<BoundingBox> objects; //Bounding box objects in this region
@@ -202,5 +210,4 @@ public class Octree
     public Octree parent { get; private set; }
 
     public int depth = ChunkManager.lodLevels;
-    public DataStructures.ChunkData chunkData;
 }

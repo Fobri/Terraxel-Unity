@@ -309,7 +309,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 963194225}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b338a37d9ba0e804da31f50657787e25, type: 3}
   m_Name: 
@@ -373,7 +373,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   player: {fileID: 963194225}
   noiseData:
-    surfaceLevel: 4.02
+    surfaceLevel: -11.57
     freq: 0.01
     ampl: 1
     oct: 2
@@ -381,17 +381,22 @@ MonoBehaviour:
   chunkPrefab: {fileID: 4194868686972551607, guid: 6c35f3c6ef85df74c950c7dc8cd341fc, type: 3}
   debugMode: 1
   chunkCount: 0
+  totalMemoryAllocated: 0
+  memoryUsed: 0
+  memoryWasted: 0
+  vertCount: 0
+  indexCount: 0
   freeBufferCount: 0
   drawPlayerBounds: 1
   drawChunkBounds: 0
   drawChunkVariables:
     position: 0
-    dirty: 0
-    dispose: 0
+    chunkState: 0
     depth: 0
     genTime: 0
     vertexCount: 0
     indexCount: 0
+    maxVertexCount: 0
   debugLogs: 0
 --- !u!4 &1802255374
 Transform:
