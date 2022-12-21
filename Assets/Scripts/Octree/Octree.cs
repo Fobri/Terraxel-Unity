@@ -105,9 +105,8 @@ public abstract class Octree
     public void UpdateTree()
     {
         float dst = math.distance(ChunkManager.playerBounds.center, region.center);
-        if(dst > ChunkManager.chunkResolution * depthMultiplier * 2){
+        if(dst > ChunkManager.chunkResolution * depthMultiplier * 2f || (thisAsChunkData().chunkState == ChunkState.READY && thisAsChunkData().vertCount == 0)){
             if(HasSubMeshes){
-                var multiplier = ChunkManager.chunkResolution * math.pow(2, depth) / 2;
                 var chunk = this as ChunkData;
                 if(!chunk.HasMesh()){
                     chunk.onMeshReady = OnMeshReady.DISPOSE_CHILDREN;

@@ -85,12 +85,10 @@ namespace DataStructures
             }
         }
         public void FreeChunk(){
-            vertCount = 0;
-            indexCount = 0;
             shouldDispose = true;
         }
         public bool HasMesh(){
-            return vertices.IsCreated;
+            return worldObject != null;
         }
         public float3 WorldPosition{
             get{

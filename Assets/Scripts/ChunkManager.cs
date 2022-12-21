@@ -163,6 +163,10 @@ public class ChunkManager : MonoBehaviour, IDisposable
         }
     }
     public static void RegenerateChunk(ChunkData chunk){
+        if(chunkDatas.Count >= MemoryManager.maxBufferCount){ 
+            shouldUpdateTree = true;
+            return;
+        }
         GameObject newChunk = Instantiate(staticChunkPrefab);
         newChunk.name = $"Chunk {chunk.WorldPosition.x}, {chunk.WorldPosition.y}, {chunk.WorldPosition.z}";
         newChunk.transform.position = chunk.WorldPosition;
@@ -171,11 +175,7 @@ public class ChunkManager : MonoBehaviour, IDisposable
         chunk.shouldDispose = false;
 
         chunk.worldObject = newChunk;
-        if(memoryManager.DensityMapAvailable && memoryManager.VertexBufferAvailable)
-            GenerateMesh(chunk);
-        else{
-            processQueue.Enqueue(chunk);
-        }
+        GenerateMesh(chunk);
         chunkDatas.Add(chunk);
     }
     public static ChunkData GenerateChunk(Vector3 pos, int depth, BoundingBox bounds){
@@ -189,16 +189,17 @@ public class ChunkManager : MonoBehaviour, IDisposable
         newChunk.GetComponent<MeshFilter>().sharedMesh = new Mesh();
         ChunkData newChunkData = new ChunkData(newChunk, bounds, depth);
         
-        if(memoryManager.DensityMapAvailable && memoryManager.VertexBufferAvailable)
-            GenerateMesh(newChunkData);
-        else{
-            processQueue.Enqueue(newChunkData);
-        }
+        GenerateMesh(newChunkData);
+
         chunkDatas.Add(newChunkData);
         return newChunkData;
     }
     static void GenerateMesh(ChunkData chunkData)
     {
+        if(!memoryManager.DensityMapAvailable || !memoryManager.VertexBufferAvailable){
+            processQueue.Enqueue(chunkData);
+            return;
+        }
         chunkData.chunkState = ChunkState.DIRTY;
         chunkData.genTime = Time.realtimeSinceStartup;
         chunkData.vertices = memoryManager.GetVertexBuffer();

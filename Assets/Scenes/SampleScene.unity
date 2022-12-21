@@ -393,7 +393,7 @@ MonoBehaviour:
   drawChunkBounds: 0
   drawChunkVariables:
     position: 0
-    chunkState: 1
+    chunkState: 0
     depth: 0
     genTime: 0
     vertexCount: 0
