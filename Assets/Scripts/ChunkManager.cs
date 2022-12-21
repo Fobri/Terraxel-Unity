@@ -16,8 +16,9 @@ public class ChunkManager : MonoBehaviour, IDisposable
 {
     public GameObject player;
     public static BoundingBox playerBounds;
+    public static bool shouldUpdateTree = false;
     public const int chunkResolution = 32;
-    public const int lodLevels = 4;
+    public const int lodLevels = 6;
     public WorldGeneration.NoiseData noiseData;
     static WorldGeneration.NoiseData staticNoiseData;
     public GameObject chunkPrefab;
@@ -81,7 +82,7 @@ public class ChunkManager : MonoBehaviour, IDisposable
         staticChunkPrefab = chunkPrefab;
         staticNoiseData = noiseData;
         chunkTree = new ChunkData();
-        chunkTree.BuildTree();
+        chunkTree.UpdateTree();
         int elemCount = MemoryManager.maxBufferCount * MemoryManager.maxVertexCount;
         totalMemoryAllocated = elemCount * sizeof(float)*3 + elemCount * sizeof(ushort);
         totalMemoryAllocated = totalMemoryAllocated / 1000000;
@@ -128,7 +129,11 @@ public class ChunkManager : MonoBehaviour, IDisposable
         if(math.distance(playerBounds.center, player.transform.position) > 10f){
             if(debugLogs) Debug.Log("Updated octree");
             playerBounds.center = player.transform.position;
-            chunkTree.BuildTree();
+            shouldUpdateTree = true;
+        }
+        if(shouldUpdateTree){
+            shouldUpdateTree = false;
+            chunkTree.UpdateTree();
         }
     }
     [Button]
@@ -174,6 +179,10 @@ public class ChunkManager : MonoBehaviour, IDisposable
         chunkDatas.Add(chunk);
     }
     public static ChunkData GenerateChunk(Vector3 pos, int depth, BoundingBox bounds){
+        if(chunkDatas.Count >= MemoryManager.maxBufferCount){ 
+            shouldUpdateTree = true;
+            return null;
+        }
         GameObject newChunk = Instantiate(staticChunkPrefab);
         newChunk.name = $"Chunk {pos.x}, {pos.y}, {pos.z}";
         newChunk.transform.position = pos;

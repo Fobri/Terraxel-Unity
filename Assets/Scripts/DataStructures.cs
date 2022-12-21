@@ -85,12 +85,9 @@ namespace DataStructures
             }
         }
         public void FreeChunk(){
+            vertCount = 0;
+            indexCount = 0;
             shouldDispose = true;
-        }
-        public int depthMultiplier{
-            get{
-                return (int)math.pow(2, depth);
-            }
         }
         public bool HasMesh(){
             return vertices.IsCreated;

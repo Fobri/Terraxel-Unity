@@ -32,42 +32,9 @@ public abstract class Octree
     {
         var multiplier = ChunkManager.chunkResolution * math.pow(2, depth - 1) / 2;
         ChunkData ret = ChunkManager.GenerateChunk(new Vector3(region.center.x - multiplier,region.center.y - multiplier,region.center.z - multiplier), depth - 1, region);
-        ret.parent = this;
+        if(ret != null) 
+            ret.parent = this;
         return ret;
-    }
-
-    public static List<BoundingBox> TestCollision(Octree tree, BoundingBox b)
-    {
-        List<BoundingBox> collisions = new List<BoundingBox>();
-
-        if (tree == null)
-            return new List<BoundingBox>();
-
-        if (tree.region.IsColliding(b))
-        {
-            //Loop through current trees objects
-            /*foreach(BoundingBox obj in tree.objects)
-            {
-                if (obj.IsColliding(b))
-                {
-                    collisions.Add(obj);
-                }
-            }*/
-
-            if (tree.children != null)
-            {
-                //Loop through suboctants
-                for (int i = 0; i < 8; i++)
-                {
-                    if (tree.children[i] != null)
-                    {
-                        collisions.AddRange(TestCollision(tree.children[i], b));
-                    }
-                }
-            }
-        }
-
-        return collisions;
     }
 
     public static BoundingBox[] CreateOctants(BoundingBox box)
@@ -133,15 +100,12 @@ public abstract class Octree
             if(children[i] == null) return;
             if((children[i] as ChunkData).chunkState == DataStructures.ChunkState.DIRTY || (children[i] as ChunkData).chunkState == DataStructures.ChunkState.INVALID) return;
         }
-        (this as ChunkData).FreeChunk();
+        thisAsChunkData().FreeChunk();
     }
-    public void BuildTree()
+    public void UpdateTree()
     {
-        //if (objects.Count <= 1)
-            //return;
-
-        //if (region.bounds.x <= 1.0f && region.bounds.y <= 1.0 && region.bounds.z <= 1.0)
-        if(!region.IsColliding(ChunkManager.playerBounds) && !region.Contains(ChunkManager.playerBounds)){
+        float dst = math.distance(ChunkManager.playerBounds.center, region.center);
+        if(dst > ChunkManager.chunkResolution * depthMultiplier * 2){
             if(HasSubMeshes){
                 var multiplier = ChunkManager.chunkResolution * math.pow(2, depth) / 2;
                 var chunk = this as ChunkData;
@@ -155,50 +119,18 @@ public abstract class Octree
             }
             return;
         }
-           // return;
         if(depth == 0) return;
-        
-        
-        //Create the tree suboctants
-        
 
-        //List<BoundingBox>[] octLists = new List<BoundingBox>[8];
-        //Debug.Log(ChunkManager.playerBounds.bounds + " " + ChunkManager.playerBounds.center);
         octants = CreateOctants(region);
         for (int i = 0; i < 8; i++)
         {
-            //Debug.Log(octants[i].bounds + " " + octants[i].center);
-            //if(octants[i].IsColliding(ChunkManager.playerBounds) || octants[i].Contains(ChunkManager.playerBounds)){
             if(children[i] == null){
                 
                 children[i] = CreateNode(octants[i]);
+                if(children[i] == null) return;
             }
-            children[i].BuildTree();
-            //}
+            children[i].UpdateTree();
         }
-        //RemoveChunkMesh();
-        /*if(chunkData == null){
-            var multiplier = ChunkManager.chunkResolution * math.pow(2, depth) / 2;
-            chunkData = ChunkManager.GenerateChunk(new Vector3(region.center.x - multiplier,region.center.y - multiplier,region.center.z - multiplier), depth);
-        }*/
-        //List<BoundingBox> delist = new List<BoundingBox>();
-
-        /*foreach (BoundingBox obj in objects)
-        {
-            for (int a = 0; a < 8; a++)
-            {
-                if (octants[a].Contains(obj))
-                {
-                    octLists[a].Add(obj);
-                    delist.Add(obj);
-                    break;
-                }
-            }
-        }*/
-
-        //delist every moved object from this node.
-        //foreach (BoundingBox obj in delist)
-            //objects.Remove(obj);
 
     }
     public BoundingBox region; //Region encapsulating the entire octant
@@ -210,4 +142,13 @@ public abstract class Octree
     public Octree parent { get; private set; }
 
     public int depth = ChunkManager.lodLevels;
+    
+    public int depthMultiplier{
+        get{
+            return (int)math.pow(2, depth);
+        }
+    }
+    private ChunkData thisAsChunkData(){
+        return this as ChunkData;
+    }
 }
