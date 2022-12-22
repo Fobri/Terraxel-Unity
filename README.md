@@ -2,6 +2,7 @@
 This is an Unity implementation of the marching cubes algorithm with vertex sharing and LOD with a recursive octree
 
 TODO:
+
 Update marching cubes algorithm to transvoxel https://transvoxel.org/
 
 Infinite world
@@ -15,6 +16,7 @@ Add colliders to 0 depth chunks
 Terrain editing
 
 Pool chunk GameObjects
+
 
 Problems
 
