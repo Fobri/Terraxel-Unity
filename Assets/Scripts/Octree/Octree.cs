@@ -6,6 +6,21 @@ using DataStructures;
 
 public abstract class Octree
 {
+    public BoundingBox region; //Region encapsulating the entire octant
+    public BoundingBox[] octants; //This objects 8 suboctants
+    //public List<BoundingBox> objects; //Bounding box objects in this region
+
+    public Octree[] children; //Child octrees.
+
+    public Octree parent { get; private set; }
+
+    public int depth = ChunkManager.lodLevels;
+    
+    public int depthMultiplier{
+        get{
+            return (int)math.pow(2, depth);
+        }
+    }
     public Octree(BoundingBox size, int depth)
     {
         children = new Octree[8];
@@ -74,18 +89,18 @@ public abstract class Octree
 
         return octants;
     }
-    bool HasSubMeshes{
+    bool HasSubChunks{
         get{
             return children[0] != null;
         }
     }
-    public bool RemoveChunksRecursive(){
+    public bool PruneChunksRecursive(){
         
         bool hadChildren = false;
         for (int i = 0; i < 8; i++){
             if(children[i] != null){
-                children[i].RemoveChunksRecursive();
-                (children[i] as ChunkData).FreeChunk();
+                children[i].PruneChunksRecursive();
+                (children[i] as ChunkData).PoolChunk();
                 hadChildren = true;
                 children[i] = null;
             }
@@ -98,28 +113,33 @@ public abstract class Octree
     public void CheckSubMeshesReady(){
         for (int i = 0; i < 8; i++){
             if(children[i] == null) return;
-            if((children[i] as ChunkData).chunkState == DataStructures.ChunkState.DIRTY || (children[i] as ChunkData).chunkState == DataStructures.ChunkState.INVALID) return;
+            if((children[i] as ChunkData).chunkState != DataStructures.ChunkState.READY) return;
         }
-        thisAsChunkData().FreeChunk();
+        thisAsChunkData().FreeChunkMesh();
+        parent?.CheckSubMeshesReady();
     }
-    public void UpdateTree()
+    public void UpdateTreeRecursive()
     {
+        if(thisAsChunkData().chunkState == ChunkState.DIRTY || thisAsChunkData().chunkState == ChunkState.INVALID){
+            ChunkManager.shouldUpdateTree = true;
+            return;
+        }
         float dst = math.distance(ChunkManager.playerBounds.center, region.center);
-        if(dst > ChunkManager.chunkResolution * depthMultiplier * 2f || (thisAsChunkData().chunkState == ChunkState.READY && thisAsChunkData().vertCount == 0)){
-            if(HasSubMeshes){
+        if(dst > ChunkManager.chunkResolution * depthMultiplier * 2f || (thisAsChunkData().chunkState != ChunkState.ROOT && thisAsChunkData().vertCount == 0)){
+            if(HasSubChunks){
                 var chunk = this as ChunkData;
                 if(!chunk.HasMesh()){
                     chunk.onMeshReady = OnMeshReady.DISPOSE_CHILDREN;
                     ChunkManager.RegenerateChunk(chunk);
-                }else{
+                }else if(chunk.onMeshReady != OnMeshReady.DISPOSE_CHILDREN){
                     chunk.onMeshReady = OnMeshReady.ALERT_PARENT;
-                    RemoveChunksRecursive();
+                    PruneChunksRecursive();
                 }
             }
             return;
         }
         if(depth == 0) return;
-
+        
         octants = CreateOctants(region);
         for (int i = 0; i < 8; i++)
         {
@@ -128,24 +148,9 @@ public abstract class Octree
                 children[i] = CreateNode(octants[i]);
                 if(children[i] == null) return;
             }
-            children[i].UpdateTree();
+            children[i].UpdateTreeRecursive();
         }
 
-    }
-    public BoundingBox region; //Region encapsulating the entire octant
-    public BoundingBox[] octants; //This objects 8 suboctants
-    //public List<BoundingBox> objects; //Bounding box objects in this region
-
-    public Octree[] children; //Child octrees.
-
-    public Octree parent { get; private set; }
-
-    public int depth = ChunkManager.lodLevels;
-    
-    public int depthMultiplier{
-        get{
-            return (int)math.pow(2, depth);
-        }
     }
     private ChunkData thisAsChunkData(){
         return this as ChunkData;

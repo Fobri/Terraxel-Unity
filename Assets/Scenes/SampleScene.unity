@@ -375,7 +375,7 @@ MonoBehaviour:
   noiseData:
     surfaceLevel: -11.57
     freq: 0.01
-    ampl: 1
+    ampl: 12.71
     oct: 2
     offset: 136.5
   chunkPrefab: {fileID: 4194868686972551607, guid: 6c35f3c6ef85df74c950c7dc8cd341fc, type: 3}
@@ -389,7 +389,7 @@ MonoBehaviour:
   memoryWasted: 0
   vertCount: 0
   indexCount: 0
-  drawPlayerBounds: 1
+  drawPlayerBounds: 0
   drawChunkBounds: 0
   drawChunkVariables:
     position: 0
@@ -399,7 +399,6 @@ MonoBehaviour:
     vertexCount: 0
     indexCount: 0
     maxVertexCount: 0
-  debugLogs: 0
 --- !u!4 &1802255374
 Transform:
   m_ObjectHideFlags: 0

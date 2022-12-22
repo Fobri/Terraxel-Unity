@@ -351,7 +351,7 @@ namespace WorldGeneration
             var freq = this.freq;
             for (int i = 0; i < oct; i++)
             {
-                total += noise.snoise(math.float2((x + offset.x + seed.x) * freq, (z + offset.z + seed.z) * freq) * ampl) * 5;
+                total += noise.snoise(math.float2((x + offset.x + seed.x) * freq, (z + offset.z + seed.z) * freq)) * ampl;
 
                 ampl *= 2;
                 freq *= 0.5f;

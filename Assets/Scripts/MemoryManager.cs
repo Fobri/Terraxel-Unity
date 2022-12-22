@@ -10,9 +10,9 @@ using WorldGeneration;
 
 public class MemoryManager : IDisposable{
     
-    public const int maxBufferCount = 128*2;
-    public const int densityMapCount = 32;
-    public const int maxVertexCount = 15000;
+    public const int maxBufferCount = 128*4;
+    public const int densityMapCount = 8;
+    public const int maxVertexCount = 30000;
     Queue<NativeArray<float>> freeDensityMaps;
     Queue<NativeArray<Vector3>> freeVertexBuffers;
     Queue<NativeArray<ushort>> freeIndexBuffers;

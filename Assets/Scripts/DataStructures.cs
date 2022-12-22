@@ -8,8 +8,9 @@ using System;
 
 namespace DataStructures
 {
-    public enum ChunkState { DIRTY, READY, INVALID }
+    public enum ChunkState { DIRTY, READY, INVALID, ROOT }
     public enum OnMeshReady { ALERT_PARENT, DISPOSE_CHILDREN }
+    public enum DisposeStatus { NOTHING, POOL, FREE_MESH }
     public class ChunkData : Octree{
         
         public NativeArray<float> densityMap;
@@ -20,9 +21,9 @@ namespace DataStructures
         public GameObject worldObject;
         public Counter vertexCounter;
         public Counter indexCounter;
-        public ChunkState chunkState;
+        public ChunkState chunkState = ChunkState.INVALID;
         public OnMeshReady onMeshReady = OnMeshReady.ALERT_PARENT;
-        public bool shouldDispose;
+        public DisposeStatus disposeStatus = DisposeStatus.NOTHING;
         public float genTime;
         public int vertCount;
         public int indexCount;
@@ -33,7 +34,7 @@ namespace DataStructures
             meshJobHandle = default;
             desc.topology = MeshTopology.Triangles;
             chunkState = ChunkState.INVALID;
-            shouldDispose = false;
+            disposeStatus = DisposeStatus.NOTHING;
         }
         //ROOT chunk
         public ChunkData() : base() {
@@ -68,7 +69,7 @@ namespace DataStructures
             }else{
                 vertCount = 0;
                 indexCount = 0;
-                FreeChunk();
+                FreeChunkMesh();
             }
             indexCounter.Dispose();
             vertexCounter.Dispose();
@@ -81,11 +82,14 @@ namespace DataStructures
                 base.NotifyParentMeshReady();
             }else if(onMeshReady == OnMeshReady.DISPOSE_CHILDREN){
                 onMeshReady = OnMeshReady.ALERT_PARENT;
-                RemoveChunksRecursive();
+                PruneChunksRecursive();
             }
         }
-        public void FreeChunk(){
-            shouldDispose = true;
+        public void FreeChunkMesh(){
+            disposeStatus = DisposeStatus.FREE_MESH;
+        }
+        public void PoolChunk(){
+            disposeStatus = DisposeStatus.POOL;
         }
         public bool HasMesh(){
             return worldObject != null;
