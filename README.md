@@ -2,7 +2,7 @@
 This is an Unity implementation of the marching cubes algorithm with vertex sharing and LOD with a recursive octree
 
 TODO:
-Update marching cubes algorithm to transvoxel https://transvoxel.org/
+Update marching cubes algorithm to transvoxel https://transvoxel.org/\n
 Infinite world
 Proper memory allocator for vertex and index data
 Calculate normals inside the job
