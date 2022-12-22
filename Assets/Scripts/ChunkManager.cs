@@ -30,31 +30,56 @@ public class ChunkManager : MonoBehaviour, IDisposable
     static Queue<ChunkData> chunkPool;
     ChunkData chunkTree;
 
+#if UNITY_EDITOR
     //DEBUG
     public bool debugMode;
-    [BoxGroup("DEBUG"), HideIf("@!debugMode"), ReadOnly]
+#if ODIN_INSPECTOR    
+[BoxGroup("DEBUG"), HideIf("@!debugMode"), ReadOnly]
+#endif
     public int chunkCount;
+#if ODIN_INSPECTOR    
     [BoxGroup("DEBUG"), HideIf("@!debugMode"), ReadOnly]
+#endif
     public int freeBufferCount;
+#if ODIN_INSPECTOR    
     [BoxGroup("DEBUG"), HideIf("@!debugMode"), ReadOnly, InfoBox("This should be the total allocated vertex buffer count. Should be @MemoryManager.maxBufferCount")]
+#endif
     public int totalChunksAccountedFor;
+#if ODIN_INSPECTOR    
     [BoxGroup("DEBUG"), HideIf("@!debugMode"), ReadOnly, InfoBox("Temporary buffers available. Should be @MemoryManager.densityMapCount")]
+#endif
     public int freeDensityMaps;
+#if ODIN_INSPECTOR    
     [BoxGroup("DEBUG"), HideIf("@!debugMode"), ReadOnly, InfoBox("Memory amount displayed in MB")]
+#endif
     public int totalMemoryAllocated;
+#if ODIN_INSPECTOR    
     [BoxGroup("DEBUG"), HideIf("@!debugMode"), ReadOnly]
+#endif
     public int memoryUsed;
+#if ODIN_INSPECTOR    
     [BoxGroup("DEBUG"), HideIf("@!debugMode"), ReadOnly]
+#endif
     public int memoryWasted;
+#if ODIN_INSPECTOR    
     [BoxGroup("DEBUG"), HideIf("@!debugMode"), ReadOnly]
+#endif
     public int vertCount;
+#if ODIN_INSPECTOR    
     [BoxGroup("DEBUG"), HideIf("@!debugMode"), ReadOnly]
+#endif
     public int indexCount;
+#if ODIN_INSPECTOR    
     [BoxGroup("DEBUG"), HideIf("@!debugMode")]
+#endif
     public bool drawPlayerBounds;
+#if ODIN_INSPECTOR    
     [BoxGroup("DEBUG"), HideIf("@!debugMode")]
+#endif
     public bool drawChunkBounds;
+#if ODIN_INSPECTOR    
     [BoxGroup("DEBUG"), HideIf("@!debugMode")]
+#endif
     public ChunkDebugView drawChunkVariables;
     [Serializable]
     public class ChunkDebugView{
@@ -71,6 +96,7 @@ public class ChunkManager : MonoBehaviour, IDisposable
             }
         }
     }
+#endif
     public void Start(){
         playerBounds = new BoundingBox(player.transform.position, new float3(chunkResolution * (int)math.pow(2, 2)));
         memoryManager = new MemoryManager();
@@ -84,26 +110,33 @@ public class ChunkManager : MonoBehaviour, IDisposable
         chunkTree = new ChunkData();
         chunkTree.chunkState = ChunkState.ROOT;
         chunkTree.UpdateTreeRecursive();
+#if UNITY_EDITOR
         int elemCount = MemoryManager.maxBufferCount * MemoryManager.maxVertexCount;
         totalMemoryAllocated = elemCount * sizeof(float)*3 + elemCount * sizeof(ushort);
         totalMemoryAllocated = totalMemoryAllocated / 1000000;
-        //GenerateWorld();
+#endif
     }
     void Update(){
+#if UNITY_EDITOR
         if(debugMode){
             memoryUsed = vertCount * sizeof(float) * 3 + indexCount * sizeof(ushort);
             memoryUsed = memoryUsed / 1000000;
             memoryWasted = totalMemoryAllocated - memoryUsed;
             freeDensityMaps = memoryManager.GetFreeDensityCount();
             totalChunksAccountedFor = chunkCount + freeBufferCount;
+            chunkCount = chunkDatas.Count;
+            freeBufferCount = memoryManager.GetFreeBufferCount();
         }
         vertCount = 0;
         indexCount = 0;
+#endif
         for(int i = 0; i < chunkDatas.Count; i++){
+#if UNITY_EDITOR
             if(debugMode){
                 vertCount += chunkDatas[i].vertCount;
                 indexCount += chunkDatas[i].indexCount;
             }
+#endif
             var chunk = chunkDatas[i];
             if(chunk.chunkState == ChunkState.DIRTY){
                 if(chunk.meshJobHandle.IsCompleted){
@@ -125,10 +158,6 @@ public class ChunkManager : MonoBehaviour, IDisposable
                 var toBeProcessed = processQueue.Dequeue();
                 GenerateMesh(toBeProcessed);
             }
-        }
-        if(debugMode){
-            chunkCount = chunkDatas.Count;
-            freeBufferCount = memoryManager.GetFreeBufferCount();
         }
         if(math.distance(playerBounds.center, player.transform.position) > 10f){
             playerBounds.center = player.transform.position;
@@ -212,7 +241,9 @@ public class ChunkManager : MonoBehaviour, IDisposable
             return;
         }
         chunkData.chunkState = ChunkState.DIRTY;
+#if UNITY_EDITOR
         chunkData.genTime = Time.realtimeSinceStartup;
+#endif
         chunkData.vertCount = 0;
         chunkData.indexCount = 0;
         chunkData.vertices = memoryManager.GetVertexBuffer();
@@ -330,7 +361,6 @@ public class ChunkManager : MonoBehaviour, IDisposable
             }
         }
     }
-#endif
     void RenderOctree(Octree tree)
     {
         if (tree == null)
@@ -356,4 +386,5 @@ public class ChunkManager : MonoBehaviour, IDisposable
             }
         }
     }
+#endif
 }
