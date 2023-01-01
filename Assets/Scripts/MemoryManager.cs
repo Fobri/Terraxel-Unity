@@ -4,7 +4,7 @@ using UnityEngine;
 using Unity.Collections;
 using System;
 using Unity.Mathematics;
-
+using DataStructures;
 using Unity.Collections.LowLevel.Unsafe;
 using WorldGeneration;
 
@@ -14,10 +14,10 @@ public class MemoryManager : IDisposable{
     public const int densityMapCount = 8;
     public const int maxVertexCount = 30000;
     Queue<NativeArray<float>> freeDensityMaps;
-    Queue<NativeArray<Vector3>> freeVertexBuffers;
+    Queue<NativeArray<VertexData>> freeVertexBuffers;
     Queue<NativeArray<ushort>> freeIndexBuffers;
     Queue<NativeArray<ushort4>> freeVertexIndexBuffers;
-    NativeArray<Vector3>[] vertexBuffers;
+    NativeArray<VertexData>[] vertexBuffers;
     NativeArray<ushort>[] indexBuffers;
     NativeArray<float>[] densityBuffers;
     NativeArray<ushort4>[] vertexIndexBuffers;
@@ -33,10 +33,10 @@ public class MemoryManager : IDisposable{
         densityBuffers = freeDensityMaps.ToArray();
     }
     public void AllocateMeshData(){
-        freeVertexBuffers = new Queue<NativeArray<Vector3>>();
+        freeVertexBuffers = new Queue<NativeArray<VertexData>>();
         freeIndexBuffers = new Queue<NativeArray<ushort>>();
         for(int i = 0; i < maxBufferCount; i++){
-            freeVertexBuffers.Enqueue(new NativeArray<Vector3>(maxVertexCount, Allocator.Persistent));
+            freeVertexBuffers.Enqueue(new NativeArray<VertexData>(maxVertexCount, Allocator.Persistent));
             freeIndexBuffers.Enqueue(new NativeArray<ushort>(maxVertexCount, Allocator.Persistent));
         }
         vertexBuffers = freeVertexBuffers.ToArray();
@@ -50,7 +50,7 @@ public class MemoryManager : IDisposable{
         if(freeVertexIndexBuffers.Count == 0) throw new Exception("No free density map available", new InvalidOperationException());
         return freeVertexIndexBuffers.Dequeue();
     }
-    public NativeArray<Vector3> GetVertexBuffer(){
+    public NativeArray<VertexData> GetVertexBuffer(){
         if(freeVertexBuffers.Count == 0) throw new Exception("No free vertex buffer available", new InvalidOperationException());
         return freeVertexBuffers.Dequeue();
     }
@@ -58,7 +58,7 @@ public class MemoryManager : IDisposable{
         if(freeIndexBuffers.Count == 0) throw new Exception("No free index buffer available", new InvalidOperationException());
         return freeIndexBuffers.Dequeue();
     }
-    public void ReturnVertexBuffer(NativeArray<Vector3> buffer){
+    public void ReturnVertexBuffer(NativeArray<VertexData> buffer){
         ClearArray(buffer, buffer.Length);
         freeVertexBuffers.Enqueue(buffer);
     }

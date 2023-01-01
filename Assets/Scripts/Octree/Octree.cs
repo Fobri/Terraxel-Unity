@@ -113,26 +113,26 @@ public abstract class Octree
     public void CheckSubMeshesReady(){
         for (int i = 0; i < 8; i++){
             if(children[i] == null) return;
-            if((children[i] as ChunkData).chunkState != DataStructures.ChunkState.READY) return;
+            if((children[i] as ChunkData).chunkState != ChunkData.ChunkState.READY) return;
         }
         thisAsChunkData().FreeChunkMesh();
         parent?.CheckSubMeshesReady();
     }
     public void UpdateTreeRecursive()
     {
-        if(thisAsChunkData().chunkState == ChunkState.DIRTY || thisAsChunkData().chunkState == ChunkState.INVALID){
+        if(thisAsChunkData().chunkState == ChunkData.ChunkState.DIRTY || thisAsChunkData().chunkState == ChunkData.ChunkState.INVALID){
             ChunkManager.shouldUpdateTree = true;
             return;
         }
         float dst = math.distance(ChunkManager.playerBounds.center, region.center);
-        if(dst > ChunkManager.chunkResolution * depthMultiplier * 2f || (thisAsChunkData().chunkState != ChunkState.ROOT && thisAsChunkData().vertCount == 0)){
+        if(dst > ChunkManager.chunkResolution * depthMultiplier * 2f || (thisAsChunkData().chunkState != ChunkData.ChunkState.ROOT && thisAsChunkData().vertCount == 0)){
             if(HasSubChunks){
                 var chunk = this as ChunkData;
                 if(!chunk.HasMesh()){
-                    chunk.onMeshReady = OnMeshReady.DISPOSE_CHILDREN;
+                    chunk.onMeshReady = ChunkData.OnMeshReady.DISPOSE_CHILDREN;
                     ChunkManager.RegenerateChunk(chunk);
-                }else if(chunk.onMeshReady != OnMeshReady.DISPOSE_CHILDREN){
-                    chunk.onMeshReady = OnMeshReady.ALERT_PARENT;
+                }else if(chunk.onMeshReady != ChunkData.OnMeshReady.DISPOSE_CHILDREN){
+                    chunk.onMeshReady = ChunkData.OnMeshReady.ALERT_PARENT;
                     PruneChunksRecursive();
                 }
             }

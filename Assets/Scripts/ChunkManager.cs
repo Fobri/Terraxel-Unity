@@ -8,10 +8,12 @@ using DataStructures;
 using Unity.Jobs;
 using UnityEngine.Rendering;
 using System;
+#if ODIN_INSPECTOR    
 using Sirenix.OdinInspector;
+using ReadOnly = Sirenix.OdinInspector.ReadOnlyAttribute;
+#endif
 using System.Linq;
 using UnityEditor;
-using ReadOnly = Sirenix.OdinInspector.ReadOnlyAttribute;
 public class ChunkManager : MonoBehaviour, IDisposable
 {
     public GameObject player;
@@ -24,7 +26,9 @@ public class ChunkManager : MonoBehaviour, IDisposable
     public GameObject chunkPrefab;
     static GameObject staticChunkPrefab;
     public static MemoryManager memoryManager;
+#if ODIN_INSPECTOR
     [ShowInInspector]
+#endif
     static List<ChunkData> chunkDatas;
     static Queue<ChunkData> processQueue;
     static Queue<ChunkData> chunkPool;
@@ -108,7 +112,7 @@ public class ChunkManager : MonoBehaviour, IDisposable
         staticChunkPrefab = chunkPrefab;
         staticNoiseData = noiseData;
         chunkTree = new ChunkData();
-        chunkTree.chunkState = ChunkState.ROOT;
+        chunkTree.chunkState = ChunkData.ChunkState.ROOT;
         chunkTree.UpdateTreeRecursive();
 #if UNITY_EDITOR
         int elemCount = MemoryManager.maxBufferCount * MemoryManager.maxVertexCount;
@@ -138,21 +142,21 @@ public class ChunkManager : MonoBehaviour, IDisposable
             }
 #endif
             var chunk = chunkDatas[i];
-            if(chunk.chunkState == ChunkState.DIRTY){
+            if(chunk.chunkState == ChunkData.ChunkState.DIRTY){
                 if(chunk.meshJobHandle.IsCompleted){
                     chunk.meshJobHandle.Complete();
                     chunk.ApplyMesh();
                 }
                 continue;
             }
-            else if(chunk.disposeStatus != DisposeStatus.NOTHING){
-                if(chunk.disposeStatus == DisposeStatus.POOL)
+            else if(chunk.disposeStatus != ChunkData.DisposeStatus.NOTHING){
+                if(chunk.disposeStatus == ChunkData.DisposeStatus.POOL)
                     PoolChunk(chunk);
-                else if(chunk.disposeStatus == DisposeStatus.FREE_MESH)
+                else if(chunk.disposeStatus == ChunkData.DisposeStatus.FREE_MESH)
                     FreeChunkBuffers(chunk);
             }
         }
-        processQueue = new Queue<ChunkData>(processQueue.Where(x => x.disposeStatus == DisposeStatus.NOTHING));
+        processQueue = new Queue<ChunkData>(processQueue.Where(x => x.disposeStatus == ChunkData.DisposeStatus.NOTHING));
         if(processQueue.Count > 0){
             if(memoryManager.DensityMapAvailable && memoryManager.VertexBufferAvailable){
                 var toBeProcessed = processQueue.Dequeue();
@@ -201,8 +205,8 @@ public class ChunkManager : MonoBehaviour, IDisposable
         newChunk.name = $"Chunk {chunk.WorldPosition.x}, {chunk.WorldPosition.y}, {chunk.WorldPosition.z}";
         newChunk.transform.position = chunk.WorldPosition;
         newChunk.GetComponent<MeshFilter>().sharedMesh = new Mesh();
-        chunk.chunkState = ChunkState.INVALID;
-        chunk.disposeStatus = DisposeStatus.NOTHING;
+        chunk.chunkState = ChunkData.ChunkState.INVALID;
+        chunk.disposeStatus = ChunkData.DisposeStatus.NOTHING;
 
         chunk.worldObject = newChunk;
         GenerateMesh(chunk);
@@ -223,8 +227,8 @@ public class ChunkManager : MonoBehaviour, IDisposable
             newChunkData.worldObject = newChunk;
             newChunkData.region = bounds;
             newChunkData.depth = depth;
-            newChunkData.chunkState = ChunkState.INVALID;
-            newChunkData.disposeStatus = DisposeStatus.NOTHING;
+            newChunkData.chunkState = ChunkData.ChunkState.INVALID;
+            newChunkData.disposeStatus = ChunkData.DisposeStatus.NOTHING;
         }else{
          newChunkData = new ChunkData(newChunk, bounds, depth);
         }
@@ -240,7 +244,7 @@ public class ChunkManager : MonoBehaviour, IDisposable
             processQueue.Enqueue(chunkData);
             return;
         }
-        chunkData.chunkState = ChunkState.DIRTY;
+        chunkData.chunkState = ChunkData.ChunkState.DIRTY;
 #if UNITY_EDITOR
         chunkData.genTime = Time.realtimeSinceStartup;
 #endif
@@ -258,15 +262,15 @@ public class ChunkManager : MonoBehaviour, IDisposable
             ampl = staticNoiseData.ampl,
             freq = staticNoiseData.freq,
             oct = staticNoiseData.oct,
-            offset = chunkData.WorldPosition,
+            offset = chunkData.WorldPosition - chunkData.depthMultiplier,
             seed = staticNoiseData.offset,
             surfaceLevel = staticNoiseData.surfaceLevel,
             noiseMap = chunkData.densityMap,
-            size = chunkResolution + 2,
+            size = chunkResolution + 3,
             depthMultiplier = chunkData.depthMultiplier
             //pos = WorldSetup.positions
         };
-        var noiseHandle = noiseJob.Schedule((chunkResolution + 2) * (chunkResolution + 2) * (chunkResolution + 2), 64);
+        var noiseHandle = noiseJob.Schedule((chunkResolution + 3) * (chunkResolution + 3) * (chunkResolution + 3), 64);
 
         
         
@@ -295,7 +299,7 @@ public class ChunkManager : MonoBehaviour, IDisposable
     }
 
     int GetDensityMapLength(){
-        var noiseMapSize = chunkResolution + 2;
+        var noiseMapSize = chunkResolution + 3;
         return noiseMapSize * noiseMapSize * noiseMapSize;
     }
     public void OnDisable(){
@@ -306,18 +310,7 @@ public class ChunkManager : MonoBehaviour, IDisposable
         memoryManager.Dispose();
     }
 
-    public static int XyzToIndex(int x, int y, int z, int width, int height)
-    {
-        return z * width * height + y * width + x;
-    }
-    public static int3 IndexToXyz(int index, int width, int height)
-    {
-        int3 position = new int3(
-            index % width,
-            index / width % height,
-            index / (width * height));
-        return position;
-    }
+    
 #if UNITY_EDITOR
     private void OnDrawGizmos()
     {

@@ -9,8 +9,6 @@ Infinite world
 
 Proper memory allocator for vertex and index data
 
-Calculate normals inside the job
-
 Add colliders to 0 depth chunks
 
 Terrain editing
