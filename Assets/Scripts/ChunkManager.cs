@@ -14,6 +14,7 @@ using ReadOnly = Sirenix.OdinInspector.ReadOnlyAttribute;
 #endif
 using System.Linq;
 using UnityEditor;
+using TMPro;
 public class ChunkManager : MonoBehaviour, IDisposable
 {
     public GameObject player;
@@ -34,8 +35,8 @@ public class ChunkManager : MonoBehaviour, IDisposable
     static Queue<ChunkData> chunkPool;
     ChunkData chunkTree;
 
-#if UNITY_EDITOR
     //DEBUG
+    [DisableInPlayMode]
     public bool debugMode;
 #if ODIN_INSPECTOR    
 [BoxGroup("DEBUG"), HideIf("@!debugMode"), ReadOnly]
@@ -74,6 +75,11 @@ public class ChunkManager : MonoBehaviour, IDisposable
 #endif
     public int indexCount;
 #if ODIN_INSPECTOR    
+    [BoxGroup("DEBUG"), HideIf("@!debugMode"), ReadOnly]
+#endif
+    public float totalGenTime;
+#if UNITY_EDITOR
+#if ODIN_INSPECTOR    
     [BoxGroup("DEBUG"), HideIf("@!debugMode")]
 #endif
     public bool drawPlayerBounds;
@@ -101,6 +107,7 @@ public class ChunkManager : MonoBehaviour, IDisposable
         }
     }
 #endif
+public TextMeshProUGUI[] debugLabels;
     public void Start(){
         playerBounds = new BoundingBox(player.transform.position, new float3(chunkResolution * (int)math.pow(2, 2)));
         memoryManager = new MemoryManager();
@@ -114,33 +121,40 @@ public class ChunkManager : MonoBehaviour, IDisposable
         chunkTree = new ChunkData();
         chunkTree.chunkState = ChunkData.ChunkState.ROOT;
         chunkTree.UpdateTreeRecursive();
-#if UNITY_EDITOR
-        int elemCount = MemoryManager.maxBufferCount * MemoryManager.maxVertexCount;
-        totalMemoryAllocated = elemCount * sizeof(float)*3 + elemCount * sizeof(ushort);
-        totalMemoryAllocated = totalMemoryAllocated / 1000000;
-#endif
+        if(debugMode){
+            int elemCount = MemoryManager.maxBufferCount * MemoryManager.maxVertexCount;
+            totalMemoryAllocated = elemCount * sizeof(float)*6 + elemCount * sizeof(ushort);
+            totalMemoryAllocated = totalMemoryAllocated / 1000000;
+        }
     }
     void Update(){
-#if UNITY_EDITOR
         if(debugMode){
-            memoryUsed = vertCount * sizeof(float) * 3 + indexCount * sizeof(ushort);
+            memoryUsed = vertCount * sizeof(float) * 6 + indexCount * sizeof(ushort);
             memoryUsed = memoryUsed / 1000000;
             memoryWasted = totalMemoryAllocated - memoryUsed;
             freeDensityMaps = memoryManager.GetFreeDensityCount();
             totalChunksAccountedFor = chunkCount + freeBufferCount;
             chunkCount = chunkDatas.Count;
             freeBufferCount = memoryManager.GetFreeBufferCount();
+            debugLabels[0].text = $"Total Memory allocated: {totalMemoryAllocated} Mb";
+            debugLabels[1].text = $"Memory used: {memoryUsed} Mb";
+            debugLabels[2].text = $"Free Memory: {memoryWasted} Mb";
+            debugLabels[3].text = $"Currently processing {MemoryManager.densityMapCount - freeDensityMaps}/{MemoryManager.densityMapCount}";
+            debugLabels[4].text = $"Chunk count: {chunkCount}/{MemoryManager.maxBufferCount}";
+            debugLabels[5].text = $"Free vertex buffers: {freeBufferCount}";
+            debugLabels[6].text = $"Total chunk generation time: {totalGenTime}";
+            debugLabels[7].text = $"Vertex count: {vertCount}";
+            debugLabels[8].text = $"Index count: {indexCount}";
         }
         vertCount = 0;
         indexCount = 0;
-#endif
+        totalGenTime = 0f;
         for(int i = 0; i < chunkDatas.Count; i++){
-#if UNITY_EDITOR
             if(debugMode){
                 vertCount += chunkDatas[i].vertCount;
                 indexCount += chunkDatas[i].indexCount;
+                totalGenTime += chunkDatas[i].genTime;
             }
-#endif
             var chunk = chunkDatas[i];
             if(chunk.chunkState == ChunkData.ChunkState.DIRTY){
                 if(chunk.meshJobHandle.IsCompleted){
@@ -245,9 +259,7 @@ public class ChunkManager : MonoBehaviour, IDisposable
             return;
         }
         chunkData.chunkState = ChunkData.ChunkState.DIRTY;
-#if UNITY_EDITOR
         chunkData.genTime = Time.realtimeSinceStartup;
-#endif
         chunkData.vertCount = 0;
         chunkData.indexCount = 0;
         chunkData.vertices = memoryManager.GetVertexBuffer();

@@ -22,9 +22,7 @@ public class ChunkData : Octree{
         public ChunkState chunkState = ChunkState.INVALID;
         public OnMeshReady onMeshReady = OnMeshReady.ALERT_PARENT;
         public DisposeStatus disposeStatus = DisposeStatus.NOTHING;
-#if UNITY_EDITOR
         public float genTime;
-#endif
         public int vertCount;
         public int indexCount;
         SubMeshDescriptor desc = new SubMeshDescriptor();
@@ -71,9 +69,7 @@ public class ChunkData : Octree{
             }
             indexCounter.Dispose();
             vertexCounter.Dispose();
-#if UNITY_EDITOR
             genTime = Time.realtimeSinceStartup - genTime;
-#endif
             ChunkManager.memoryManager.ReturnDensityMap(densityMap);
             ChunkManager.memoryManager.ReturnVertexIndexBuffer(vertexIndexBuffer);
             densityMap = default;
