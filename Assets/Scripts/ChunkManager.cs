@@ -26,6 +26,8 @@ public class ChunkManager : MonoBehaviour, IDisposable
     static WorldGeneration.NoiseData staticNoiseData;
     public GameObject chunkPrefab;
     static GameObject staticChunkPrefab;
+    static Transform poolParent;
+    static Transform activeParent;
     public static MemoryManager memoryManager;
 #if ODIN_INSPECTOR
     [ShowInInspector]
@@ -33,6 +35,7 @@ public class ChunkManager : MonoBehaviour, IDisposable
     static List<ChunkData> chunkDatas;
     static Queue<ChunkData> processQueue;
     static Queue<ChunkData> chunkPool;
+    static Queue<GameObject> objectPool;
     ChunkData chunkTree;
 
     //DEBUG
@@ -113,11 +116,14 @@ public TextMeshProUGUI[] debugLabels;
         memoryManager = new MemoryManager();
         processQueue = new Queue<ChunkData>();
         chunkPool = new Queue<ChunkData>();
+        objectPool = new Queue<GameObject>();
         memoryManager.AllocateDensityMaps(GetDensityMapLength(), (chunkResolution + 1)*(chunkResolution + 1)*(chunkResolution + 1));
         memoryManager.AllocateMeshData();
         chunkDatas = new List<ChunkData>();
         staticChunkPrefab = chunkPrefab;
         staticNoiseData = noiseData;
+        poolParent = transform.GetChild(0);
+        activeParent = transform.GetChild(1);
         chunkTree = new ChunkData();
         chunkTree.chunkState = ChunkData.ChunkState.ROOT;
         chunkTree.UpdateTreeRecursive();
@@ -192,7 +198,13 @@ public TextMeshProUGUI[] debugLabels;
     }
     public static void FreeChunkBuffers(ChunkData chunk){
         chunkDatas.Remove(chunk);
-        Destroy(chunk.worldObject);
+        //Destroy(chunk.worldObject);
+        //chunk.worldObject.SetActive(false);
+        chunk.worldObject.name = "Pooled chunk";
+        chunk.worldObject.transform.SetParent(poolParent);
+        chunk.worldObject.GetComponent<MeshFilter>().sharedMesh.Clear();
+        objectPool.Enqueue(chunk.worldObject);
+        chunk.worldObject = null;
         if(chunk.indices.IsCreated){
             memoryManager.ReturnIndexBuffer(chunk.indices);
             chunk.indices = default;
@@ -210,15 +222,27 @@ public TextMeshProUGUI[] debugLabels;
             chunk.vertexIndexBuffer = default;
         }
     }
+    static GameObject GetChunkObject(){
+        if(objectPool.Count > 0){
+            var chunk = objectPool.Dequeue();
+            chunk.transform.SetParent(activeParent);
+            return chunk;
+        }
+        else{
+            var chunk = Instantiate(staticChunkPrefab);
+            chunk.GetComponent<MeshFilter>().sharedMesh = new Mesh();
+            chunk.transform.SetParent(activeParent);
+            return chunk;
+        }
+    }
     public static void RegenerateChunk(ChunkData chunk){
         if(chunkDatas.Count >= MemoryManager.maxBufferCount){ 
             shouldUpdateTree = true;
             return;
         }
-        GameObject newChunk = Instantiate(staticChunkPrefab);
+        GameObject newChunk = GetChunkObject();
         newChunk.name = $"Chunk {chunk.WorldPosition.x}, {chunk.WorldPosition.y}, {chunk.WorldPosition.z}";
         newChunk.transform.position = chunk.WorldPosition;
-        newChunk.GetComponent<MeshFilter>().sharedMesh = new Mesh();
         chunk.chunkState = ChunkData.ChunkState.INVALID;
         chunk.disposeStatus = ChunkData.DisposeStatus.NOTHING;
 
@@ -231,10 +255,9 @@ public TextMeshProUGUI[] debugLabels;
             shouldUpdateTree = true;
             return null;
         }
-        GameObject newChunk = Instantiate(staticChunkPrefab);
+        GameObject newChunk = GetChunkObject();
         newChunk.name = $"Chunk {pos.x}, {pos.y}, {pos.z}";
         newChunk.transform.position = pos;
-        newChunk.GetComponent<MeshFilter>().sharedMesh = new Mesh();
         ChunkData newChunkData = null;
         if(chunkPool.Count > 0){
             newChunkData = chunkPool.Dequeue();

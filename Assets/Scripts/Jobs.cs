@@ -236,15 +236,6 @@ namespace WorldGeneration
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public float3 GetVertexNormal(int3 voxelLocalPosition){
             if(voxelLocalPosition.x >= chunkSize || voxelLocalPosition.y >= chunkSize || voxelLocalPosition.z >= chunkSize) return new float3(0);
-            /*float3 normal = new float3(0f);
-            float localDensity = densities[Utils.XyzToIndex(voxelLocalPosition, chunkSize + 1)];
-            if(densities[Utils.XyzToIndex(voxelLocalPosition + new int3(1, 0, 0), chunkSize + 1)] > localDensity) normal.x += 1f;
-            if(densities[Utils.XyzToIndex(voxelLocalPosition + new int3(-1, 0, 0), chunkSize + 1)] > localDensity) normal.x -= 1f;
-            if(densities[Utils.XyzToIndex(voxelLocalPosition + new int3(0, 1, 0), chunkSize + 1)] > localDensity) normal.y += 1f;
-            if(densities[Utils.XyzToIndex(voxelLocalPosition + new int3(0, -1, 0), chunkSize + 1)] > localDensity) normal.y -= 1f;
-            if(densities[Utils.XyzToIndex(voxelLocalPosition + new int3(0, 0, 1), chunkSize + 1)] > localDensity) normal.z += 1f;
-            if(densities[Utils.XyzToIndex(voxelLocalPosition + new int3(0, 0, -1), chunkSize + 1)] > localDensity) normal.z -= 1f;
-            return math.normalize(normal);*/
             float nx = (SampleDensity(voxelLocalPosition + new int3(1, 0, 0)) - SampleDensity(voxelLocalPosition - new int3(1, 0, 0)));
             float ny = (SampleDensity(voxelLocalPosition + new int3(0, 1, 0)) - SampleDensity(voxelLocalPosition - new int3(0, 1, 0)));
             float nz = (SampleDensity(voxelLocalPosition + new int3(0, 0, 1)) - SampleDensity(voxelLocalPosition - new int3(0, 0, 1)));
