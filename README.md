@@ -13,14 +13,13 @@ Add colliders to 0 depth chunks
 
 Terrain editing
 
-Pool chunk GameObjects
 
 
 Problems
 
 When moving really fast some high detail chunks might remain until parent chunk gets pooled
 
-Slight stutter when a lot of chunks get loaded/unloaded (Will be fixed with chunk GameObject pooling probably)
+Slight stutter when a lot of chunks get loaded/unloaded
 
 If the highest LOD level has no surface, the chunk doesnt divide further possibly missing detail (Like small islands etc)
 

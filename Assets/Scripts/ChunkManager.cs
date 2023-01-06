@@ -200,10 +200,13 @@ public TextMeshProUGUI[] debugLabels;
         chunkDatas.Remove(chunk);
         //Destroy(chunk.worldObject);
         //chunk.worldObject.SetActive(false);
-        chunk.worldObject.name = "Pooled chunk";
-        chunk.worldObject.transform.SetParent(poolParent);
-        chunk.worldObject.GetComponent<MeshFilter>().sharedMesh.Clear();
-        objectPool.Enqueue(chunk.worldObject);
+        if(chunk.worldObject != null){
+            chunk.worldObject.name = "Pooled chunk";
+            chunk.worldObject.transform.SetParent(poolParent);
+            chunk.worldObject.GetComponent<MeshFilter>().sharedMesh.Clear();
+            objectPool.Enqueue(chunk.worldObject);
+        }
+        chunk.hasMesh = false;
         chunk.worldObject = null;
         if(chunk.indices.IsCreated){
             memoryManager.ReturnIndexBuffer(chunk.indices);
@@ -222,7 +225,7 @@ public TextMeshProUGUI[] debugLabels;
             chunk.vertexIndexBuffer = default;
         }
     }
-    static GameObject GetChunkObject(){
+    public static GameObject GetChunkObject(){
         if(objectPool.Count > 0){
             var chunk = objectPool.Dequeue();
             chunk.transform.SetParent(activeParent);
@@ -240,13 +243,13 @@ public TextMeshProUGUI[] debugLabels;
             shouldUpdateTree = true;
             return;
         }
-        GameObject newChunk = GetChunkObject();
+        /*GameObject newChunk = GetChunkObject();
         newChunk.name = $"Chunk {chunk.WorldPosition.x}, {chunk.WorldPosition.y}, {chunk.WorldPosition.z}";
-        newChunk.transform.position = chunk.WorldPosition;
+        newChunk.transform.position = chunk.WorldPosition;*/
         chunk.chunkState = ChunkData.ChunkState.INVALID;
         chunk.disposeStatus = ChunkData.DisposeStatus.NOTHING;
-
-        chunk.worldObject = newChunk;
+        chunk.hasMesh = true;
+        //chunk.worldObject = newChunk;
         GenerateMesh(chunk);
         chunkDatas.Add(chunk);
     }
@@ -255,21 +258,22 @@ public TextMeshProUGUI[] debugLabels;
             shouldUpdateTree = true;
             return null;
         }
-        GameObject newChunk = GetChunkObject();
+        /*GameObject newChunk = GetChunkObject();
         newChunk.name = $"Chunk {pos.x}, {pos.y}, {pos.z}";
-        newChunk.transform.position = pos;
+        newChunk.transform.position = pos;*/
         ChunkData newChunkData = null;
         if(chunkPool.Count > 0){
             newChunkData = chunkPool.Dequeue();
-            newChunkData.worldObject = newChunk;
+            //newChunkData.worldObject = newChunk;
             newChunkData.region = bounds;
             newChunkData.depth = depth;
             newChunkData.chunkState = ChunkData.ChunkState.INVALID;
             newChunkData.disposeStatus = ChunkData.DisposeStatus.NOTHING;
         }else{
-         newChunkData = new ChunkData(newChunk, bounds, depth);
+         newChunkData = new ChunkData(null, bounds, depth);
         }
         
+        newChunkData.hasMesh = true;
         GenerateMesh(newChunkData);
 
         chunkDatas.Add(newChunkData);

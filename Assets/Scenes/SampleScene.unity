@@ -1577,7 +1577,7 @@ MonoBehaviour:
     oct: 2
     offset: 136.5
   chunkPrefab: {fileID: 4194868686972551607, guid: 6c35f3c6ef85df74c950c7dc8cd341fc, type: 3}
-  debugMode: 0
+  debugMode: 1
   chunkCount: 0
   freeBufferCount: 0
   totalChunksAccountedFor: 0

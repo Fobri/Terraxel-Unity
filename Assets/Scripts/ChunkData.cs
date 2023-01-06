@@ -25,7 +25,13 @@ public class ChunkData : Octree{
         public float genTime;
         public int vertCount;
         public int indexCount;
+        public bool hasMesh;
         SubMeshDescriptor desc = new SubMeshDescriptor();
+        static VertexAttributeDescriptor[] layout = new[]
+                {
+                    new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float32, 3),
+                    new VertexAttributeDescriptor(VertexAttribute.Normal, VertexAttributeFormat.Float32, 3)
+                };
         public ChunkData(GameObject worldObject, BoundingBox bounds, int depth) 
         : base(bounds, depth){
             this.worldObject = worldObject;
@@ -37,18 +43,20 @@ public class ChunkData : Octree{
         //ROOT chunk
         public ChunkData() : base() {
         }
+        void InitWorldObject(){
+            worldObject = ChunkManager.GetChunkObject();
+            worldObject.name = $"Chunk {WorldPosition.x}, {WorldPosition.y}, {WorldPosition.z}";
+            worldObject.transform.position = WorldPosition;
+        }
         public void ApplyMesh(){
             chunkState = ChunkState.READY;
-            var mesh = worldObject.GetComponent<MeshFilter>().sharedMesh;
-            var layout = new[]
-                {
-                    new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float32, 3),
-                    new VertexAttributeDescriptor(VertexAttribute.Normal, VertexAttributeFormat.Float32, 3)
-                };
+            
             var vertexCount = vertexCounter.Count;
             var indexCount = indexCounter.Count * 3;
             if (vertexCount > 0)
             {
+                InitWorldObject();
+                var mesh = worldObject.GetComponent<MeshFilter>().sharedMesh;
                 mesh.bounds = new Bounds(new float3(ChunkManager.chunkResolution * depthMultiplier / 2), region.bounds);
                 //Set vertices and indices
                 mesh.SetVertexBufferParams(vertexCount, layout);
@@ -87,9 +95,9 @@ public class ChunkData : Octree{
         public void PoolChunk(){
             disposeStatus = DisposeStatus.POOL;
         }
-        public bool HasMesh(){
+        /*public bool HasMesh(){
             return worldObject != null;
-        }
+        }*/
         public float3 WorldPosition{
             get{
                 return (float3)region.center - new float3(ChunkManager.chunkResolution * depthMultiplier / 2);

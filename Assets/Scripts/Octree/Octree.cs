@@ -128,7 +128,7 @@ public abstract class Octree
         if(dst > ChunkManager.chunkResolution * depthMultiplier * 2f || (thisAsChunkData().chunkState != ChunkData.ChunkState.ROOT && thisAsChunkData().vertCount == 0)){
             if(HasSubChunks){
                 var chunk = this as ChunkData;
-                if(!chunk.HasMesh()){
+                if(!chunk.hasMesh){
                     chunk.onMeshReady = ChunkData.OnMeshReady.DISPOSE_CHILDREN;
                     ChunkManager.RegenerateChunk(chunk);
                 }else if(chunk.onMeshReady != ChunkData.OnMeshReady.DISPOSE_CHILDREN){
