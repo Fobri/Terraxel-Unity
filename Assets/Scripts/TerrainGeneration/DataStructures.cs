@@ -1,10 +1,33 @@
 using Unity.Mathematics;
+using Unity.Collections;
 
 namespace DataStructures
 {
     public struct VertexData{
         public float3 vertex;
         public float3 normal;
+    }
+    public struct MeshData : System.IDisposable{
+        
+        public NativeArray<VertexData> vertexBuffer;
+        public NativeArray<ushort> indexBuffer;
+        public NativeArray<float> densityBuffer;
+
+        public MeshData(NativeArray<VertexData> vertexBuffer, NativeArray<ushort> indexBuffer, NativeArray<float> densityBuffer){
+            this.vertexBuffer = vertexBuffer;
+            this.indexBuffer = indexBuffer;
+            this.densityBuffer = densityBuffer;
+        }
+        public bool IsCreated{
+            get{
+                return vertexBuffer.IsCreated;
+            }
+        }
+        public void Dispose(){
+            densityBuffer.Dispose();
+            indexBuffer.Dispose();
+            vertexBuffer.Dispose();
+        }
     }
     public struct ushort4{
         public ushort x;

@@ -17,6 +17,9 @@ using UnityEditor;
 using TMPro;
 public class ChunkManager : MonoBehaviour, IDisposable
 {
+    public enum WorldState { DENSITY_UPDATE, MESH_UPDATE, IDLE }
+    [ReadOnly]
+    public WorldState worldState = WorldState.IDLE;
     public GameObject player;
     public static BoundingBox playerBounds;
     public static bool shouldUpdateTree = false;
@@ -33,7 +36,8 @@ public class ChunkManager : MonoBehaviour, IDisposable
     [ShowInInspector]
 #endif
     static List<ChunkData> chunkDatas;
-    static Queue<ChunkData> processQueue;
+    static Queue<ChunkData> densityQueue;
+    static Queue<ChunkData> meshQueue;
     static Queue<ChunkData> chunkPool;
     static Queue<GameObject> objectPool;
     ChunkData chunkTree;
@@ -114,11 +118,11 @@ public TextMeshProUGUI[] debugLabels;
     public void Start(){
         playerBounds = new BoundingBox(player.transform.position, new float3(chunkResolution * (int)math.pow(2, 2)));
         memoryManager = new MemoryManager();
-        processQueue = new Queue<ChunkData>();
+        densityQueue = new Queue<ChunkData>();
+        meshQueue = new Queue<ChunkData>();
         chunkPool = new Queue<ChunkData>();
         objectPool = new Queue<GameObject>();
-        memoryManager.AllocateDensityMaps(GetDensityMapLength(), (chunkResolution + 1)*(chunkResolution + 1)*(chunkResolution + 1));
-        memoryManager.AllocateMeshData();
+        memoryManager.Init();
         chunkDatas = new List<ChunkData>();
         staticChunkPrefab = chunkPrefab;
         staticNoiseData = noiseData;
@@ -129,7 +133,10 @@ public TextMeshProUGUI[] debugLabels;
         chunkTree.UpdateTreeRecursive();
         if(debugMode){
             int elemCount = MemoryManager.maxBufferCount * MemoryManager.maxVertexCount;
-            totalMemoryAllocated = elemCount * sizeof(float)*6 + elemCount * sizeof(ushort);
+            var ns = ChunkManager.chunkResolution + 3;
+            var size = ns * ns * ns;
+            int nmSize = MemoryManager.maxBufferCount * size;
+            totalMemoryAllocated = elemCount * sizeof(float)*6 + elemCount * sizeof(ushort) + nmSize * sizeof(float);
             totalMemoryAllocated = totalMemoryAllocated / 1000000;
         }
     }
@@ -138,14 +145,14 @@ public TextMeshProUGUI[] debugLabels;
             memoryUsed = vertCount * sizeof(float) * 6 + indexCount * sizeof(ushort);
             memoryUsed = memoryUsed / 1000000;
             memoryWasted = totalMemoryAllocated - memoryUsed;
-            freeDensityMaps = memoryManager.GetFreeDensityCount();
+            freeDensityMaps = memoryManager.GetFreeVertexIndexBufferCount();
             totalChunksAccountedFor = chunkCount + freeBufferCount;
             chunkCount = chunkDatas.Count;
-            freeBufferCount = memoryManager.GetFreeBufferCount();
+            freeBufferCount = memoryManager.GetFreeMeshDataCount();
             debugLabels[0].text = $"Total Memory allocated: {totalMemoryAllocated} Mb";
             debugLabels[1].text = $"Memory used: {memoryUsed} Mb";
             debugLabels[2].text = $"Free Memory: {memoryWasted} Mb";
-            debugLabels[3].text = $"Currently processing {MemoryManager.densityMapCount - freeDensityMaps}/{MemoryManager.densityMapCount}";
+            debugLabels[3].text = $"Currently processing {MemoryManager.maxConcurrentOperations - freeDensityMaps}/{MemoryManager.maxConcurrentOperations}";
             debugLabels[4].text = $"Chunk count: {chunkCount}/{MemoryManager.maxBufferCount}";
             debugLabels[5].text = $"Free vertex buffers: {freeBufferCount}";
             debugLabels[6].text = $"Total chunk generation time: {totalGenTime}";
@@ -155,6 +162,8 @@ public TextMeshProUGUI[] debugLabels;
         vertCount = 0;
         indexCount = 0;
         totalGenTime = 0f;
+        bool densityUpdates = false;
+        bool meshUpdates = false;
         for(int i = 0; i < chunkDatas.Count; i++){
             if(debugMode){
                 vertCount += chunkDatas[i].vertCount;
@@ -162,26 +171,59 @@ public TextMeshProUGUI[] debugLabels;
                 totalGenTime += chunkDatas[i].genTime;
             }
             var chunk = chunkDatas[i];
+            if(chunk.generationState == ChunkData.GenerationState.DENSITY && chunk.chunkState != ChunkData.ChunkState.READY) densityUpdates = true;
+            else if (chunk.generationState == ChunkData.GenerationState.MESH && chunk.chunkState != ChunkData.ChunkState.READY) meshUpdates = true;
             if(chunk.chunkState == ChunkData.ChunkState.DIRTY){
-                if(chunk.meshJobHandle.IsCompleted){
-                    chunk.meshJobHandle.Complete();
-                    chunk.ApplyMesh();
+                if(chunk.jobHandle.IsCompleted){
+                    chunk.jobHandle.Complete();
+                    if(chunk.generationState == ChunkData.GenerationState.MESH)
+                        chunk.ApplyMesh();
+                    else{
+                        chunk.generationState = ChunkData.GenerationState.MESH;
+                        UpdateChunk(chunk);
+                    }
                 }
                 continue;
             }
-            else if(chunk.disposeStatus != ChunkData.DisposeStatus.NOTHING){
-                if(chunk.disposeStatus == ChunkData.DisposeStatus.POOL)
+            else if(chunk.disposeStatus != ChunkData.DisposeState.NOTHING){
+                if(chunk.disposeStatus == ChunkData.DisposeState.POOL)
                     PoolChunk(chunk);
-                else if(chunk.disposeStatus == ChunkData.DisposeStatus.FREE_MESH)
+                else if(chunk.disposeStatus == ChunkData.DisposeState.FREE_MESH)
                     FreeChunkBuffers(chunk);
             }
         }
-        processQueue = new Queue<ChunkData>(processQueue.Where(x => x.disposeStatus == ChunkData.DisposeStatus.NOTHING));
-        if(processQueue.Count > 0){
-            if(memoryManager.DensityMapAvailable && memoryManager.VertexBufferAvailable){
-                var toBeProcessed = processQueue.Dequeue();
-                GenerateMesh(toBeProcessed);
+        if(!densityUpdates && worldState == WorldState.DENSITY_UPDATE){
+            if(meshUpdates){}
+        }
+        if(worldState == WorldState.DENSITY_UPDATE){
+            densityQueue = new Queue<ChunkData>(densityQueue.Where(x => x.disposeStatus == ChunkData.DisposeState.NOTHING));
+            if(densityQueue.Count > 0){
+                while(densityQueue.Count > 0){
+                    var toBeProcessed = densityQueue.Dequeue();
+                    UpdateChunk(toBeProcessed);
+                }
+            }else if(!densityUpdates){
+                worldState = WorldState.IDLE;
             }
+        }
+        else if(worldState == WorldState.MESH_UPDATE){
+            meshQueue = new Queue<ChunkData>(meshQueue.Where(x => x.disposeStatus == ChunkData.DisposeState.NOTHING));
+            if(meshQueue.Count > 0){
+                while(meshQueue.Count > 0 && memoryManager.GetFreeVertexIndexBufferCount() > 0){
+                    var toBeProcessed = meshQueue.Dequeue();
+                    if(!toBeProcessed.meshData.IsCreated && memoryManager.GetFreeMeshDataCount() == 0) {
+                        meshQueue.Enqueue(toBeProcessed);
+                        break;
+                    }
+                    UpdateChunk(toBeProcessed);
+                }
+            }else if(!meshUpdates){
+                worldState = WorldState.IDLE;
+            }
+        }
+        if(worldState == WorldState.IDLE){
+            if(densityQueue.Count > 0) worldState = WorldState.DENSITY_UPDATE;
+            else if(meshQueue.Count > 0) worldState = WorldState.MESH_UPDATE;
         }
         if(math.distance(playerBounds.center, player.transform.position) > 10f){
             playerBounds.center = player.transform.position;
@@ -208,21 +250,9 @@ public TextMeshProUGUI[] debugLabels;
         }
         chunk.hasMesh = false;
         chunk.worldObject = null;
-        if(chunk.indices.IsCreated){
-            memoryManager.ReturnIndexBuffer(chunk.indices);
-            chunk.indices = default;
-        }
-        if(chunk.vertices.IsCreated){
-            memoryManager.ReturnVertexBuffer(chunk.vertices);
-            chunk.vertices = default;
-        }
-        if(chunk.densityMap != default){ 
-            memoryManager.ReturnDensityMap(chunk.densityMap);
-            chunk.densityMap = default;
-        }
-        if(chunk.vertexIndexBuffer != default){
-            memoryManager.ReturnVertexIndexBuffer(chunk.vertexIndexBuffer);
-            chunk.vertexIndexBuffer = default;
+        if(chunk.meshData.IsCreated){
+            memoryManager.ReturnMeshData(chunk.meshData);
+            chunk.meshData = default;
         }
     }
     public static GameObject GetChunkObject(){
@@ -247,10 +277,11 @@ public TextMeshProUGUI[] debugLabels;
         newChunk.name = $"Chunk {chunk.WorldPosition.x}, {chunk.WorldPosition.y}, {chunk.WorldPosition.z}";
         newChunk.transform.position = chunk.WorldPosition;*/
         chunk.chunkState = ChunkData.ChunkState.INVALID;
-        chunk.disposeStatus = ChunkData.DisposeStatus.NOTHING;
+        chunk.disposeStatus = ChunkData.DisposeState.NOTHING;
+        chunk.generationState = ChunkData.GenerationState.DENSITY;
         chunk.hasMesh = true;
         //chunk.worldObject = newChunk;
-        GenerateMesh(chunk);
+        UpdateChunk(chunk);
         chunkDatas.Add(chunk);
     }
     public static ChunkData GenerateChunk(Vector3 pos, int depth, BoundingBox bounds){
@@ -268,34 +299,49 @@ public TextMeshProUGUI[] debugLabels;
             newChunkData.region = bounds;
             newChunkData.depth = depth;
             newChunkData.chunkState = ChunkData.ChunkState.INVALID;
-            newChunkData.disposeStatus = ChunkData.DisposeStatus.NOTHING;
+            newChunkData.disposeStatus = ChunkData.DisposeState.NOTHING;
+            newChunkData.generationState = ChunkData.GenerationState.DENSITY;
         }else{
          newChunkData = new ChunkData(null, bounds, depth);
         }
         
         newChunkData.hasMesh = true;
-        GenerateMesh(newChunkData);
+        UpdateChunk(newChunkData);
 
         chunkDatas.Add(newChunkData);
         return newChunkData;
     }
-    static void GenerateMesh(ChunkData chunkData)
-    {
-        if(!memoryManager.DensityMapAvailable || !memoryManager.VertexBufferAvailable){
-            processQueue.Enqueue(chunkData);
-            return;
-        }
-        chunkData.chunkState = ChunkData.ChunkState.DIRTY;
+    static void UpdateChunk(ChunkData chunkData){
         chunkData.genTime = Time.realtimeSinceStartup;
-        chunkData.vertCount = 0;
-        chunkData.indexCount = 0;
-        chunkData.vertices = memoryManager.GetVertexBuffer();
-        chunkData.indices = memoryManager.GetIndexBuffer();
-        chunkData.vertexCounter = new Counter(Allocator.Persistent);
-        chunkData.indexCounter = new Counter(Allocator.Persistent);
-        chunkData.densityMap = memoryManager.GetDensityMap();
-        chunkData.vertexIndexBuffer = memoryManager.GetVertexIndexBuffer();
-
+        if(chunkData.generationState == ChunkData.GenerationState.DENSITY){
+            if(!chunkData.meshData.IsCreated){
+                if(memoryManager.GetFreeMeshDataCount() > 0){
+                    chunkData.meshData = memoryManager.GetMeshData();
+                }else{
+                    densityQueue.Enqueue(chunkData);
+                    chunkData.chunkState = ChunkData.ChunkState.QUEUED;
+                    return;
+                }
+            }
+            chunkData.chunkState = ChunkData.ChunkState.DIRTY;
+            chunkData.jobHandle = ScheduleDensityJob(chunkData);
+        }
+        else{
+            if(memoryManager.GetFreeVertexIndexBufferCount() == 0){
+                chunkData.chunkState = ChunkData.ChunkState.QUEUED;
+                meshQueue.Enqueue(chunkData);
+                return;
+            }
+            chunkData.vertexIndexBuffer = memoryManager.GetVertexIndexBuffer();
+            chunkData.vertCount = 0;
+            chunkData.indexCount = 0;
+            chunkData.vertexCounter = new Counter(Allocator.Persistent);
+            chunkData.indexCounter = new Counter(Allocator.Persistent);
+            chunkData.chunkState = ChunkData.ChunkState.DIRTY;
+            chunkData.jobHandle = ScheduleMeshJob(chunkData);
+        }
+    }
+    static JobHandle ScheduleDensityJob(ChunkData chunkData){
         var noiseJob = new NoiseJob()
         {
             ampl = staticNoiseData.ampl,
@@ -304,42 +350,37 @@ public TextMeshProUGUI[] debugLabels;
             offset = chunkData.WorldPosition - chunkData.depthMultiplier,
             seed = staticNoiseData.offset,
             surfaceLevel = staticNoiseData.surfaceLevel,
-            noiseMap = chunkData.densityMap,
+            noiseMap = chunkData.meshData.densityBuffer,
             size = chunkResolution + 3,
             depthMultiplier = chunkData.depthMultiplier
             //pos = WorldSetup.positions
         };
-        var noiseHandle = noiseJob.Schedule((chunkResolution + 3) * (chunkResolution + 3) * (chunkResolution + 3), 64);
-
-        
-        
+        return noiseJob.Schedule((chunkResolution + 3) * (chunkResolution + 3) * (chunkResolution + 3), 64);
+    }
+    static JobHandle ScheduleMeshJob(ChunkData chunkData)
+    {
         var marchingJob = new MarchingJob()
         {
-            densities = chunkData.densityMap,
+            densities = chunkData.meshData.densityBuffer,
             isolevel = 0f,
             chunkSize = chunkResolution + 1,
-            vertices = chunkData.vertices,
+            vertices = chunkData.meshData.vertexBuffer,
             //triangles = chunkData.indices,
             vertexCounter = chunkData.vertexCounter,
             depthMultiplier = chunkData.depthMultiplier,
             vertexIndices = chunkData.vertexIndexBuffer
             
         };
-        var marchingHandle = marchingJob.Schedule((chunkResolution + 1) * (chunkResolution + 1) * (chunkResolution + 1), 32, noiseHandle);
+        var marchingHandle = marchingJob.Schedule((chunkResolution + 1) * (chunkResolution + 1) * (chunkResolution + 1), 32);
 
         var vertexSharingJob = new VertexSharingJob()
         {
-            triangles = chunkData.indices,
+            triangles = chunkData.meshData.indexBuffer,
             chunkSize = chunkResolution + 1,
             counter = chunkData.indexCounter,
             vertexIndices = chunkData.vertexIndexBuffer
         };
-        chunkData.meshJobHandle = vertexSharingJob.Schedule((chunkResolution + 1) * (chunkResolution + 1) * (chunkResolution + 1), 32, marchingHandle);
-    }
-
-    int GetDensityMapLength(){
-        var noiseMapSize = chunkResolution + 3;
-        return noiseMapSize * noiseMapSize * noiseMapSize;
+        return vertexSharingJob.Schedule((chunkResolution + 1) * (chunkResolution + 1) * (chunkResolution + 1), 32, marchingHandle);
     }
     public void OnDisable(){
         Dispose();

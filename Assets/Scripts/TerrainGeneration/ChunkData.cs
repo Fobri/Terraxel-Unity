@@ -8,20 +8,20 @@ using System;
 using DataStructures;
 
 public class ChunkData : Octree{
-        public enum ChunkState { DIRTY, READY, INVALID, ROOT }
+        public enum ChunkState { DIRTY, READY, INVALID, ROOT, QUEUED }
+        public enum GenerationState { DENSITY, MESH }
         public enum OnMeshReady { ALERT_PARENT, DISPOSE_CHILDREN }
-        public enum DisposeStatus { NOTHING, POOL, FREE_MESH }
-        public NativeArray<float> densityMap;
+        public enum DisposeState { NOTHING, POOL, FREE_MESH }
         public NativeArray<ushort4> vertexIndexBuffer;
-        public NativeArray<VertexData> vertices;
-        public NativeArray<ushort> indices;
-        public JobHandle meshJobHandle;
+        public MeshData meshData;
+        public JobHandle jobHandle;
         public GameObject worldObject;
         public Counter vertexCounter;
         public Counter indexCounter;
         public ChunkState chunkState = ChunkState.INVALID;
         public OnMeshReady onMeshReady = OnMeshReady.ALERT_PARENT;
-        public DisposeStatus disposeStatus = DisposeStatus.NOTHING;
+        public DisposeState disposeStatus = DisposeState.NOTHING;
+        public GenerationState generationState;
         public float genTime;
         public int vertCount;
         public int indexCount;
@@ -35,10 +35,11 @@ public class ChunkData : Octree{
         public ChunkData(GameObject worldObject, BoundingBox bounds, int depth) 
         : base(bounds, depth){
             this.worldObject = worldObject;
-            meshJobHandle = default;
+            jobHandle = default;
             desc.topology = MeshTopology.Triangles;
             chunkState = ChunkState.INVALID;
-            disposeStatus = DisposeStatus.NOTHING;
+            disposeStatus = DisposeState.NOTHING;
+            generationState = GenerationState.DENSITY;
         }
         //ROOT chunk
         public ChunkData() : base() {
@@ -60,9 +61,9 @@ public class ChunkData : Octree{
                 mesh.bounds = new Bounds(new float3(ChunkManager.chunkResolution * depthMultiplier / 2), region.bounds);
                 //Set vertices and indices
                 mesh.SetVertexBufferParams(vertexCount, layout);
-                mesh.SetVertexBufferData(vertices, 0, 0, vertexCount, 0, MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);
+                mesh.SetVertexBufferData(meshData.vertexBuffer, 0, 0, vertexCount, 0, MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);
                 mesh.SetIndexBufferParams(indexCount, IndexFormat.UInt16);
-                mesh.SetIndexBufferData(indices, 0, 0, indexCount, MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);
+                mesh.SetIndexBufferData(meshData.indexBuffer, 0, 0, indexCount, MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);
 
                 desc.indexCount = indexCount;
                 mesh.SetSubMesh(0, desc, MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);
@@ -78,9 +79,7 @@ public class ChunkData : Octree{
             indexCounter.Dispose();
             vertexCounter.Dispose();
             genTime = Time.realtimeSinceStartup - genTime;
-            ChunkManager.memoryManager.ReturnDensityMap(densityMap);
             ChunkManager.memoryManager.ReturnVertexIndexBuffer(vertexIndexBuffer);
-            densityMap = default;
             vertexIndexBuffer = default;
             if(onMeshReady == OnMeshReady.ALERT_PARENT){
                 base.NotifyParentMeshReady();
@@ -90,10 +89,10 @@ public class ChunkData : Octree{
             }
         }
         public void FreeChunkMesh(){
-            disposeStatus = DisposeStatus.FREE_MESH;
+            disposeStatus = DisposeState.FREE_MESH;
         }
         public void PoolChunk(){
-            disposeStatus = DisposeStatus.POOL;
+            disposeStatus = DisposeState.POOL;
         }
         /*public bool HasMesh(){
             return worldObject != null;
