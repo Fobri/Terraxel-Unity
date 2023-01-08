@@ -49,7 +49,7 @@ public abstract class Octree
     private Octree CreateNode(BoundingBox region)
     {
         var multiplier = ChunkManager.chunkResolution * depthMultipliers[depth - 1] / 2;
-        ChunkData ret = ChunkManager.GenerateChunk(new Vector3(region.center.x - multiplier,region.center.y - multiplier,region.center.z - multiplier), depth - 1, region);
+        ChunkData ret = ChunkManager.GenerateChunk(new Vector3(region.center.x - multiplier,region.center.y - multiplier,region.center.z - multiplier), depth - 1, region, depth - 1 == 0);
         if(ret != null) 
             ret.parent = this;
         return ret;
@@ -94,13 +94,14 @@ public abstract class Octree
     }
     public Octree Query(BoundingBox region){
         for(int i = 0; i < 8; i++){
-            if(children[i] == null) return null;
+            if(children[i] == null) return this;
             if(children[i].region.Contains(region)){
-                var childQuery = children[i].Query(region);
-                if(childQuery == null) return children[i];
-            }else return null;
+                return children[i].Query(region);
+            }
         }
-        return null;
+        //Root chunk
+        if(this.parent == null) return null;
+        return this;
     }
     public ChunkData GetByLocation(QuadrantLocations location) => location switch{
         QuadrantLocations.NE_TOP => children[0] as ChunkData,
@@ -144,12 +145,8 @@ public abstract class Octree
     }
     public void UpdateTreeRecursive()
     {
-        if(thisAsChunkData().chunkState == ChunkData.ChunkState.DIRTY || thisAsChunkData().chunkState == ChunkData.ChunkState.INVALID){
-            ChunkManager.shouldUpdateTree = true;
-            return;
-        }
         float dst = math.distance(ChunkManager.playerBounds.center, region.center);
-        if(dst > ChunkManager.chunkResolution * depthMultiplier * 2f || (thisAsChunkData().chunkState != ChunkData.ChunkState.ROOT && thisAsChunkData().vertCount == 0)){
+        if(dst > ChunkManager.chunkResolution * depthMultiplier * 2f || (thisAsChunkData().chunkState == ChunkData.ChunkState.READY && thisAsChunkData().hasMesh && thisAsChunkData().vertCount == 0)){
             if(HasSubChunks){
                 var chunk = this as ChunkData;
                 if(!chunk.hasMesh){
@@ -162,7 +159,9 @@ public abstract class Octree
             }
             return;
         }
-        if(depth == 0) return;
+        if(depth == 0){
+            return;
+        }
         
         octants = CreateOctants(region);
         for (int i = 0; i < 8; i++)

@@ -177,11 +177,20 @@ public TextMeshProUGUI[] debugLabels;
             if(chunk.chunkState == ChunkData.ChunkState.DIRTY){
                 if(chunk.jobHandle.IsCompleted){
                     chunk.jobHandle.Complete();
-                    if(chunk.generationState == ChunkData.GenerationState.MESH)
+                    if(chunk.generationState == ChunkData.GenerationState.MESH && worldState == WorldState.MESH_UPDATE){
+                        meshUpdates = true;
                         chunk.ApplyMesh();
-                    else{
+                    }
+                    else if(chunk.generationState == ChunkData.GenerationState.DENSITY && worldState == WorldState.DENSITY_UPDATE){
                         chunk.generationState = ChunkData.GenerationState.MESH;
+                        densityUpdates = true;
                         UpdateChunk(chunk);
+                    }
+                }else{
+                    if(chunk.generationState == ChunkData.GenerationState.MESH && worldState == WorldState.MESH_UPDATE){
+                        meshUpdates = true;
+                    }else if(chunk.generationState == ChunkData.GenerationState.DENSITY && worldState == WorldState.DENSITY_UPDATE){
+                        densityUpdates = true;
                     }
                 }
                 continue;
@@ -192,9 +201,6 @@ public TextMeshProUGUI[] debugLabels;
                 else if(chunk.disposeStatus == ChunkData.DisposeState.FREE_MESH)
                     FreeChunkBuffers(chunk);
             }
-        }
-        if(!densityUpdates && worldState == WorldState.DENSITY_UPDATE){
-            if(meshUpdates){}
         }
         if(worldState == WorldState.DENSITY_UPDATE){
             densityQueue = new Queue<ChunkData>(densityQueue.Where(x => x.disposeStatus == ChunkData.DisposeState.NOTHING));
@@ -223,8 +229,8 @@ public TextMeshProUGUI[] debugLabels;
             }
         }
         if(worldState == WorldState.IDLE){
-            if(densityQueue.Count > 0) worldState = WorldState.DENSITY_UPDATE;
-            else if(meshQueue.Count > 0) worldState = WorldState.MESH_UPDATE;
+            if(densityQueue.Count > 0 || densityUpdates) worldState = WorldState.DENSITY_UPDATE;
+            else if(meshQueue.Count > 0 || meshUpdates) worldState = WorldState.MESH_UPDATE;
         }
         if(math.distance(playerBounds.center, player.transform.position) > 10f){
             playerBounds.center = player.transform.position;
@@ -285,7 +291,7 @@ public TextMeshProUGUI[] debugLabels;
         UpdateChunk(chunk);
         chunkDatas.Add(chunk);
     }
-    public static ChunkData GenerateChunk(Vector3 pos, int depth, BoundingBox bounds){
+    public static ChunkData GenerateChunk(Vector3 pos, int depth, BoundingBox bounds, bool generate = true){
         if(chunkDatas.Count >= MemoryManager.maxBufferCount){ 
             shouldUpdateTree = true;
             return null;
@@ -306,8 +312,10 @@ public TextMeshProUGUI[] debugLabels;
          newChunkData = new ChunkData(null, bounds, depth);
         }
         
-        newChunkData.hasMesh = true;
-        UpdateChunk(newChunkData);
+        if(generate){
+            newChunkData.hasMesh = true;
+            UpdateChunk(newChunkData);
+        }
 
         chunkDatas.Add(newChunkData);
         return newChunkData;
@@ -377,7 +385,6 @@ public TextMeshProUGUI[] debugLabels;
         }
         if(drawChunkBounds){
             Gizmos.DrawWireCube(Vector3.zero, new float3(chunkResolution * math.pow(2, lodLevels)));
-            RenderOctree(chunkTree);
         }
         if(drawChunkVariables.draw){
             GUI.color = Color.green;
@@ -411,31 +418,9 @@ public TextMeshProUGUI[] debugLabels;
                     offset.y += 4f;
                     Handles.Label(offset, Utils.DirectionMaskToString(chunkDatas[i].dirMask));
                 }
-            }
-        }
-    }
-    void RenderOctree(Octree tree)
-    {
-        if (tree == null)
-            return;
-        if(tree.octants == null) return;
-        foreach(BoundingBox b in tree.octants)
-        {
-            b.Draw();
-        }
-
-        if (tree.children == null)
-            return;
-
-        foreach (Octree child in tree.children)
-        {
-            if (child == null || child.octants == null)
-                continue;
-
-            foreach(BoundingBox b in child.octants)
-            {
-                b.Draw();
-                RenderOctree(child);
+                if(drawChunkBounds){
+                    Gizmos.DrawWireCube(chunkDatas[i].region.center, chunkDatas[i].region.bounds);
+                }
             }
         }
     }
