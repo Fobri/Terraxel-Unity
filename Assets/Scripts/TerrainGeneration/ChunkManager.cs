@@ -40,7 +40,7 @@ public class ChunkManager : MonoBehaviour, IDisposable
     static Queue<ChunkData> meshQueue;
     static Queue<ChunkData> chunkPool;
     static Queue<GameObject> objectPool;
-    ChunkData chunkTree;
+    public static ChunkData chunkTree {get; private set;}
 
     //DEBUG
     [DisableInPlayMode]
@@ -107,9 +107,10 @@ public class ChunkManager : MonoBehaviour, IDisposable
         public bool vertexCount;
         public bool indexCount;
         public bool maxVertexCount;
+        public bool dirMask;
         public bool draw{
             get{
-                return position || chunkState || depth || genTime || vertexCount || indexCount || maxVertexCount;
+                return position || chunkState || depth || genTime || vertexCount || indexCount || maxVertexCount || dirMask;
             }
         }
     }
@@ -338,7 +339,7 @@ public TextMeshProUGUI[] debugLabels;
             chunkData.vertexCounter = new Counter(Allocator.Persistent);
             chunkData.indexCounter = new Counter(Allocator.Persistent);
             chunkData.chunkState = ChunkData.ChunkState.DIRTY;
-            chunkData.jobHandle = ScheduleMeshJob(chunkData);
+            chunkData.UpdateMesh();
         }
     }
     static JobHandle ScheduleDensityJob(ChunkData chunkData){
@@ -356,31 +357,6 @@ public TextMeshProUGUI[] debugLabels;
             //pos = WorldSetup.positions
         };
         return noiseJob.Schedule((chunkResolution + 3) * (chunkResolution + 3) * (chunkResolution + 3), 64);
-    }
-    static JobHandle ScheduleMeshJob(ChunkData chunkData)
-    {
-        var marchingJob = new MarchingJob()
-        {
-            densities = chunkData.meshData.densityBuffer,
-            isolevel = 0f,
-            chunkSize = chunkResolution + 1,
-            vertices = chunkData.meshData.vertexBuffer,
-            //triangles = chunkData.indices,
-            vertexCounter = chunkData.vertexCounter,
-            depthMultiplier = chunkData.depthMultiplier,
-            vertexIndices = chunkData.vertexIndexBuffer
-            
-        };
-        var marchingHandle = marchingJob.Schedule((chunkResolution + 1) * (chunkResolution + 1) * (chunkResolution + 1), 32);
-
-        var vertexSharingJob = new VertexSharingJob()
-        {
-            triangles = chunkData.meshData.indexBuffer,
-            chunkSize = chunkResolution + 1,
-            counter = chunkData.indexCounter,
-            vertexIndices = chunkData.vertexIndexBuffer
-        };
-        return vertexSharingJob.Schedule((chunkResolution + 1) * (chunkResolution + 1) * (chunkResolution + 1), 32, marchingHandle);
     }
     public void OnDisable(){
         Dispose();
@@ -430,6 +406,10 @@ public TextMeshProUGUI[] debugLabels;
                 if(drawChunkVariables.maxVertexCount){
                     offset.y += 4f;
                     Handles.Label(offset, MemoryManager.maxVertexCount.ToString());
+                }
+                if(drawChunkVariables.dirMask){
+                    offset.y += 4f;
+                    Handles.Label(offset, Utils.DirectionMaskToString(chunkDatas[i].dirMask));
                 }
             }
         }

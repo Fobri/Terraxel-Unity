@@ -77,6 +77,13 @@ namespace WorldGeneration
         /// The densities to generate the mesh off of
         /// </summary>
         [ReadOnly, NativeDisableContainerSafetyRestriction] public NativeArray<float> densities;
+        [ReadOnly] public NeighbourDensities front;
+        [ReadOnly] public NeighbourDensities back;
+        [ReadOnly] public NeighbourDensities left;
+        [ReadOnly] public NeighbourDensities right;
+        [ReadOnly] public NeighbourDensities up;
+        [ReadOnly] public NeighbourDensities down;
+        [ReadOnly] public byte neighbourDirectionMask;
 
         /// <summary>
         /// The density level where a surface will be created. Densities below this will be inside the surface (solid),

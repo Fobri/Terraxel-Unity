@@ -18,9 +18,12 @@ public abstract class Octree
     
     public int depthMultiplier{
         get{
-            return (int)math.pow(2, depth);
+            return depthMultipliers[depth];
         }
     }
+    static readonly int[] depthMultipliers = {
+        1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024
+    };
     public Octree(BoundingBox size, int depth)
     {
         children = new Octree[8];
@@ -37,7 +40,7 @@ public abstract class Octree
     {
         children = new Octree[8];
         //objects = new List<BoundingBox>();
-        region = new BoundingBox(Vector3.zero, new float3(ChunkManager.chunkResolution * math.pow(2, depth)));
+        region = new BoundingBox(Vector3.zero, new float3(ChunkManager.chunkResolution * depthMultiplier));
         parent = null;
         //chunkData = ChunkManager.GenerateChunk(new float3(-ChunkManager.chunkResolution * math.pow(2, depth)/2), ChunkManager.lodLevels);
         //chunkData.node = this;
@@ -45,7 +48,7 @@ public abstract class Octree
 
     private Octree CreateNode(BoundingBox region)
     {
-        var multiplier = ChunkManager.chunkResolution * math.pow(2, depth - 1) / 2;
+        var multiplier = ChunkManager.chunkResolution * depthMultipliers[depth - 1] / 2;
         ChunkData ret = ChunkManager.GenerateChunk(new Vector3(region.center.x - multiplier,region.center.y - multiplier,region.center.z - multiplier), depth - 1, region);
         if(ret != null) 
             ret.parent = this;
@@ -89,7 +92,28 @@ public abstract class Octree
 
         return octants;
     }
-    bool HasSubChunks{
+    public Octree Query(BoundingBox region){
+        for(int i = 0; i < 8; i++){
+            if(children[i] == null) return null;
+            if(children[i].region.Contains(region)){
+                var childQuery = children[i].Query(region);
+                if(childQuery == null) return children[i];
+            }else return null;
+        }
+        return null;
+    }
+    public ChunkData GetByLocation(QuadrantLocations location) => location switch{
+        QuadrantLocations.NE_TOP => children[0] as ChunkData,
+        QuadrantLocations.NW_TOP => children[1] as ChunkData,
+        QuadrantLocations.SW_TOP => children[2] as ChunkData,
+        QuadrantLocations.SE_TOP => children[3] as ChunkData,
+        QuadrantLocations.NE_BOT => children[4] as ChunkData,
+        QuadrantLocations.NW_BOT => children[5] as ChunkData,
+        QuadrantLocations.SW_BOT => children[6] as ChunkData,
+        QuadrantLocations.SE_BOT => children[7] as ChunkData,
+        _ => null
+    };
+    public bool HasSubChunks{
         get{
             return children[0] != null;
         }

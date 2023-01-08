@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Unity.Mathematics;
 
 [System.Serializable]
 public struct BoundingBox
@@ -16,8 +17,8 @@ public struct BoundingBox
         Gizmos.DrawWireCube(center, bounds);
     }
 
-    public Vector3 center;
-    public Vector3 bounds;
+    public float3 center;
+    public float3 bounds;
 
     public bool IsColliding(BoundingBox other)
     {
@@ -31,9 +32,9 @@ public struct BoundingBox
     //Returns true if other is fully inside of this bounding box
     public bool Contains(BoundingBox other)
     {
-        bool xContains = (Mathf.Abs(center.x - other.center.x) + (other.bounds.x / 2 + bounds.x / 2)) < bounds.x;
-        bool yContains = (Mathf.Abs(center.y - other.center.y) + (other.bounds.y / 2 + bounds.x / 2)) < bounds.y;
-        bool zContains = (Mathf.Abs(center.z - other.center.z) + (other.bounds.z / 2 + bounds.x / 2)) < bounds.z;
+        bool xContains = (Mathf.Abs(center.x - other.center.x) + (other.bounds.x / 2 + bounds.x / 2)) <= bounds.x;
+        bool yContains = (Mathf.Abs(center.y - other.center.y) + (other.bounds.y / 2 + bounds.x / 2)) <= bounds.y;
+        bool zContains = (Mathf.Abs(center.z - other.center.z) + (other.bounds.z / 2 + bounds.x / 2)) <= bounds.z;
 
         return xContains && yContains && zContains;
     }
