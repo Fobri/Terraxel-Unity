@@ -95,8 +95,8 @@ public class ChunkData : Octree{
                 up = neighbourDensities[2],
                 down = neighbourDensities[3],
                 right = neighbourDensities[4],
-                left = neighbourDensities[5]
-                
+                left = neighbourDensities[5],
+                neighbourDirectionMask = dirMask
             };
             var marchingHandle = marchingJob.Schedule((ChunkManager.chunkResolution + 1) * (ChunkManager.chunkResolution + 1) * (ChunkManager.chunkResolution + 1), 32);
 

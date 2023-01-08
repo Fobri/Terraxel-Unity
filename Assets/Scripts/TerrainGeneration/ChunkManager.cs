@@ -24,7 +24,7 @@ public class ChunkManager : MonoBehaviour, IDisposable
     public static BoundingBox playerBounds;
     public static bool shouldUpdateTree = false;
     public const int chunkResolution = 32;
-    public const int lodLevels = 6;
+    public const int lodLevels = 5;
     public WorldGeneration.NoiseData noiseData;
     static WorldGeneration.NoiseData staticNoiseData;
     public GameObject chunkPrefab;
@@ -178,12 +178,12 @@ public TextMeshProUGUI[] debugLabels;
                 if(chunk.jobHandle.IsCompleted){
                     chunk.jobHandle.Complete();
                     if(chunk.generationState == ChunkData.GenerationState.MESH && worldState == WorldState.MESH_UPDATE){
-                        meshUpdates = true;
+                        //meshUpdates = true;
                         chunk.ApplyMesh();
                     }
                     else if(chunk.generationState == ChunkData.GenerationState.DENSITY && worldState == WorldState.DENSITY_UPDATE){
                         chunk.generationState = ChunkData.GenerationState.MESH;
-                        densityUpdates = true;
+                        //densityUpdates = true;
                         UpdateChunk(chunk);
                     }
                 }else{
@@ -291,7 +291,7 @@ public TextMeshProUGUI[] debugLabels;
         UpdateChunk(chunk);
         chunkDatas.Add(chunk);
     }
-    public static ChunkData GenerateChunk(Vector3 pos, int depth, BoundingBox bounds, bool generate = true){
+    public static ChunkData GenerateChunk(Vector3 pos, int depth, BoundingBox bounds){
         if(chunkDatas.Count >= MemoryManager.maxBufferCount){ 
             shouldUpdateTree = true;
             return null;
@@ -312,10 +312,8 @@ public TextMeshProUGUI[] debugLabels;
          newChunkData = new ChunkData(null, bounds, depth);
         }
         
-        if(generate){
-            newChunkData.hasMesh = true;
-            UpdateChunk(newChunkData);
-        }
+        newChunkData.hasMesh = true;
+        UpdateChunk(newChunkData);
 
         chunkDatas.Add(newChunkData);
         return newChunkData;

@@ -49,7 +49,7 @@ public abstract class Octree
     private Octree CreateNode(BoundingBox region)
     {
         var multiplier = ChunkManager.chunkResolution * depthMultipliers[depth - 1] / 2;
-        ChunkData ret = ChunkManager.GenerateChunk(new Vector3(region.center.x - multiplier,region.center.y - multiplier,region.center.z - multiplier), depth - 1, region, depth - 1 == 0);
+        ChunkData ret = ChunkManager.GenerateChunk(new Vector3(region.center.x - multiplier,region.center.y - multiplier,region.center.z - multiplier), depth - 1, region);
         if(ret != null) 
             ret.parent = this;
         return ret;
@@ -116,7 +116,8 @@ public abstract class Octree
     };
     public bool HasSubChunks{
         get{
-            return children[0] != null;
+            return children[0] != null && children[1] != null && children[2] != null && children[3] != null
+                 && children[4] != null && children[5] != null && children[6] != null && children[7] != null;
         }
     }
     public bool PruneChunksRecursive(){
@@ -146,7 +147,7 @@ public abstract class Octree
     public void UpdateTreeRecursive()
     {
         float dst = math.distance(ChunkManager.playerBounds.center, region.center);
-        if(dst > ChunkManager.chunkResolution * depthMultiplier * 2f || (thisAsChunkData().chunkState == ChunkData.ChunkState.READY && thisAsChunkData().hasMesh && thisAsChunkData().vertCount == 0)){
+        if(dst > ChunkManager.chunkResolution * depthMultiplier * 2f){
             if(HasSubChunks){
                 var chunk = this as ChunkData;
                 if(!chunk.hasMesh){

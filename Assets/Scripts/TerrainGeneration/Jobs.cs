@@ -215,8 +215,17 @@ namespace WorldGeneration
         private VertexData VertexInterpolate(float3 p1, float3 p2, VoxelCornerElement v1, VoxelCornerElement v2, float isolevel)
         {
             var vert = new VertexData();
-            vert.vertex = (p1 + (isolevel - v1.density) * (p2 - p1) / (v2.density - v1.density)) * depthMultiplier;
-            //vert.normal = math.normalize((isolevel - v1.density) * (v2.normal - v1.normal) / (v2.density - v1.density));
+            float3 vertPos = (p1 + (isolevel - v1.density) * (p2 - p1) / (v2.density - v1.density));
+            if(depthMultiplier > 1){
+                if(p1.x > chunkSize - 2 && (neighbourDirectionMask & 0b_0000_0001) == 0b_0000_0001) vertPos.x -= depthMultiplier * 0.5f;
+                else if(p1.x == 0 && (neighbourDirectionMask & 0b_0000_0010) == 0b_0000_0010) vertPos.x += depthMultiplier * 0.5f;
+                if(p1.y > chunkSize - 2 && (neighbourDirectionMask & 0b_0000_0100) == 0b_0000_0100) vertPos.y -= depthMultiplier * 0.5f;
+                else if(p1.y == 0 && (neighbourDirectionMask & 0b_0000_1000) == 0b_0000_1000) vertPos.y += depthMultiplier * 0.5f;
+                if(p1.z > chunkSize - 2 && (neighbourDirectionMask & 0b_0010_0000) == 0b_0010_0000) vertPos.z -= depthMultiplier * 0.5f;
+                else if(p1.z == 0 && (neighbourDirectionMask & 0b_0001_0000) == 0b_0001_0000) vertPos.z += depthMultiplier * 0.5f;
+            }
+
+            vert.vertex = vertPos * depthMultiplier;
             vert.normal = (v1.normal + (isolevel - v1.density) * (v2.normal - v1.normal) / (v2.density - v1.density));
             return vert;
         }
