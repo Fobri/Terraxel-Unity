@@ -28,19 +28,26 @@ namespace WorldGeneration
         [ReadOnly] public int chunkSize;
         [WriteOnly] public Counter counter;
         [ReadOnly] public NativeArray<ushort4> vertexIndices;
+        [ReadOnly] public byte neighbourDirectionMask;
 
         public void Execute(int index){
 
             int3 voxelLocalPosition = Utils.IndexToXyz(index, chunkSize);
-            if(voxelLocalPosition.x == 0 || voxelLocalPosition.y == 0 || voxelLocalPosition.z == 0) return;
+            var neighbours = Utils.DecodeNeighborMask(neighbourDirectionMask);
+
+            if(voxelLocalPosition.x + 1 == chunkSize || voxelLocalPosition.y + 1 == chunkSize || voxelLocalPosition.z + 1 == chunkSize) return;
+            if(voxelLocalPosition.x + 2 == chunkSize && neighbours.c0.x) return;
+            else if(voxelLocalPosition.x == 0 && neighbours.c0.y) return;
+            if(voxelLocalPosition.y + 2 == chunkSize && neighbours.c1.x) return;
+            else if(voxelLocalPosition.y == 0 && neighbours.c1.y) return;
+            if(voxelLocalPosition.z + 2 == chunkSize && neighbours.c2.x) return;
+            else if(voxelLocalPosition.z == 0 && neighbours.c2.y) return;
 
             int cubeIndex = (int)vertexIndices[index].w;
             if (cubeIndex == 0 || cubeIndex == 255)
             {
                 return;
             }
-
-            //VertexList vertexList = GenerateVertexList(densities, corners, edgeIndex, isolevel);
 
             // Index at the beginning of the row
             int rowIndex = 15 * cubeIndex;
@@ -132,6 +139,15 @@ namespace WorldGeneration
         {
             // Voxel's position inside the chunk. Goes from (0, 0, 0) to (chunkSize-1, chunkSize-1, chunkSize-1)
             int3 voxelLocalPosition = Utils.IndexToXyz(index, chunkSize) - 1;
+
+            var neighbours = Utils.DecodeNeighborMask(neighbourDirectionMask);
+            
+            if(voxelLocalPosition.x == chunkSize - 1 && neighbours.c0.x) return;
+            else if(voxelLocalPosition.x == 0 && neighbours.c0.y) return;
+            if(voxelLocalPosition.y == chunkSize - 1 && neighbours.c1.x) return;
+            else if(voxelLocalPosition.y == 0 && neighbours.c1.y) return;
+            if(voxelLocalPosition.z == chunkSize - 1 && neighbours.c2.x) return;
+            else if(voxelLocalPosition.z == 0 && neighbours.c2.y) return;
 
             VoxelCorners<VoxelCornerElement> densities = GetDensities(voxelLocalPosition);
 

@@ -94,13 +94,14 @@ public abstract class Octree
     }
     public Octree Query(BoundingBox region){
         for(int i = 0; i < 8; i++){
-            if(children[i] == null) return null;
+            if(children[i] == null) return this;
             if(children[i].region.Contains(region)){
-                var childQuery = children[i].Query(region);
-                if(childQuery == null) return children[i];
-            }else return null;
+                return children[i].Query(region);
+            }
         }
-        return null;
+        //Root chunk
+        if(this.parent == null) return null;
+        return this;
     }
     public ChunkData GetByLocation(QuadrantLocations location) => location switch{
         QuadrantLocations.NE_TOP => children[0] as ChunkData,
@@ -115,7 +116,8 @@ public abstract class Octree
     };
     public bool HasSubChunks{
         get{
-            return children[0] != null;
+            return children[0] != null && children[1] != null && children[2] != null && children[3] != null
+                 && children[4] != null && children[5] != null && children[6] != null && children[7] != null;
         }
     }
     public bool PruneChunksRecursive(){
@@ -144,12 +146,8 @@ public abstract class Octree
     }
     public void UpdateTreeRecursive()
     {
-        if(thisAsChunkData().chunkState == ChunkData.ChunkState.DIRTY || thisAsChunkData().chunkState == ChunkData.ChunkState.INVALID){
-            ChunkManager.shouldUpdateTree = true;
-            return;
-        }
         float dst = math.distance(ChunkManager.playerBounds.center, region.center);
-        if(dst > ChunkManager.chunkResolution * depthMultiplier * 2f || (thisAsChunkData().chunkState != ChunkData.ChunkState.ROOT && thisAsChunkData().vertCount == 0)){
+        if(dst > ChunkManager.chunkResolution * depthMultiplier * 2f){
             if(HasSubChunks){
                 var chunk = this as ChunkData;
                 if(!chunk.hasMesh){
@@ -162,7 +160,9 @@ public abstract class Octree
             }
             return;
         }
-        if(depth == 0) return;
+        if(depth == 0){
+            return;
+        }
         
         octants = CreateOctants(region);
         for (int i = 0; i < 8; i++)

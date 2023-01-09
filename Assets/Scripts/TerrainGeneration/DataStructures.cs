@@ -3,6 +3,8 @@ using Unity.Collections;
 using System.Collections.Generic;
 using Unity.Collections.LowLevel.Unsafe;
 
+using System.Runtime.CompilerServices;
+
 namespace DataStructures
 {
     
@@ -128,6 +130,13 @@ namespace DataStructures
             if((dirMask & 0b_0001_0000) == 0b_0001_0000) value += "Right, ";
             if((dirMask & 0b_0010_0000) == 0b_0010_0000) value += "Left, ";
             return value;
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool2x3 DecodeNeighborMask(byte dirMask){
+            return new bool2x3(new bool2((dirMask & 0b_0000_0001) == 0b_0000_0001, (dirMask & 0b_0000_0010) == 0b_0000_0010), 
+                                                    new bool2((dirMask & 0b_0000_0100) == 0b_0000_0100, (dirMask & 0b_0000_1000) == 0b_0000_1000),
+                                                    new bool2((dirMask & 0b_0010_0000) == 0b_0010_0000, (dirMask & 0b_0001_0000) == 0b_0001_0000));
+            
         }
     }
 }
