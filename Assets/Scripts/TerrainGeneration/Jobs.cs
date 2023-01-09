@@ -28,19 +28,26 @@ namespace WorldGeneration
         [ReadOnly] public int chunkSize;
         [WriteOnly] public Counter counter;
         [ReadOnly] public NativeArray<ushort4> vertexIndices;
+        [ReadOnly] public byte neighbourDirectionMask;
 
         public void Execute(int index){
 
             int3 voxelLocalPosition = Utils.IndexToXyz(index, chunkSize);
+            var neighbours = Utils.DecodeNeighborMask(neighbourDirectionMask);
+
             if(voxelLocalPosition.x + 1 == chunkSize || voxelLocalPosition.y + 1 == chunkSize || voxelLocalPosition.z + 1 == chunkSize) return;
+            if(voxelLocalPosition.x + 2 == chunkSize && neighbours.c0.x) return;
+            else if(voxelLocalPosition.x == 0 && neighbours.c0.y) return;
+            if(voxelLocalPosition.y + 2 == chunkSize && neighbours.c1.x) return;
+            else if(voxelLocalPosition.y == 0 && neighbours.c1.y) return;
+            if(voxelLocalPosition.z + 2 == chunkSize && neighbours.c2.x) return;
+            else if(voxelLocalPosition.z == 0 && neighbours.c2.y) return;
 
             int cubeIndex = (int)vertexIndices[index].w;
             if (cubeIndex == 0 || cubeIndex == 255)
             {
                 return;
             }
-
-            //VertexList vertexList = GenerateVertexList(densities, corners, edgeIndex, isolevel);
 
             // Index at the beginning of the row
             int rowIndex = 15 * cubeIndex;
@@ -128,6 +135,15 @@ namespace WorldGeneration
             // Voxel's position inside the chunk. Goes from (0, 0, 0) to (chunkSize-1, chunkSize-1, chunkSize-1)
             int3 voxelLocalPosition = Utils.IndexToXyz(index, chunkSize);
 
+            var neighbours = Utils.DecodeNeighborMask(neighbourDirectionMask);
+            
+            if(voxelLocalPosition.x == chunkSize - 1 && neighbours.c0.x) return;
+            else if(voxelLocalPosition.x == 0 && neighbours.c0.y) return;
+            if(voxelLocalPosition.y == chunkSize - 1 && neighbours.c1.x) return;
+            else if(voxelLocalPosition.y == 0 && neighbours.c1.y) return;
+            if(voxelLocalPosition.z == chunkSize - 1 && neighbours.c2.x) return;
+            else if(voxelLocalPosition.z == 0 && neighbours.c2.y) return;
+
             VoxelCorners<VoxelCornerElement> densities = GetDensities(voxelLocalPosition);
 
             int cubeIndex = CalculateCubeIndex(densities, isolevel);
@@ -162,6 +178,7 @@ namespace WorldGeneration
             }
             vertexIndices[index] = indices;
         }
+        
         /// <summary>
         /// Gets the densities for the voxel at a position
         /// </summary>
@@ -216,14 +233,6 @@ namespace WorldGeneration
         {
             var vert = new VertexData();
             float3 vertPos = (p1 + (isolevel - v1.density) * (p2 - p1) / (v2.density - v1.density));
-            if(depthMultiplier > 1){
-                if(p1.x > chunkSize - 2 && (neighbourDirectionMask & 0b_0000_0001) == 0b_0000_0001) vertPos.x -= depthMultiplier * 0.5f;
-                else if(p1.x == 0 && (neighbourDirectionMask & 0b_0000_0010) == 0b_0000_0010) vertPos.x += depthMultiplier * 0.5f;
-                if(p1.y > chunkSize - 2 && (neighbourDirectionMask & 0b_0000_0100) == 0b_0000_0100) vertPos.y -= depthMultiplier * 0.5f;
-                else if(p1.y == 0 && (neighbourDirectionMask & 0b_0000_1000) == 0b_0000_1000) vertPos.y += depthMultiplier * 0.5f;
-                if(p1.z > chunkSize - 2 && (neighbourDirectionMask & 0b_0010_0000) == 0b_0010_0000) vertPos.z -= depthMultiplier * 0.5f;
-                else if(p1.z == 0 && (neighbourDirectionMask & 0b_0001_0000) == 0b_0001_0000) vertPos.z += depthMultiplier * 0.5f;
-            }
 
             vert.vertex = vertPos * depthMultiplier;
             vert.normal = (v1.normal + (isolevel - v1.density) * (v2.normal - v1.normal) / (v2.density - v1.density));

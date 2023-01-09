@@ -98,16 +98,17 @@ public class ChunkData : Octree{
                 left = neighbourDensities[5],
                 neighbourDirectionMask = dirMask
             };
-            var marchingHandle = marchingJob.Schedule((ChunkManager.chunkResolution + 1) * (ChunkManager.chunkResolution + 1) * (ChunkManager.chunkResolution + 1), 32);
+            var marchingHandle = marchingJob.Schedule((ChunkManager.chunkResolution + 1) * (ChunkManager.chunkResolution + 1) * (ChunkManager.chunkResolution + 1), 1);
 
             var vertexSharingJob = new VertexSharingJob()
             {
                 triangles = meshData.indexBuffer,
                 chunkSize = ChunkManager.chunkResolution + 1,
                 counter = indexCounter,
-                vertexIndices = vertexIndexBuffer
+                vertexIndices = vertexIndexBuffer,
+                neighbourDirectionMask = dirMask
             };
-            jobHandle = vertexSharingJob.Schedule((ChunkManager.chunkResolution + 1) * (ChunkManager.chunkResolution + 1) * (ChunkManager.chunkResolution + 1), 32, marchingHandle);
+            jobHandle = vertexSharingJob.Schedule((ChunkManager.chunkResolution + 1) * (ChunkManager.chunkResolution + 1) * (ChunkManager.chunkResolution + 1), 1, marchingHandle);
         }
         bool CheckNeighbour(int3 relativeOffset, out NeighbourDensities densities){
             float3 pos = ChunkManager.chunkResolution * depthMultiplier * relativeOffset;
