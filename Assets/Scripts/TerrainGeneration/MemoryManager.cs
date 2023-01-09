@@ -11,7 +11,7 @@ using WorldGeneration;
 public class MemoryManager : IDisposable{
     
     public const int maxBufferCount = 128*4;
-    public const int maxConcurrentOperations = 8;
+    public const int maxConcurrentOperations = 4;
     public const int maxVertexCount = 30000;
     Queue<MeshData> freeMeshDatas;
     MeshData[] meshDatas;

@@ -79,6 +79,8 @@ public class ChunkData : Octree{
                 dirMask |= 0b_0010_0000;
                 neighbourDensities[5] = densities;
             }
+            
+            genTime = Time.realtimeSinceStartup;
             var marchingJob = new MarchingJob()
             {
                 densities = meshData.densityBuffer,
@@ -86,6 +88,7 @@ public class ChunkData : Octree{
                 chunkSize = ChunkManager.chunkResolution + 1,
                 vertices = meshData.vertexBuffer,
                 vertexCounter = vertexCounter,
+                indexCounter = indexCounter,
                 depthMultiplier = depthMultiplier,
                 vertexIndices = vertexIndexBuffer,
                 front = neighbourDensities[0],
@@ -93,12 +96,12 @@ public class ChunkData : Octree{
                 up = neighbourDensities[2],
                 down = neighbourDensities[3],
                 right = neighbourDensities[4],
-                left = neighbourDensities[5]
-                
+                left = neighbourDensities[5],
+                triangles = meshData.indexBuffer
             };
-            var marchingHandle = marchingJob.Schedule((ChunkManager.chunkResolution + 1) * (ChunkManager.chunkResolution + 1) * (ChunkManager.chunkResolution + 1), 32);
+            jobHandle = marchingJob.Schedule((ChunkManager.chunkResolution + 1) * (ChunkManager.chunkResolution + 1) * (ChunkManager.chunkResolution + 1), default);
 
-            var vertexSharingJob = new VertexSharingJob()
+            /*var vertexSharingJob = new VertexSharingJob()
             {
                 triangles = meshData.indexBuffer,
                 chunkSize = ChunkManager.chunkResolution + 1,
@@ -106,7 +109,7 @@ public class ChunkData : Octree{
                 vertexIndices = vertexIndexBuffer
             };
             jobHandle = vertexSharingJob.Schedule((ChunkManager.chunkResolution + 1) * (ChunkManager.chunkResolution + 1) * (ChunkManager.chunkResolution + 1), 32, marchingHandle);
-        }
+        */}
         bool CheckNeighbour(int3 relativeOffset, out NeighbourDensities densities){
             float3 pos = ChunkManager.chunkResolution * depthMultiplier * relativeOffset;
             var tree = ChunkManager.chunkTree as Octree;

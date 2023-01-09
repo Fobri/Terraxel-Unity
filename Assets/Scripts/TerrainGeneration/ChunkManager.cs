@@ -313,7 +313,6 @@ public TextMeshProUGUI[] debugLabels;
         return newChunkData;
     }
     static void UpdateChunk(ChunkData chunkData){
-        chunkData.genTime = Time.realtimeSinceStartup;
         if(chunkData.generationState == ChunkData.GenerationState.DENSITY){
             if(!chunkData.meshData.IsCreated){
                 if(memoryManager.GetFreeMeshDataCount() > 0){
@@ -393,7 +392,7 @@ public TextMeshProUGUI[] debugLabels;
                 }
                 if(drawChunkVariables.genTime){
                     offset.y += 4f;
-                    Handles.Label(offset, chunkDatas[i].genTime.ToString());
+                    Handles.Label(offset, math.round(chunkDatas[i].genTime * 1000).ToString() + "ms");
                 }
                 if(drawChunkVariables.vertexCount){
                     offset.y += 4f;
