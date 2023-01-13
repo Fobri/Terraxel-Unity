@@ -46,7 +46,6 @@ namespace WorldGeneration
         [NativeDisableParallelForRestriction, WriteOnly] public NativeArray<ushort> triangles;
         [ReadOnly] public int depthMultiplier;
         public NativeArray<ushort4> vertexIndices;
-        private const float s = 1f / 256f;
         public void Execute(int index)
         {
             int3 voxelLocalPosition = Utils.IndexToXyz(index, chunkSize);
@@ -180,15 +179,15 @@ namespace WorldGeneration
             if(v0 != v1){
                 float3 P1 = (voxelLocalPosition + Tables.CubeCorners[v1]);
                 float3 N1 = GetVertexNormal((int3)P1);
-                vertPos = (t * P0 * s + u * P1 * s) * depthMultiplier;
-                vertNormal = t * N0 * s + u * N1 * s;
+                vertPos = (t * P0 + u * P1) * depthMultiplier ;
+                vertNormal = (t * N0 + u * N1);
             }else{
-                vertPos = P0 * s * depthMultiplier;
-                vertNormal = N0 * s;
+                vertPos = P0 * depthMultiplier;
+                vertNormal = N0;
             }
             
             int vertexIndex = vertexCounter.Increment();
-            vertices[vertexIndex] = new VertexData(vertPos, vertNormal);
+            vertices[vertexIndex] = new VertexData(vertPos / 256f, vertNormal / 256f);
             return (ushort)vertexIndex;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -273,15 +272,23 @@ namespace WorldGeneration
         {
             noiseMap[index] = FinalNoise(Utils.IndexToXyz(index, size) * depthMultiplier);
         }
+        /*[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private sbyte Remap(float value, float start1, float stop1, float start2, float stop2){
+            return Convert.ToSByte(start2 + (stop2 - start2) * ((value - start1) / (stop1 - start1)));
+        }*/
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         sbyte FinalNoise(float3 pos)
         {
             //pos -= depthMultiplier;
             float value = SurfaceNoise2D(pos.x, pos.z);
-            value -= pos.y + offset.y - surfaceLevel;
-            value += PerlinNoise3D(pos.x, pos.y, pos.z) * math.clamp(value, 0f, -1f);
-            value = -value;
-            return Convert.ToSByte(math.clamp(value * 127, -127, 127));
+            float yPos = offset.y + pos.y;
+            float density = (value + surfaceLevel - yPos) * 0.1f;
+            //value -= pos.y + offset.y - surfaceLevel;
+            //value += PerlinNoise3D(pos.x, pos.y, pos.z) * math.clamp(value, 0f, -1f);
+            //value = -value;
+            return Convert.ToSByte(math.clamp(-density * 127f, -127f, 127f));
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         float PerlinNoise3D(float x, float y, float z)
         {
             float total = 0;
