@@ -87,7 +87,7 @@ public class ChunkData : Octree{
             {
                 densities = meshData.densityBuffer,
                 isolevel = 0f,
-                chunkSize = ChunkManager.chunkResolution + 1,
+                chunkSize = ChunkManager.chunkResolution,
                 vertices = meshData.vertexBuffer,
                 vertexCounter = vertexCounter,
                 indexCounter = indexCounter,
@@ -102,7 +102,7 @@ public class ChunkData : Octree{
                 triangles = meshData.indexBuffer,
                 neighbourDirectionMask = dirMask
             };
-            jobHandle = marchingJob.Schedule((ChunkManager.chunkResolution + 1) * (ChunkManager.chunkResolution + 1) * (ChunkManager.chunkResolution + 1), default);
+            jobHandle = marchingJob.Schedule((ChunkManager.chunkResolution) * (ChunkManager.chunkResolution) * (ChunkManager.chunkResolution), default);
 
             /*var vertexSharingJob = new VertexSharingJob()
             {
@@ -148,7 +148,7 @@ public class ChunkData : Octree{
                 mesh.SetVertexBufferParams(vertexCount, layout);
                 mesh.SetVertexBufferData(meshData.vertexBuffer, 0, 0, vertexCount, 0, MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);
                 mesh.SetIndexBufferParams(indexCount, IndexFormat.UInt16);
-                mesh.SetIndexBufferData(meshData.indexBuffer, 0, 0, indexCount, MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);
+                mesh.SetIndexBufferData(meshData.indexBuffer, 0, 0, indexCount,  MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);
 
                 desc.indexCount = indexCount;
                 mesh.SetSubMesh(0, desc, MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);

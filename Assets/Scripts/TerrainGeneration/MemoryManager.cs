@@ -38,7 +38,7 @@ public class MemoryManager : IDisposable{
         for(int i = 0; i < maxBufferCount; i++){
             var verts = new NativeArray<VertexData>(maxVertexCount, Allocator.Persistent);
             var indices = new NativeArray<ushort>(maxVertexCount, Allocator.Persistent);
-            var densities = new NativeArray<float>(size, Allocator.Persistent);
+            var densities = new NativeArray<sbyte>(size, Allocator.Persistent);
             freeMeshDatas.Enqueue(new MeshData(verts, indices, densities));
         }
         meshDatas = freeMeshDatas.ToArray();

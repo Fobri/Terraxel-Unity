@@ -11,18 +11,18 @@ namespace DataStructures
     public enum QuadrantLocations { NE_TOP, NW_TOP, SW_TOP, SE_TOP, NE_BOT, NW_BOT, SW_BOT, SE_BOT}
     public struct NeighbourDensities{
         [ReadOnly, NativeDisableContainerSafetyRestriction]
-        public NativeArray<float> first;
+        public NativeArray<sbyte> first;
         
         [ReadOnly, NativeDisableContainerSafetyRestriction]
-        public NativeArray<float> second;
+        public NativeArray<sbyte> second;
         
         [ReadOnly, NativeDisableContainerSafetyRestriction]
-        public NativeArray<float> third;
+        public NativeArray<sbyte> third;
         
         [ReadOnly, NativeDisableContainerSafetyRestriction]
-        public NativeArray<float> fourth;
+        public NativeArray<sbyte> fourth;
 
-        public NativeArray<float> this[int index]{
+        public NativeArray<sbyte> this[int index]{
             get{
                 switch(index){
                     case 0: return first;
@@ -47,14 +47,18 @@ namespace DataStructures
     public struct VertexData{
         public float3 vertex;
         public float3 normal;
+        public VertexData(float3 vertex, float3 normal){
+            this.vertex = vertex;
+            this.normal = normal;
+        }
     }
     public struct MeshData : System.IDisposable{
         
         public NativeArray<VertexData> vertexBuffer;
         public NativeArray<ushort> indexBuffer;
-        public NativeArray<float> densityBuffer;
+        public NativeArray<sbyte> densityBuffer;
 
-        public MeshData(NativeArray<VertexData> vertexBuffer, NativeArray<ushort> indexBuffer, NativeArray<float> densityBuffer){
+        public MeshData(NativeArray<VertexData> vertexBuffer, NativeArray<ushort> indexBuffer, NativeArray<sbyte> densityBuffer){
             this.vertexBuffer = vertexBuffer;
             this.indexBuffer = indexBuffer;
             this.densityBuffer = densityBuffer;
@@ -71,31 +75,69 @@ namespace DataStructures
         }
     }
     public struct ushort4{
-        public ushort x;
-        public ushort y;
-        public ushort z;
-        public ushort w;
-        public ushort4(ushort x, ushort y, ushort z, ushort w){
-            this.x = x; 
-            this.y = y;
-            this.z = z;
-            this.w = w;
+        ushort x;
+        ushort y;
+        ushort z;
+        public ushort4(ushort value){
+            x = value;
+            y = value;
+            z = value;
         }
-        public ushort4(int value){
-            this.x = (ushort)value;
-            this.y = (ushort)value;
-            this.z = (ushort)value; 
-            this.w = (ushort)value;
+        public ushort this[int index]{
+            get{
+                switch(index){
+                    case 1: return x;
+                    case 2: return y;
+                    case 3: return z;
+                    
+                    default: throw new System.IndexOutOfRangeException();
+                }
+            }set{
+                switch(index){
+                    case 1: x = value; break;
+                    case 2: y = value; break;
+                    case 3: z = value; break;
+                    
+                    default: throw new System.IndexOutOfRangeException();
+                }
+            }
         }
     }
     public struct VoxelCornerElement{
-        public float density;
-        public float3 normal;
-        public VoxelCornerElement(float density, float3 normal){
+        public sbyte density;
+        public VoxelCornerElement(sbyte density){
             this.density = density;
-            this.normal = normal;
         }
     }
+    public struct RegularCell
+    {
+        private byte geometryCounts;
+
+        // High nibble is vertex count, low nibble is triangle count.
+        private byte[] vertexIndex;
+        // Groups of 3 indexes giving the triangulation.
+
+        public RegularCell(byte gc, byte[] vi)
+        {
+            geometryCounts = gc;
+            vertexIndex = vi;
+        }
+
+        public long GetVertexCount()
+        {
+            return (geometryCounts >> 4);
+        }
+
+        public long GetTriangleCount()
+        {
+            return (geometryCounts & 0x0F);
+        }
+
+        public byte[] Indizes()
+        {
+            return vertexIndex;
+        }
+    };
     public class Utils{
         public static int XyzToIndex(int x, int y, int z, int size)
         {

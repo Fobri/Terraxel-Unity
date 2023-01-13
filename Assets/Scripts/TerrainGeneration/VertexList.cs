@@ -5,74 +5,74 @@ using Unity.Mathematics;
 
 namespace WorldGeneration
 {
-    public struct VertexList
+    public struct CellIndices
     {
         /// <summary>
         /// The first vertex
         /// </summary>
-        private float3 _c1;
+        private ushort _c1;
 
         /// <summary>
         /// The second vertex
         /// </summary>
-        private float3 _c2;
+        private ushort _c2;
 
         /// <summary>
         /// The third vertex
         /// </summary>
-        private float3 _c3;
+        private ushort _c3;
 
         /// <summary>
         /// The fourth vertex
         /// </summary>
-        private float3 _c4;
+        private ushort _c4;
 
         /// <summary>
         /// The fifth vertex
         /// </summary>
-        private float3 _c5;
+        private ushort _c5;
 
         /// <summary>
         /// The sixth vertex
         /// </summary>
-        private float3 _c6;
+        private ushort _c6;
 
         /// <summary>
         /// The seventh vertex
         /// </summary>
-        private float3 _c7;
+        private ushort _c7;
 
         /// <summary>
         /// The eighth vertex
         /// </summary>
-        private float3 _c8;
+        private ushort _c8;
 
         /// <summary>
         /// The ninth vertex
         /// </summary>
-        private float3 _c9;
+        private ushort _c9;
 
         /// <summary>
         /// The tenth vertex
         /// </summary>
-        private float3 _c10;
+        private ushort _c10;
 
         /// <summary>
         /// The eleventh vertex
         /// </summary>
-        private float3 _c11;
+        private ushort _c11;
 
         /// <summary>
         /// The twelfth vertex
         /// </summary>
-        private float3 _c12;
+        private ushort _c12;
 
         /// <summary>
         /// The indexer for the vertex list
         /// </summary>
         /// <param name="index">The vertex's index</param>
         /// <exception cref="System.IndexOutOfRangeException">Thrown when the index is more than 11.</exception>
-        public float3 this[int index]
+        public ushort this[int index]
         {
             get
             {

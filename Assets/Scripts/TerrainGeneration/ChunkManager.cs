@@ -368,6 +368,9 @@ public TextMeshProUGUI[] debugLabels;
     }
 
     public void Dispose(){
+        foreach(var chunk in chunkDatas){
+            chunk.jobHandle.Complete();
+        }
         memoryManager.Dispose();
     }
 
