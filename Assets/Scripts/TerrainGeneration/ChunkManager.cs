@@ -134,16 +134,18 @@ public TextMeshProUGUI[] debugLabels;
         chunkTree.UpdateTreeRecursive();
         if(debugMode){
             int elemCount = MemoryManager.maxBufferCount * MemoryManager.maxVertexCount;
-            var ns = ChunkManager.chunkResolution + 3;
+            var ns = ChunkManager.chunkResolution + 1;
             var size = ns * ns * ns;
             int nmSize = MemoryManager.maxBufferCount * size;
-            totalMemoryAllocated = elemCount * sizeof(float)*6 + elemCount * sizeof(ushort) + nmSize * sizeof(float);
+            totalMemoryAllocated = elemCount * sizeof(float)*6 + elemCount * sizeof(ushort) + nmSize * sizeof(sbyte);
             totalMemoryAllocated = totalMemoryAllocated / 1000000;
         }
     }
     void Update(){
         if(debugMode){
-            memoryUsed = vertCount * sizeof(float) * 6 + indexCount * sizeof(ushort);
+            memoryUsed = vertCount * sizeof(float) * 6 + 
+                        indexCount * sizeof(ushort) + 
+                        (ChunkManager.chunkResolution + 1) * (ChunkManager.chunkResolution + 1) * (ChunkManager.chunkResolution + 1) * sizeof(sbyte) * chunkCount;
             memoryUsed = memoryUsed / 1000000;
             memoryWasted = totalMemoryAllocated - memoryUsed;
             freeDensityMaps = memoryManager.GetFreeVertexIndexBufferCount();
@@ -169,7 +171,8 @@ public TextMeshProUGUI[] debugLabels;
             if(debugMode){
                 vertCount += chunkDatas[i].vertCount;
                 indexCount += chunkDatas[i].indexCount;
-                totalGenTime += chunkDatas[i].genTime;
+                if(chunkDatas[i].chunkState == ChunkData.ChunkState.READY)
+                    totalGenTime += chunkDatas[i].genTime;
             }
             var chunk = chunkDatas[i];
             if(chunk.generationState == ChunkData.GenerationState.DENSITY && chunk.chunkState != ChunkData.ChunkState.READY) densityUpdates = true;
@@ -353,15 +356,15 @@ public TextMeshProUGUI[] debugLabels;
             ampl = staticNoiseData.ampl,
             freq = staticNoiseData.freq,
             oct = staticNoiseData.oct,
-            offset = chunkData.WorldPosition - chunkData.depthMultiplier,
+            offset = chunkData.WorldPosition,
             seed = staticNoiseData.offset,
             surfaceLevel = staticNoiseData.surfaceLevel,
             noiseMap = chunkData.meshData.densityBuffer,
-            size = chunkResolution + 3,
+            size = chunkResolution + 1,
             depthMultiplier = chunkData.depthMultiplier
             //pos = WorldSetup.positions
         };
-        return noiseJob.Schedule((chunkResolution + 3) * (chunkResolution + 3) * (chunkResolution + 3), 64);
+        return noiseJob.Schedule((chunkResolution + 1) * (chunkResolution + 1) * (chunkResolution + 1), 64);
     }
     public void OnDisable(){
         Dispose();

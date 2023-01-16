@@ -74,11 +74,11 @@ namespace DataStructures
             vertexBuffer.Dispose();
         }
     }
-    public struct ushort4{
+    public struct ushort3{
         ushort x;
         ushort y;
         ushort z;
-        public ushort4(ushort value){
+        public ushort3(ushort value){
             x = value;
             y = value;
             z = value;
@@ -158,10 +158,10 @@ namespace DataStructures
         public static readonly Dictionary<int3, QuadrantLocations[]> ChunkRelativePositionToQuadrantLocations = new Dictionary<int3, QuadrantLocations[]>(){
         {new int3(1, 0, 0), new QuadrantLocations[]{QuadrantLocations.SW_TOP, QuadrantLocations.SE_TOP, QuadrantLocations.SW_BOT, QuadrantLocations.SE_BOT}},
         {new int3(-1, 0, 0), new QuadrantLocations[]{QuadrantLocations.NW_TOP, QuadrantLocations.NE_TOP, QuadrantLocations.NW_BOT, QuadrantLocations.NE_BOT}},
-        {new int3(0, 1, 0), new QuadrantLocations[]{QuadrantLocations.NW_TOP, QuadrantLocations.NE_TOP, QuadrantLocations.SW_TOP, QuadrantLocations.SE_TOP}},
-        {new int3(0, -1, 0), new QuadrantLocations[]{QuadrantLocations.NW_BOT, QuadrantLocations.NE_BOT, QuadrantLocations.SW_BOT, QuadrantLocations.SE_BOT}},
+        {new int3(0, -1, 0), new QuadrantLocations[]{QuadrantLocations.NW_TOP, QuadrantLocations.NE_TOP, QuadrantLocations.SW_TOP, QuadrantLocations.SE_TOP}},
+        {new int3(0, 1, 0), new QuadrantLocations[]{QuadrantLocations.NW_BOT, QuadrantLocations.NE_BOT, QuadrantLocations.SW_BOT, QuadrantLocations.SE_BOT}},
         {new int3(0, 0, 1), new QuadrantLocations[]{QuadrantLocations.SE_TOP, QuadrantLocations.NE_TOP, QuadrantLocations.SE_BOT, QuadrantLocations.NE_BOT}},
-        {new int3(0, 0, -1), new QuadrantLocations[]{QuadrantLocations.NW_TOP, QuadrantLocations.SW_TOP, QuadrantLocations.NW_BOT, QuadrantLocations.SW_BOT}}};
+        {new int3(0, 0, -1), new QuadrantLocations[]{QuadrantLocations.SW_TOP, QuadrantLocations.NW_TOP, QuadrantLocations.SW_BOT, QuadrantLocations.NW_BOT}}};
 
         public static string DirectionMaskToString(byte dirMask){
             string value = "";

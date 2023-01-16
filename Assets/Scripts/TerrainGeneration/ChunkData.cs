@@ -12,7 +12,7 @@ public class ChunkData : Octree{
         public enum GenerationState { DENSITY, MESH }
         public enum OnMeshReady { ALERT_PARENT, DISPOSE_CHILDREN }
         public enum DisposeState { NOTHING, POOL, FREE_MESH }
-        public NativeArray<ushort4> vertexIndexBuffer;
+        public NativeArray<ushort3> vertexIndexBuffer;
         public MeshData meshData;
         public JobHandle jobHandle;
         public GameObject worldObject;
@@ -58,28 +58,28 @@ public class ChunkData : Octree{
             if(depth > 0){
                 if(CheckNeighbour(new int3(1, 0, 0), out densities)){
                     dirMask |= 0b_0000_0001;
-                    neighbourDensities[0] = densities;
                 }
+                neighbourDensities[0] = densities;
                 if(CheckNeighbour(new int3(-1, 0, 0), out densities)){
                     dirMask |= 0b_0000_0010;
-                    neighbourDensities[1] = densities;
                 }
+                neighbourDensities[1] = densities;
                 if(CheckNeighbour(new int3(0, 1, 0), out densities)){
                     dirMask |= 0b_0000_0100;
-                    neighbourDensities[2] = densities;
                 }
+                neighbourDensities[2] = densities;
                 if(CheckNeighbour(new int3(0, -1, 0), out densities)){
                     dirMask |= 0b_0000_1000;
-                    neighbourDensities[3] = densities;
                 }
+                neighbourDensities[3] = densities;
                 if(CheckNeighbour(new int3(0, 0, -1), out densities)){
                     dirMask |= 0b_0001_0000;
-                    neighbourDensities[4] = densities;
                 }
+                neighbourDensities[4] = densities;
                 if(CheckNeighbour(new int3(0, 0, 1), out densities)){
                     dirMask |= 0b_0010_0000;
-                    neighbourDensities[5] = densities;
                 }
+                neighbourDensities[5] = densities;
             }
             
             genTime = Time.realtimeSinceStartup;
@@ -103,17 +103,7 @@ public class ChunkData : Octree{
                 neighbourDirectionMask = dirMask
             };
             jobHandle = marchingJob.Schedule((ChunkManager.chunkResolution) * (ChunkManager.chunkResolution) * (ChunkManager.chunkResolution), default);
-
-            /*var vertexSharingJob = new VertexSharingJob()
-            {
-                triangles = meshData.indexBuffer,
-                chunkSize = ChunkManager.chunkResolution + 1,
-                counter = indexCounter,
-                vertexIndices = vertexIndexBuffer,
-                neighbourDirectionMask = dirMask
-            };
-            jobHandle = vertexSharingJob.Schedule((ChunkManager.chunkResolution + 1) * (ChunkManager.chunkResolution + 1) * (ChunkManager.chunkResolution + 1), 32, marchingHandle);
-        */}
+        }
         bool CheckNeighbour(int3 relativeOffset, out NeighbourDensities densities){
             float3 pos = ChunkManager.chunkResolution * depthMultiplier * relativeOffset;
             var tree = ChunkManager.chunkTree as Octree;
@@ -127,6 +117,11 @@ public class ChunkData : Octree{
                     }
                     densities = _densities;
                     return true;
+                }else if(queryResult.depth == this.depth){
+                    NeighbourDensities _densities = new NeighbourDensities();
+                    _densities[0] = (queryResult as ChunkData).meshData.densityBuffer;
+                    densities = _densities;
+                    return false;
                 }
                 densities = default(NeighbourDensities);
                 return false;

@@ -45,12 +45,11 @@ namespace WorldGeneration
         
         [NativeDisableParallelForRestriction, WriteOnly] public NativeArray<ushort> triangles;
         [ReadOnly] public int depthMultiplier;
-        public NativeArray<ushort4> vertexIndices;
+        public NativeArray<ushort3> vertexIndices;
         public void Execute(int index)
         {
             int3 voxelLocalPosition = Utils.IndexToXyz(index, chunkSize);
 
-            var neighbours = Utils.DecodeNeighborMask(neighbourDirectionMask);
 
             VoxelCorners<sbyte> density = GetDensities(voxelLocalPosition);
 
@@ -75,7 +74,7 @@ namespace WorldGeneration
             long triangleCount = (cellData & 0x0F);
             
             CellIndices cellIndices = new CellIndices();
-            vertexIndices[index] = new ushort4(0);
+            vertexIndices[index] = new ushort3(0);
             var currentCell = vertexIndices[index];
             
             for (int i = 0; i < vertexCount; i++)
@@ -165,7 +164,7 @@ namespace WorldGeneration
             return value;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ushort4 GetCell(int3 voxelLocalPosition){
+        private ushort3 GetCell(int3 voxelLocalPosition){
             return vertexIndices[Utils.XyzToIndex(voxelLocalPosition, chunkSize)];
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -213,7 +212,113 @@ namespace WorldGeneration
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public sbyte SampleDensity(int3 pos){
-            return densities[Utils.XyzToIndex(pos + 1, chunkSize + 3)];
+            var neighbours = Utils.DecodeNeighborMask(neighbourDirectionMask);
+            if(pos.x > chunkSize){
+                pos = math.clamp(pos, new int3(0), new int3(chunkSize + 1));
+                if(neighbours.c0.x){
+                    float2 scaledPosition = new float2(pos.y, pos.z) * 2;
+                    int2 quadrantOffset = GetQuadrantOffset(scaledPosition);
+                    var neighbourDensities = GetNeighbourQuadrant(front, quadrantOffset);
+                    if(neighbourDensities == default) return 127;
+                    return neighbourDensities[Utils.XyzToIndex(new int3(0, pos.y - chunkSize / 2 * quadrantOffset.x, pos.z - chunkSize / 2 * quadrantOffset.y), chunkSize + 1)];
+                }else{
+                    if(front[0] != default){
+                        return front[0][Utils.XyzToIndex(new int3(0, pos.y, pos.z), chunkSize + 1)];
+                    }
+                }
+            }else if(pos.x < 0){
+                pos = math.clamp(pos, new int3(0), new int3(chunkSize + 1));
+                if(neighbours.c0.y){
+                    float2 scaledPosition = new float2(pos.y, pos.z) * 2;
+                    int2 quadrantOffset = GetQuadrantOffset(scaledPosition);
+                    var neighbourDensities = GetNeighbourQuadrant(back, quadrantOffset);
+                    if(neighbourDensities == default) return 127;
+                    return neighbourDensities[Utils.XyzToIndex(new int3(chunkSize + 1, pos.y - chunkSize / 2 * quadrantOffset.x, pos.z - chunkSize / 2 * quadrantOffset.y), chunkSize + 1)];
+                }else{
+                    if(back[0] != default){
+                        return back[0][Utils.XyzToIndex(new int3(chunkSize + 1, pos.y, pos.z), chunkSize + 1)];
+                    }
+                }
+            }else if(pos.y > chunkSize){
+                pos = math.clamp(pos, new int3(0), new int3(chunkSize + 1));
+                if(neighbours.c1.x){
+                    float2 scaledPosition = new float2(pos.x, pos.z) * 2;
+                    int2 quadrantOffset = GetQuadrantOffset(scaledPosition);
+                    var neighbourDensities = GetNeighbourQuadrant(up, quadrantOffset);
+                    if(neighbourDensities == default) return 127;
+                    return neighbourDensities[Utils.XyzToIndex(new int3(pos.x - chunkSize / 2 * quadrantOffset.x, 0, pos.z - chunkSize / 2 * quadrantOffset.y), chunkSize + 1)];
+                }else{
+                    if(up[0] != default){
+                        return up[0][Utils.XyzToIndex(new int3(pos.x, 0, pos.z), chunkSize + 1)];
+                    }
+                }
+            }else if(pos.y < 0){
+                pos = math.clamp(pos, new int3(0), new int3(chunkSize + 1));
+                if(neighbours.c1.y){
+                    float2 scaledPosition = new float2(pos.x, pos.z) * 2;
+                    int2 quadrantOffset = GetQuadrantOffset(scaledPosition);
+                    var neighbourDensities = GetNeighbourQuadrant(down, quadrantOffset);
+                    if(neighbourDensities == default) return 127;
+                    return neighbourDensities[Utils.XyzToIndex(new int3(pos.x - chunkSize / 2 * quadrantOffset.x, chunkSize + 1, pos.z - chunkSize / 2 * quadrantOffset.y), chunkSize + 1)];
+                }else{
+                    if(down[0] != default){
+                        return down[0][Utils.XyzToIndex(new int3(pos.x, chunkSize + 1, pos.z), chunkSize + 1)];
+                    }
+                }
+            }else if(pos.z > chunkSize){
+                pos = math.clamp(pos, new int3(0), new int3(chunkSize + 1));
+                if(neighbours.c2.x){
+                    float2 scaledPosition = new float2(pos.y, pos.x) * 2;
+                    int2 quadrantOffset = GetQuadrantOffset(scaledPosition);
+                    var neighbourDensities = GetNeighbourQuadrant(right, quadrantOffset);
+                    if(neighbourDensities == default) return 127;
+                    return neighbourDensities[Utils.XyzToIndex(new int3(pos.x - chunkSize / 2 * quadrantOffset.y, pos.y - chunkSize / 2 * quadrantOffset.x, 0), chunkSize + 1)];
+                }else{
+                    if(right[0] != default){
+                        return right[0][Utils.XyzToIndex(new int3(pos.x, pos.y, 0), chunkSize + 1)];
+                    }
+                }
+            }else if(pos.z < 0){
+                pos = math.clamp(pos, new int3(0), new int3(chunkSize + 1));
+                if(neighbours.c2.y){
+                    float2 scaledPosition = new float2(pos.y, pos.x) * 2;
+                    int2 quadrantOffset = GetQuadrantOffset(scaledPosition);
+                    var neighbourDensities = GetNeighbourQuadrant(left, quadrantOffset);
+                    if(neighbourDensities == default) return 127;
+                    return neighbourDensities[Utils.XyzToIndex(new int3(pos.x - chunkSize / 2 * quadrantOffset.y, pos.y - chunkSize / 2 * quadrantOffset.x, chunkSize + 1), chunkSize + 1)];
+                }else{
+                    if(down[0] != default){
+                        return down[0][Utils.XyzToIndex(new int3(pos.x, pos.y, chunkSize + 1), chunkSize + 1)];
+                    }
+                }
+            }
+            return densities[Utils.XyzToIndex(pos, chunkSize + 1)];
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private int2 GetQuadrantOffset(float2 scaledPosition){
+            int2 quadrantOffset = new int2(0);
+            if(scaledPosition.x > chunkSize) {
+                quadrantOffset.x = 1;
+            }
+            if(scaledPosition.y > chunkSize) {
+                quadrantOffset.y = 1;
+            }
+            return quadrantOffset;
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private NativeArray<sbyte> GetNeighbourQuadrant(NeighbourDensities neighbour, int2 quadrantOffset){
+            
+            if(quadrantOffset.x == 1){
+                if(quadrantOffset.y == 1){
+                    return neighbour[1];
+                }else{
+                    return neighbour[3];
+                }
+            }else if(quadrantOffset.y == 1){
+                return neighbour[0];
+            }else{
+                return neighbour[2];
+            }
         }
     }
     //Chunk noisemap update job, in a ball shape. Could implement more complex logic for this as well.

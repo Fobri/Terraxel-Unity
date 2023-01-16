@@ -15,8 +15,8 @@ public class MemoryManager : IDisposable{
     public const int maxVertexCount = 30000;
     Queue<MeshData> freeMeshDatas;
     MeshData[] meshDatas;
-    Queue<NativeArray<ushort4>> freeVertexIndexBuffers;
-    NativeArray<ushort4>[] vertexIndexBuffers;
+    Queue<NativeArray<ushort3>> freeVertexIndexBuffers;
+    NativeArray<ushort3>[] vertexIndexBuffers;
 
     public void Init(){
         AllocateMeshData();
@@ -25,14 +25,14 @@ public class MemoryManager : IDisposable{
     void AllocateTempBuffers(){
 
         var vertexIndexBufferLength = (ChunkManager.chunkResolution + 1)*(ChunkManager.chunkResolution + 1)*(ChunkManager.chunkResolution + 1);
-        freeVertexIndexBuffers = new Queue<NativeArray<ushort4>>();
+        freeVertexIndexBuffers = new Queue<NativeArray<ushort3>>();
         for(int i = 0; i < maxConcurrentOperations; i++){
-            freeVertexIndexBuffers.Enqueue(new NativeArray<ushort4>(vertexIndexBufferLength, Allocator.Persistent));
+            freeVertexIndexBuffers.Enqueue(new NativeArray<ushort3>(vertexIndexBufferLength, Allocator.Persistent));
         }
         vertexIndexBuffers = freeVertexIndexBuffers.ToArray();
     }
     void AllocateMeshData(){
-        var ns = ChunkManager.chunkResolution + 3;
+        var ns = ChunkManager.chunkResolution + 1;
         var size = ns * ns * ns;
         freeMeshDatas = new Queue<MeshData>();
         for(int i = 0; i < maxBufferCount; i++){
@@ -47,7 +47,7 @@ public class MemoryManager : IDisposable{
         if(freeMeshDatas.Count == 0) throw new Exception("No free mesh data available", new InvalidOperationException());
         return freeMeshDatas.Dequeue();
     }
-    public NativeArray<ushort4> GetVertexIndexBuffer(){
+    public NativeArray<ushort3> GetVertexIndexBuffer(){
         if(freeVertexIndexBuffers.Count == 0) throw new Exception("No free density map available", new InvalidOperationException());
         var thing = freeVertexIndexBuffers.Dequeue();
         if(thing == default) Debug.Log("wut");
@@ -58,7 +58,7 @@ public class MemoryManager : IDisposable{
         ClearArray(data.vertexBuffer, data.vertexBuffer.Length);
         freeMeshDatas.Enqueue(data);
     }
-    public void ReturnVertexIndexBuffer(NativeArray<ushort4> buffer){
+    public void ReturnVertexIndexBuffer(NativeArray<ushort3> buffer){
         if(buffer == default) throw new Exception("Tried to return invalid buffer", new InvalidCastException());
         ClearArray(buffer, buffer.Length);
         freeVertexIndexBuffers.Enqueue(buffer);
