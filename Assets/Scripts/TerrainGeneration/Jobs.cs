@@ -27,7 +27,8 @@ namespace WorldGeneration
         /// <summary>
         /// The densities to generate the mesh off of
         /// </summary>
-        [ReadOnly, NativeDisableContainerSafetyRestriction] public NativeArray<sbyte> densities;
+        [ReadOnly] public DensityData densities;
+        [ReadOnly] public int3 chunkPos;
         
         [ReadOnly] public NeighbourDensities front;
         [ReadOnly] public NeighbourDensities back;
@@ -213,7 +214,7 @@ namespace WorldGeneration
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public sbyte SampleDensity(int3 pos){
-            return densities[Utils.XyzToIndex(pos + 1, chunkSize + 3)];
+            return densities.GetDensity(pos * depthMultiplier + chunkPos);
         }
     }
     //Chunk noisemap update job, in a ball shape. Could implement more complex logic for this as well.
@@ -261,21 +262,23 @@ namespace WorldGeneration
         [ReadOnly] public float freq;
         [ReadOnly] public int oct;
         [ReadOnly] public int depthMultiplier;
-        
-        [NativeDisableParallelForRestriction, NativeDisableContainerSafetyRestriction, WriteOnly]
-        public NativeArray<sbyte> noiseMap;
         [ReadOnly] public int size;
+        [NativeDisableParallelForRestriction, NativeDisableContainerSafetyRestriction, WriteOnly]
+        public DensityResultData data;
 
 
 
         public void Execute(int index)
         {
-            noiseMap[index] = FinalNoise(Utils.IndexToXyz(index, size) * depthMultiplier);
+            var value = FinalNoise(Utils.IndexToXyz(index, size) * depthMultiplier);
+            if(value != 127){
+                data.isEmpty.Value = false;
+            }
+            if(value != -127){
+                data.isFull.Value = false;
+            }
+            data.densityMap[index] = value;
         }
-        /*[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private sbyte Remap(float value, float start1, float stop1, float start2, float stop2){
-            return Convert.ToSByte(start2 + (stop2 - start2) * ((value - start1) / (stop1 - start1)));
-        }*/
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         sbyte FinalNoise(float3 pos)
         {
@@ -283,42 +286,9 @@ namespace WorldGeneration
             float value = SurfaceNoise2D(pos.x, pos.z);
             float yPos = offset.y + pos.y;
             float density = (value + surfaceLevel - yPos) * 0.1f;
-            //value -= pos.y + offset.y - surfaceLevel;
-            //value += PerlinNoise3D(pos.x, pos.y, pos.z) * math.clamp(value, 0f, -1f);
-            //value = -value;
             return Convert.ToSByte(math.clamp(-density * 127f, -127f, 127f));
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        float PerlinNoise3D(float x, float y, float z)
-        {
-            float total = 0;
-            var ampl = this.ampl;
-            var freq = this.freq;
-            for (int i = 0; i < oct; i++)
-            {
-                total += noise.snoise(math.float3((x + offset.x + seed.x) * freq, (y + offset.y + seed.y) * freq, (z + offset.z + seed.z) * freq) * ampl);
-
-                ampl *= 2;
-                freq *= 0.5f;
-            }
-            //total -= total % 2.5f;
-            return total;
-        }
-        float PerlinNoise3DSnake(float x, float y, float z)
-        {
-            float total = 0;
-            var ampl = this.ampl;
-            var freq = this.freq + 0.03f;
-            for (int i = 0; i < oct; i++)
-            {
-                total += noise.snoise(math.float3((x + offset.x + seed.x) * freq, (y + offset.y + seed.y) * freq, (z + offset.z + seed.z) * freq) * ampl);
-
-                ampl *= 2;
-                freq *= 0.5f;
-            }
-            total -= total % 2.5f;
-            return total;
-        }
         float SurfaceNoise2D(float x, float z)
         {
             float total = 0;

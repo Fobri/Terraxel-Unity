@@ -2,12 +2,11 @@ using Unity.Mathematics;
 using Unity.Collections;
 using System.Collections.Generic;
 using Unity.Collections.LowLevel.Unsafe;
-
 using System.Runtime.CompilerServices;
 
 namespace DataStructures
 {
-    
+
     public enum QuadrantLocations { NE_TOP, NW_TOP, SW_TOP, SE_TOP, NE_BOT, NW_BOT, SW_BOT, SE_BOT}
     public struct NeighbourDensities{
         [ReadOnly, NativeDisableContainerSafetyRestriction]
@@ -44,6 +43,15 @@ namespace DataStructures
             }
         }
     }
+    public struct DensityResultData{
+        
+        [NativeDisableParallelForRestriction, NativeDisableContainerSafetyRestriction, WriteOnly]
+        public NativeArray<sbyte> densityMap;
+        [WriteOnly, NativeDisableParallelForRestriction]
+        public NativeReference<bool> isEmpty;
+        [WriteOnly, NativeDisableParallelForRestriction]
+        public NativeReference<bool> isFull;
+    }
     public struct VertexData{
         public float3 vertex;
         public float3 normal;
@@ -56,12 +64,10 @@ namespace DataStructures
         
         public NativeArray<VertexData> vertexBuffer;
         public NativeArray<ushort> indexBuffer;
-        public NativeArray<sbyte> densityBuffer;
 
-        public MeshData(NativeArray<VertexData> vertexBuffer, NativeArray<ushort> indexBuffer, NativeArray<sbyte> densityBuffer){
+        public MeshData(NativeArray<VertexData> vertexBuffer, NativeArray<ushort> indexBuffer){
             this.vertexBuffer = vertexBuffer;
             this.indexBuffer = indexBuffer;
-            this.densityBuffer = densityBuffer;
         }
         public bool IsCreated{
             get{
@@ -69,7 +75,6 @@ namespace DataStructures
             }
         }
         public void Dispose(){
-            densityBuffer.Dispose();
             indexBuffer.Dispose();
             vertexBuffer.Dispose();
         }

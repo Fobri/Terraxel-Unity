@@ -1550,6 +1550,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1802255374}
   - component: {fileID: 1802255373}
+  - component: {fileID: 1802255375}
   m_Layer: 0
   m_Name: World
   m_TagString: Untagged
@@ -1569,7 +1570,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 87b662f4f11715b4fa62d2622e2df4b5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  worldState: 2
   player: {fileID: 963194225}
   noiseData:
     surfaceLevel: -11.57
@@ -1591,6 +1591,7 @@ MonoBehaviour:
   totalGenTime: 0
   drawPlayerBounds: 0
   drawChunkBounds: 0
+  drawDensityMaps: 0
   drawChunkVariables:
     position: 0
     chunkState: 0
@@ -1627,6 +1628,18 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 2
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1802255375
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1802255372}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: af55ce50d98f351478ebc00f5436a31d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &2012754583
 GameObject:
   m_ObjectHideFlags: 0

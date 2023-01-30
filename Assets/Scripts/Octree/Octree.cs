@@ -4,7 +4,7 @@ using UnityEngine;
 using Unity.Mathematics;
 using DataStructures;
 
-public abstract class Octree
+public abstract class Octree : JobRunner
 {
     public BoundingBox region; //Region encapsulating the entire octant
     public BoundingBox[] octants; //This objects 8 suboctants
@@ -21,7 +21,7 @@ public abstract class Octree
             return depthMultipliers[depth];
         }
     }
-    static readonly int[] depthMultipliers = {
+    public static readonly int[] depthMultipliers = {
         1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024
     };
     public Octree(BoundingBox size, int depth)
