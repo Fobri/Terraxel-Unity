@@ -24,18 +24,8 @@ namespace WorldGeneration
     [BurstCompile]
     public struct MarchingJob : IJobFor
     {
-        /// <summary>
-        /// The densities to generate the mesh off of
-        /// </summary>
         [ReadOnly] public DensityData densities;
         [ReadOnly] public int3 chunkPos;
-        
-        [ReadOnly] public NeighbourDensities front;
-        [ReadOnly] public NeighbourDensities back;
-        [ReadOnly] public NeighbourDensities left;
-        [ReadOnly] public NeighbourDensities right;
-        [ReadOnly] public NeighbourDensities up;
-        [ReadOnly] public NeighbourDensities down;
         [ReadOnly] public byte neighbourDirectionMask;
         [ReadOnly] public float isolevel;
         [ReadOnly] public int chunkSize;
@@ -86,19 +76,18 @@ namespace WorldGeneration
                 byte v0 = (byte)((edge >> 4) & 0x0F); //First Corner Index
                 byte v1 = (byte)(edge & 0x0F); //Second Corner Index
 
-                int t = (density[v1] << 8) / (density[v1] - density[v0]);
 
                 int3 cellDirection = DecodeCellIndices((byte)(edge >> 12));
                 int vertexEdgeIndex = (edge >> 8) & 0xF;
                 //if ((t & 0x00FF) != 0){
                     if((edge >> 12) == 8){
                         // Vertex lies in the interior of the edge.
-                        var newVertexIndex = CreateNewVertex(voxelLocalPosition, v0, v1, t);
+                        var newVertexIndex = CreateNewVertex(voxelLocalPosition + Tables.CubeCorners[v0], voxelLocalPosition + Tables.CubeCorners[v1], density[v0], density[v1]);
                         currentCell[vertexEdgeIndex] = newVertexIndex;
                         cellIndices[i] = newVertexIndex;
                     }else{
                         if((cellDirection.x == -1 && voxelLocalPosition.x == 0) || (cellDirection.y == -1 && voxelLocalPosition.y == 0) || (cellDirection.z == -1 && voxelLocalPosition.z == 0)){
-                            cellIndices[i] = CreateNewVertex(voxelLocalPosition, v0, v1, t);
+                            cellIndices[i] = CreateNewVertex(voxelLocalPosition + Tables.CubeCorners[v0], voxelLocalPosition + Tables.CubeCorners[v1], density[v0], density[v1]);
                         }
                         else{
                             cellIndices[i] = GetCell(voxelLocalPosition + cellDirection)[vertexEdgeIndex];
@@ -170,20 +159,38 @@ namespace WorldGeneration
             return vertexIndices[Utils.XyzToIndex(voxelLocalPosition, chunkSize)];
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ushort CreateNewVertex(int3 voxelLocalPosition, byte v0, byte v1, int t){
+        private ushort CreateNewVertex(int3 lowerEndPointPos, int3 higherEndPointPos, sbyte lowerEndPointDensity, sbyte higherEndPointDensity){
+            lowerEndPointPos *= depthMultiplier;
+            higherEndPointPos *= depthMultiplier;
+            if(depthMultiplier != 1){
+                int3 posInDensityMap = new int3(0);
+                int3 oldPos = new int3(-1);
+                while(!oldPos.Equals(posInDensityMap)){
+                    oldPos = posInDensityMap;
+                    posInDensityMap = ((lowerEndPointPos) + (higherEndPointPos)) / 2;
+                    sbyte halfWayDensity = SampleDensityRaw(posInDensityMap);
+                    if((lowerEndPointDensity >= 0 && halfWayDensity >= 0) || (lowerEndPointDensity < 0 && halfWayDensity < 0)){
+                        lowerEndPointPos = posInDensityMap;
+                        lowerEndPointDensity = halfWayDensity;
+                    }else{
+                        higherEndPointPos = posInDensityMap;
+                        higherEndPointDensity = halfWayDensity;
+                    }
+                }
+            }
+            var divider = (higherEndPointDensity - lowerEndPointDensity);
+            if(divider == 0) divider = 1;
+            int t = (higherEndPointDensity << 8) / divider;
             int u = 0x0100 - t;
-            //Q = t * P0 + u * P1;
             float3 vertPos;
             float3 vertNormal;
-            float3 P0 = (voxelLocalPosition + Tables.CubeCorners[v0]);
-            float3 N0 = GetVertexNormal((int3)P0);
-            if(v0 != v1){
-                float3 P1 = (voxelLocalPosition + Tables.CubeCorners[v1]);
-                float3 N1 = GetVertexNormal((int3)P1);
-                vertPos = (t * P0 + u * P1) * depthMultiplier ;
+            float3 N0 = GetVertexNormal(lowerEndPointPos);
+            if(!lowerEndPointPos.Equals(higherEndPointPos)){
+                float3 N1 = GetVertexNormal(higherEndPointPos);
+                vertPos = (t * lowerEndPointPos + u * higherEndPointPos);
                 vertNormal = (t * N0 + u * N1);
             }else{
-                vertPos = P0 * depthMultiplier;
+                vertPos = lowerEndPointPos;
                 vertNormal = N0;
             }
             
@@ -207,14 +214,18 @@ namespace WorldGeneration
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public float3 GetVertexNormal(int3 voxelLocalPosition){
             //if(voxelLocalPosition.x >= chunkSize || voxelLocalPosition.y >= chunkSize || voxelLocalPosition.z >= chunkSize) return new float3(0);
-            float nx = (SampleDensity(voxelLocalPosition + new int3(1, 0, 0)) - SampleDensity(voxelLocalPosition - new int3(1, 0, 0)));
-            float ny = (SampleDensity(voxelLocalPosition + new int3(0, 1, 0)) - SampleDensity(voxelLocalPosition - new int3(0, 1, 0)));
-            float nz = (SampleDensity(voxelLocalPosition + new int3(0, 0, 1)) - SampleDensity(voxelLocalPosition - new int3(0, 0, 1)));
+            float nx = (SampleDensityRaw(voxelLocalPosition + new int3(1, 0, 0)) - SampleDensityRaw(voxelLocalPosition - new int3(1, 0, 0)));
+            float ny = (SampleDensityRaw(voxelLocalPosition + new int3(0, 1, 0)) - SampleDensityRaw(voxelLocalPosition - new int3(0, 1, 0)));
+            float nz = (SampleDensityRaw(voxelLocalPosition + new int3(0, 0, 1)) - SampleDensityRaw(voxelLocalPosition - new int3(0, 0, 1)));
             return math.normalize((new float3(nx,ny,nz)));
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public sbyte SampleDensity(int3 pos){
             return densities.GetDensity(pos * depthMultiplier + chunkPos);
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public sbyte SampleDensityRaw(int3 pos){
+            return densities.GetDensity(pos + chunkPos);
         }
     }
     //Chunk noisemap update job, in a ball shape. Could implement more complex logic for this as well.
@@ -263,7 +274,7 @@ namespace WorldGeneration
         [ReadOnly] public int oct;
         [ReadOnly] public int depthMultiplier;
         [ReadOnly] public int size;
-        [NativeDisableParallelForRestriction, NativeDisableContainerSafetyRestriction, WriteOnly]
+        [NativeDisableParallelForRestriction, WriteOnly]
         public DensityResultData data;
 
 

@@ -15,6 +15,7 @@ using ReadOnly = Sirenix.OdinInspector.ReadOnlyAttribute;
 using System.Linq;
 using UnityEditor;
 using TMPro;
+using Unity.Profiling;
 public class ChunkManager : MonoBehaviour, IDisposable
 {
     public enum WorldState { DENSITY_UPDATE, MESH_UPDATE, IDLE }

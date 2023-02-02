@@ -10,7 +10,8 @@ using WorldGeneration;
 
 public class MemoryManager : IDisposable{
     
-    public const int maxBufferCount = 128*6;
+    public const int maxBufferCount = 128*4;
+    public const int densityCount = 128*6;
     public const int maxConcurrentOperations = 4;
     public const int maxVertexCount = 30000;
     public const int densityMapLength = (ChunkManager.chunkResolution)*(ChunkManager.chunkResolution)*(ChunkManager.chunkResolution);
@@ -18,7 +19,7 @@ public class MemoryManager : IDisposable{
     MeshData[] meshDatas;
     Queue<NativeArray<ushort4>> freeVertexIndexBuffers;
     Queue<NativeArray<sbyte>> freeDensityMaps;
-    NativeArray<sbyte>[] densityMaps;
+    NativeArray<sbyte> densityMap;
     NativeArray<ushort4>[] vertexIndexBuffers;
 
     public void Init(){
@@ -37,15 +38,17 @@ public class MemoryManager : IDisposable{
     void AllocateMeshData(){
         freeMeshDatas = new Queue<MeshData>();
         freeDensityMaps = new Queue<NativeArray<sbyte>>();
+        densityMap = new NativeArray<sbyte>(densityMapLength * densityCount, Allocator.Persistent);
         for(int i = 0; i < maxBufferCount; i++){
             var verts = new NativeArray<VertexData>(maxVertexCount, Allocator.Persistent);
             var indices = new NativeArray<ushort>(maxVertexCount, Allocator.Persistent);
-            var densities = new NativeArray<sbyte>(densityMapLength, Allocator.Persistent);
-            freeDensityMaps.Enqueue(densities);
             freeMeshDatas.Enqueue(new MeshData(verts, indices));
         }
+        for(int i = 0; i < densityCount; i++){
+            var densities = densityMap.GetSubArray(i*densityMapLength, densityMapLength);
+            freeDensityMaps.Enqueue(densities);
+        }
         meshDatas = freeMeshDatas.ToArray();
-        densityMaps = freeDensityMaps.ToArray();
     }
     public MeshData GetMeshData(){
         if(freeMeshDatas.Count == 0) throw new Exception("No free mesh data available", new InvalidOperationException());
@@ -94,9 +97,7 @@ public class MemoryManager : IDisposable{
         foreach(var buffer in vertexIndexBuffers){
             buffer.Dispose();
         }
-        foreach(var buffer in densityMaps){
-            buffer.Dispose();
-        }
+        densityMap.Dispose();
     }
     unsafe void ClearArray<T>(NativeArray<T> to_clear, int length) where T : struct
         {

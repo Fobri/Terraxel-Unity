@@ -103,17 +103,6 @@ public abstract class Octree : JobRunner
         if(this.parent == null) return null;
         return this;
     }
-    public ChunkData GetByLocation(QuadrantLocations location) => location switch{
-        QuadrantLocations.NE_TOP => children[0] as ChunkData,
-        QuadrantLocations.NW_TOP => children[1] as ChunkData,
-        QuadrantLocations.SW_TOP => children[2] as ChunkData,
-        QuadrantLocations.SE_TOP => children[3] as ChunkData,
-        QuadrantLocations.NE_BOT => children[4] as ChunkData,
-        QuadrantLocations.NW_BOT => children[5] as ChunkData,
-        QuadrantLocations.SW_BOT => children[6] as ChunkData,
-        QuadrantLocations.SE_BOT => children[7] as ChunkData,
-        _ => null
-    };
     public bool HasSubChunks{
         get{
             return children[0] != null && children[1] != null && children[2] != null && children[3] != null

@@ -51,32 +51,24 @@ public class ChunkData : Octree{
         public void UpdateMesh(){
             //Check front
             dirMask = 0;
-            NeighbourDensities[] neighbourDensities = new NeighbourDensities[6];
-            NeighbourDensities densities;
             if(depth > 0){
-                if(CheckNeighbour(new int3(1, 0, 0), out densities)){
+                if(CheckNeighbour(new int3(1, 0, 0))){
                     dirMask |= 0b_0000_0001;
-                    neighbourDensities[0] = densities;
                 }
-                if(CheckNeighbour(new int3(-1, 0, 0), out densities)){
+                if(CheckNeighbour(new int3(-1, 0, 0))){
                     dirMask |= 0b_0000_0010;
-                    neighbourDensities[1] = densities;
                 }
-                if(CheckNeighbour(new int3(0, 1, 0), out densities)){
+                if(CheckNeighbour(new int3(0, 1, 0))){
                     dirMask |= 0b_0000_0100;
-                    neighbourDensities[2] = densities;
                 }
-                if(CheckNeighbour(new int3(0, -1, 0), out densities)){
+                if(CheckNeighbour(new int3(0, -1, 0))){
                     dirMask |= 0b_0000_1000;
-                    neighbourDensities[3] = densities;
                 }
-                if(CheckNeighbour(new int3(0, 0, -1), out densities)){
+                if(CheckNeighbour(new int3(0, 0, -1))){
                     dirMask |= 0b_0001_0000;
-                    neighbourDensities[4] = densities;
                 }
-                if(CheckNeighbour(new int3(0, 0, 1), out densities)){
+                if(CheckNeighbour(new int3(0, 0, 1))){
                     dirMask |= 0b_0010_0000;
-                    neighbourDensities[5] = densities;
                 }
             }
             
@@ -92,12 +84,6 @@ public class ChunkData : Octree{
                 indexCounter = indexCounter,
                 depthMultiplier = depthMultiplier,
                 vertexIndices = vertexIndexBuffer,
-                front = neighbourDensities[0],
-                back = neighbourDensities[1],
-                up = neighbourDensities[2],
-                down = neighbourDensities[3],
-                right = neighbourDensities[4],
-                left = neighbourDensities[5],
                 triangles = meshData.indexBuffer,
                 neighbourDirectionMask = dirMask
             };
@@ -113,24 +99,16 @@ public class ChunkData : Octree{
             };
             jobHandle = vertexSharingJob.Schedule((ChunkManager.chunkResolution + 1) * (ChunkManager.chunkResolution + 1) * (ChunkManager.chunkResolution + 1), 32, marchingHandle);
         */}
-        bool CheckNeighbour(int3 relativeOffset, out NeighbourDensities densities){
+        bool CheckNeighbour(int3 relativeOffset){
             float3 pos = ChunkManager.chunkResolution * depthMultiplier * relativeOffset;
             var tree = ChunkManager.chunkTree as Octree;
             var queryResult = tree.Query(new BoundingBox(this.region.center + pos, this.region.bounds - 4));
             if(queryResult != null){
                 if(queryResult.HasSubChunks){
-                    NeighbourDensities _densities = new NeighbourDensities();
-                    var quadrants = Utils.ChunkRelativePositionToQuadrantLocations[relativeOffset];
-                    for(int i = 0; i < 4; i++){
-                        //_densities[i] = queryResult.GetByLocation(quadrants[i]).meshData.densityBuffer;
-                    }
-                    densities = _densities;
                     return true;
                 }
-                densities = default(NeighbourDensities);
                 return false;
             }
-            densities = default(NeighbourDensities);
             return false;
         }
         public void ApplyMesh(){

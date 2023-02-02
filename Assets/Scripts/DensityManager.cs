@@ -129,13 +129,9 @@ public class DensityManager : JobRunner, IDisposable {
         densityData.Dispose();
     }
 }
-
 public struct DensityData : IDisposable{
-    [ReadOnly]
     public NativeHashMap<int3, IntPtr> densities;
-    [ReadOnly]
     public NativeHashSet<int3> fullChunks;
-    [ReadOnly]
     public NativeHashSet<int3> emptyChunks;
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
