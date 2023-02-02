@@ -4,7 +4,7 @@ using UnityEngine;
 using Unity.Mathematics;
 using DataStructures;
 
-public abstract class Octree
+public abstract class Octree : JobRunner
 {
     public BoundingBox region; //Region encapsulating the entire octant
     public BoundingBox[] octants; //This objects 8 suboctants
@@ -21,7 +21,7 @@ public abstract class Octree
             return depthMultipliers[depth];
         }
     }
-    static readonly int[] depthMultipliers = {
+    public static readonly int[] depthMultipliers = {
         1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024
     };
     public Octree(BoundingBox size, int depth)
@@ -103,17 +103,6 @@ public abstract class Octree
         if(this.parent == null) return null;
         return this;
     }
-    public ChunkData GetByLocation(QuadrantLocations location) => location switch{
-        QuadrantLocations.NE_TOP => children[0] as ChunkData,
-        QuadrantLocations.NW_TOP => children[1] as ChunkData,
-        QuadrantLocations.SW_TOP => children[2] as ChunkData,
-        QuadrantLocations.SE_TOP => children[3] as ChunkData,
-        QuadrantLocations.NE_BOT => children[4] as ChunkData,
-        QuadrantLocations.NW_BOT => children[5] as ChunkData,
-        QuadrantLocations.SW_BOT => children[6] as ChunkData,
-        QuadrantLocations.SE_BOT => children[7] as ChunkData,
-        _ => null
-    };
     public bool HasSubChunks{
         get{
             return children[0] != null && children[1] != null && children[2] != null && children[3] != null

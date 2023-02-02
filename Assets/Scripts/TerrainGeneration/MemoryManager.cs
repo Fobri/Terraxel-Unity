@@ -11,11 +11,15 @@ using WorldGeneration;
 public class MemoryManager : IDisposable{
     
     public const int maxBufferCount = 128*4;
+    public const int densityCount = 128*6;
     public const int maxConcurrentOperations = 4;
     public const int maxVertexCount = 30000;
+    public const int densityMapLength = (ChunkManager.chunkResolution)*(ChunkManager.chunkResolution)*(ChunkManager.chunkResolution);
     Queue<MeshData> freeMeshDatas;
     MeshData[] meshDatas;
     Queue<NativeArray<ushort3>> freeVertexIndexBuffers;
+    Queue<NativeArray<sbyte>> freeDensityMaps;
+    NativeArray<sbyte> densityMap;
     NativeArray<ushort3>[] vertexIndexBuffers;
 
     public void Init(){
@@ -24,7 +28,7 @@ public class MemoryManager : IDisposable{
     }
     void AllocateTempBuffers(){
 
-        var vertexIndexBufferLength = (ChunkManager.chunkResolution + 1)*(ChunkManager.chunkResolution + 1)*(ChunkManager.chunkResolution + 1);
+        var vertexIndexBufferLength = densityMapLength;
         freeVertexIndexBuffers = new Queue<NativeArray<ushort3>>();
         for(int i = 0; i < maxConcurrentOperations; i++){
             freeVertexIndexBuffers.Enqueue(new NativeArray<ushort3>(vertexIndexBufferLength, Allocator.Persistent));
@@ -32,14 +36,17 @@ public class MemoryManager : IDisposable{
         vertexIndexBuffers = freeVertexIndexBuffers.ToArray();
     }
     void AllocateMeshData(){
-        var ns = ChunkManager.chunkResolution + 1;
-        var size = ns * ns * ns;
         freeMeshDatas = new Queue<MeshData>();
+        freeDensityMaps = new Queue<NativeArray<sbyte>>();
+        densityMap = new NativeArray<sbyte>(densityMapLength * densityCount, Allocator.Persistent);
         for(int i = 0; i < maxBufferCount; i++){
             var verts = new NativeArray<VertexData>(maxVertexCount, Allocator.Persistent);
             var indices = new NativeArray<ushort>(maxVertexCount, Allocator.Persistent);
-            var densities = new NativeArray<sbyte>(size, Allocator.Persistent);
-            freeMeshDatas.Enqueue(new MeshData(verts, indices, densities));
+            freeMeshDatas.Enqueue(new MeshData(verts, indices));
+        }
+        for(int i = 0; i < densityCount; i++){
+            var densities = densityMap.GetSubArray(i*densityMapLength, densityMapLength);
+            freeDensityMaps.Enqueue(densities);
         }
         meshDatas = freeMeshDatas.ToArray();
     }
@@ -48,8 +55,14 @@ public class MemoryManager : IDisposable{
         return freeMeshDatas.Dequeue();
     }
     public NativeArray<ushort3> GetVertexIndexBuffer(){
-        if(freeVertexIndexBuffers.Count == 0) throw new Exception("No free density map available", new InvalidOperationException());
+        if(freeVertexIndexBuffers.Count == 0) throw new Exception("No free vertex index buffer available", new InvalidOperationException());
         var thing = freeVertexIndexBuffers.Dequeue();
+        if(thing == default) Debug.Log("wut");
+        return thing;
+    }
+    public NativeArray<sbyte> GetDensityMap(){
+        if(freeDensityMaps.Count == 0) throw new Exception("No free density map available", new InvalidOperationException());
+        var thing = freeDensityMaps.Dequeue();
         if(thing == default) Debug.Log("wut");
         return thing;
     }
@@ -57,6 +70,9 @@ public class MemoryManager : IDisposable{
         ClearArray(data.indexBuffer, data.indexBuffer.Length);
         ClearArray(data.vertexBuffer, data.vertexBuffer.Length);
         freeMeshDatas.Enqueue(data);
+    }
+    public void ReturnDensityMap(NativeArray<sbyte> map){
+        freeDensityMaps.Enqueue(map);
     }
     public void ReturnVertexIndexBuffer(NativeArray<ushort3> buffer){
         if(buffer == default) throw new Exception("Tried to return invalid buffer", new InvalidCastException());
@@ -66,6 +82,9 @@ public class MemoryManager : IDisposable{
 
     public int GetFreeVertexIndexBufferCount(){
         return freeVertexIndexBuffers.Count;
+    }
+    public int GetFreeDensityMapCount(){
+        return freeDensityMaps.Count;
     }
     public int GetFreeMeshDataCount(){
         return freeMeshDatas.Count;
@@ -78,6 +97,7 @@ public class MemoryManager : IDisposable{
         foreach(var buffer in vertexIndexBuffers){
             buffer.Dispose();
         }
+        densityMap.Dispose();
     }
     unsafe void ClearArray<T>(NativeArray<T> to_clear, int length) where T : struct
         {

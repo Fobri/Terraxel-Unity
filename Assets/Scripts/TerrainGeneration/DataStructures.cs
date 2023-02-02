@@ -2,47 +2,20 @@ using Unity.Mathematics;
 using Unity.Collections;
 using System.Collections.Generic;
 using Unity.Collections.LowLevel.Unsafe;
-
 using System.Runtime.CompilerServices;
 
 namespace DataStructures
 {
-    
-    public enum QuadrantLocations { NE_TOP, NW_TOP, SW_TOP, SE_TOP, NE_BOT, NW_BOT, SW_BOT, SE_BOT}
-    public struct NeighbourDensities{
-        [ReadOnly, NativeDisableContainerSafetyRestriction]
-        public NativeArray<sbyte> first;
-        
-        [ReadOnly, NativeDisableContainerSafetyRestriction]
-        public NativeArray<sbyte> second;
-        
-        [ReadOnly, NativeDisableContainerSafetyRestriction]
-        public NativeArray<sbyte> third;
-        
-        [ReadOnly, NativeDisableContainerSafetyRestriction]
-        public NativeArray<sbyte> fourth;
 
-        public NativeArray<sbyte> this[int index]{
-            get{
-                switch(index){
-                    case 0: return first;
-                    case 1: return second;
-                    case 2: return third;
-                    case 3: return fourth;
-                    
-                    default: throw new System.IndexOutOfRangeException();
-                }
-            }set{
-                switch(index){
-                    case 0: first = value; break;
-                    case 1: second = value; break;
-                    case 2: third = value; break;
-                    case 3: fourth = value; break;
-                    
-                    default: throw new System.IndexOutOfRangeException();
-                }
-            }
-        }
+    
+    public struct DensityResultData{
+        
+        [NativeDisableParallelForRestriction, NativeDisableContainerSafetyRestriction, WriteOnly]
+        public NativeArray<sbyte> densityMap;
+        [WriteOnly, NativeDisableParallelForRestriction]
+        public NativeReference<bool> isEmpty;
+        [WriteOnly, NativeDisableParallelForRestriction]
+        public NativeReference<bool> isFull;
     }
     public struct VertexData{
         public float3 vertex;
@@ -56,12 +29,10 @@ namespace DataStructures
         
         public NativeArray<VertexData> vertexBuffer;
         public NativeArray<ushort> indexBuffer;
-        public NativeArray<sbyte> densityBuffer;
 
-        public MeshData(NativeArray<VertexData> vertexBuffer, NativeArray<ushort> indexBuffer, NativeArray<sbyte> densityBuffer){
+        public MeshData(NativeArray<VertexData> vertexBuffer, NativeArray<ushort> indexBuffer){
             this.vertexBuffer = vertexBuffer;
             this.indexBuffer = indexBuffer;
-            this.densityBuffer = densityBuffer;
         }
         public bool IsCreated{
             get{
@@ -69,7 +40,6 @@ namespace DataStructures
             }
         }
         public void Dispose(){
-            densityBuffer.Dispose();
             indexBuffer.Dispose();
             vertexBuffer.Dispose();
         }
@@ -155,13 +125,6 @@ namespace DataStructures
                 index / (size * size));
             return position;
         }
-        public static readonly Dictionary<int3, QuadrantLocations[]> ChunkRelativePositionToQuadrantLocations = new Dictionary<int3, QuadrantLocations[]>(){
-        {new int3(1, 0, 0), new QuadrantLocations[]{QuadrantLocations.SW_TOP, QuadrantLocations.SE_TOP, QuadrantLocations.SW_BOT, QuadrantLocations.SE_BOT}},
-        {new int3(-1, 0, 0), new QuadrantLocations[]{QuadrantLocations.NW_TOP, QuadrantLocations.NE_TOP, QuadrantLocations.NW_BOT, QuadrantLocations.NE_BOT}},
-        {new int3(0, -1, 0), new QuadrantLocations[]{QuadrantLocations.NW_TOP, QuadrantLocations.NE_TOP, QuadrantLocations.SW_TOP, QuadrantLocations.SE_TOP}},
-        {new int3(0, 1, 0), new QuadrantLocations[]{QuadrantLocations.NW_BOT, QuadrantLocations.NE_BOT, QuadrantLocations.SW_BOT, QuadrantLocations.SE_BOT}},
-        {new int3(0, 0, 1), new QuadrantLocations[]{QuadrantLocations.SE_TOP, QuadrantLocations.NE_TOP, QuadrantLocations.SE_BOT, QuadrantLocations.NE_BOT}},
-        {new int3(0, 0, -1), new QuadrantLocations[]{QuadrantLocations.SW_TOP, QuadrantLocations.NW_TOP, QuadrantLocations.SW_BOT, QuadrantLocations.NW_BOT}}};
 
         public static string DirectionMaskToString(byte dirMask){
             string value = "";
