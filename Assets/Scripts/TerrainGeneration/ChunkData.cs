@@ -73,7 +73,7 @@ public class ChunkData : Octree{
             }
             
             genTime = Time.realtimeSinceStartup;
-            var marchingJob = new MarchingJob()
+            var marchingJob = new MeshJob()
             {
                 densities = ChunkManager.densityManager.GetJobDensityData(),
                 chunkPos = (int3)WorldPosition,
@@ -85,7 +85,8 @@ public class ChunkData : Octree{
                 depthMultiplier = depthMultiplier,
                 vertexIndices = vertexIndexBuffer,
                 triangles = meshData.indexBuffer,
-                neighbourDirectionMask = dirMask
+                neighbourDirectionMask = dirMask,
+                cache = new DensityCacheInstance(new int3(int.MaxValue))
             };
             base.ScheduleJob(marchingJob, (ChunkManager.chunkResolution) * (ChunkManager.chunkResolution) * (ChunkManager.chunkResolution));
 

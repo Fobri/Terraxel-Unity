@@ -3,6 +3,7 @@ using Unity.Collections;
 using System.Collections.Generic;
 using Unity.Collections.LowLevel.Unsafe;
 using System.Runtime.CompilerServices;
+using System;
 
 namespace DataStructures
 {
@@ -16,6 +17,15 @@ namespace DataStructures
         public NativeReference<bool> isEmpty;
         [WriteOnly, NativeDisableParallelForRestriction]
         public NativeReference<bool> isFull;
+    }
+    public struct DensityCacheInstance{
+        [NativeDisableUnsafePtrRestriction]
+        public IntPtr cachedDensityMap;
+        public int3 cachedPos;
+        public DensityCacheInstance(int3 pos){
+            this.cachedDensityMap = default;
+            this.cachedPos = pos;
+        }
     }
     public struct VertexData{
         public float3 vertex;
@@ -116,6 +126,14 @@ namespace DataStructures
         public static int XyzToIndex(int3 index, int size)
         {
             return XyzToIndex(index.x, index.y, index.z, size);
+        }
+        public static int3 WorldPosToChunkPos(int3 worldPos){
+            var chunkPos = (int3)(math.floor(worldPos / ChunkManager.chunkResolution)) * ChunkManager.chunkResolution;
+            //chunkPos -= math.select(new int3(ChunkManager.chunkResolution), new int3(0), (worldPos < 0) & (worldPos % ChunkManager.chunkResolution != 0));
+            if(worldPos.x < 0 && worldPos.x % ChunkManager.chunkResolution != 0) chunkPos.x -= ChunkManager.chunkResolution;
+            if(worldPos.y < 0 && worldPos.y % ChunkManager.chunkResolution != 0) chunkPos.y -= ChunkManager.chunkResolution;
+            if(worldPos.z < 0 && worldPos.z % ChunkManager.chunkResolution != 0) chunkPos.z -= ChunkManager.chunkResolution;
+            return chunkPos;
         }
         public static int3 IndexToXyz(int index, int size)
         {

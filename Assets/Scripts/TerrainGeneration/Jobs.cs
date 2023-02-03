@@ -22,7 +22,7 @@ namespace WorldGeneration
         public float offset;
     }
     [BurstCompile]
-    public struct MarchingJob : IJobFor
+    public struct MeshJob : IJobFor
     {
         [ReadOnly] public DensityData densities;
         [ReadOnly] public int3 chunkPos;
@@ -32,11 +32,12 @@ namespace WorldGeneration
         [WriteOnly] public Counter vertexCounter;
         
         [WriteOnly] public Counter indexCounter;
-        [NativeDisableParallelForRestriction, WriteOnly] public NativeArray<VertexData> vertices;
+        [WriteOnly] public NativeArray<VertexData> vertices;
         
-        [NativeDisableParallelForRestriction, WriteOnly] public NativeArray<ushort> triangles;
+        [WriteOnly] public NativeArray<ushort> triangles;
         [ReadOnly] public int depthMultiplier;
         public NativeArray<ushort3> vertexIndices;
+        public DensityCacheInstance cache;
         public void Execute(int index)
         {
             int3 voxelLocalPosition = Utils.IndexToXyz(index, chunkSize);
@@ -161,6 +162,7 @@ namespace WorldGeneration
         private ushort CreateNewVertex(int3 lowerEndPointPos, int3 higherEndPointPos, sbyte lowerEndPointDensity, sbyte higherEndPointDensity){
             lowerEndPointPos *= depthMultiplier;
             higherEndPointPos *= depthMultiplier;
+            //Surface shift
             if(depthMultiplier != 1){
                 int3 posInDensityMap = new int3(0);
                 int3 oldPos = new int3(-1);
@@ -220,11 +222,36 @@ namespace WorldGeneration
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public sbyte SampleDensity(int3 pos){
-            return densities.GetDensity(pos * depthMultiplier + chunkPos);
+            return GetDensityWithCache(pos * depthMultiplier + chunkPos);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public sbyte SampleDensityRaw(int3 pos){
-            return densities.GetDensity(pos + chunkPos);
+            return GetDensityWithCache(pos + chunkPos);
+        }
+        private sbyte GetDensityWithCache(int3 worldPos){
+            var chunkPos = Utils.WorldPosToChunkPos(worldPos);
+            var localPosInChunk = math.abs(worldPos - chunkPos);
+            if(!cache.cachedPos.Equals(chunkPos)){
+                if(densities.ContainsPos(chunkPos)){
+                    cache.cachedDensityMap = densities.GetDensityMap(chunkPos);
+                    cache.cachedPos = chunkPos;
+                }else if(densities.IsEmpty(chunkPos)) {return 127;}
+                else if(densities.IsFull(chunkPos)) {return -127;}
+                else{
+                    return 127;
+                }
+            }
+            unsafe{
+            return UnsafeUtility.ReadArrayElement<sbyte>((void*)cache.cachedDensityMap, Utils.XyzToIndex(localPosInChunk, ChunkManager.chunkResolution));
+            }
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public TransitionCorners<sbyte> GetTransitionFace(int3 voxelLocalPosition, int transitionDirectionIndex){
+            TransitionCorners<sbyte> result = new TransitionCorners<sbyte>();
+            for(int i = 0; i < 9; i++){
+                result[i] = SampleDensityRaw(voxelLocalPosition * depthMultiplier + Tables.TransitionDirectionTable[transitionDirectionIndex * 9 + i]);
+            }
+            return result;
         }
     }
     //Chunk noisemap update job, in a ball shape. Could implement more complex logic for this as well.
@@ -319,6 +346,15 @@ namespace WorldGeneration
     //Tables used for marching cubes. Taken from https://github.com/Eldemarkki/Marching-Cubes-Terrain
     internal class Tables
     {
+        public static readonly int3[] TransitionDirectionTable = {
+            //order: front, back, right, left, up, down
+            new int3(2,0,0), new int3(2,0,1), new int3(2,0,2), new int3(2,1,0), new int3(2,1,1), new int3(2,1,2), new int3(2,2,0),new int3(2,2,1),new int3(2,2,2),
+            new int3(0,0,2), new int3(0,0,1), new int3(0,0,0), new int3(0,1,2), new int3(0,1,1), new int3(0,1,0), new int3(0,2,2),new int3(0,2,1),new int3(0,2,0),
+            new int3(2,0,2),new int3(1,0,2),new int3(0,0,2),new int3(2,1,2),new int3(1,1,2),new int3(0,1,2),new int3(2,2,2),new int3(1,2,2),new int3(0,2,2),
+            new int3(0,0,0),new int3(1,0,0),new int3(2,0,0),new int3(0,1,0),new int3(1,1,0),new int3(2,1,0),new int3(0,2,0),new int3(1,2,0),new int3(2,2,0),
+            new int3(2,2,0),new int3(2,2,1),new int3(2,2,2),new int3(1,2,0),new int3(1,2,1),new int3(1,2,2),new int3(0,2,0),new int3(0,2,1),new int3(0,2,2),
+            new int3(0,0,0),new int3(0,0,1),new int3(0,0,2),new int3(1,0,0),new int3(1,0,1),new int3(1,0,2),new int3(2,0,0),new int3(2,0,1),new int3(2,0,1)
+        };
         /// <summary>
         /// Lookup table for how the edges should be connected
         /// </summary>

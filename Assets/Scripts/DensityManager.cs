@@ -9,6 +9,7 @@ using WorldGeneration;
 using Unity.Collections.LowLevel.Unsafe;
 using DataStructures;
 using System.Runtime.CompilerServices;
+using System.Threading;
 
 public class DensityManager : JobRunner, IDisposable {
     
@@ -133,15 +134,14 @@ public struct DensityData : IDisposable{
     public NativeHashMap<int3, IntPtr> densities;
     public NativeHashSet<int3> fullChunks;
     public NativeHashSet<int3> emptyChunks;
+
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public sbyte GetDensity(int3 worldPos){
-        var chunkPos = (int3)(math.floor(worldPos / ChunkManager.chunkResolution)) * ChunkManager.chunkResolution;
-        if(worldPos.x < 0 && worldPos.x % ChunkManager.chunkResolution != 0) chunkPos.x -= ChunkManager.chunkResolution;
-        if(worldPos.y < 0 && worldPos.y % ChunkManager.chunkResolution != 0) chunkPos.y -= ChunkManager.chunkResolution;
-        if(worldPos.z < 0 && worldPos.z % ChunkManager.chunkResolution != 0) chunkPos.z -= ChunkManager.chunkResolution;
+        var chunkPos = Utils.WorldPosToChunkPos(worldPos);
 
         var localPosInChunk = math.abs(worldPos - chunkPos);
+
         if(fullChunks.Contains(chunkPos)) return -127;
         if(emptyChunks.Contains(chunkPos)) return 127;
         if(densities.ContainsKey(chunkPos)){
@@ -151,6 +151,27 @@ public struct DensityData : IDisposable{
             }
         }
         return 127;
+    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public IntPtr GetDensityMap(int3 chunkPos){
+        unsafe{
+        return densities[chunkPos];
+        }
+    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool ContainsPos(int3 chunkPos){
+        return densities.ContainsKey(chunkPos);
+    }
+
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsEmpty(int3 chunkPos){
+        return emptyChunks.Contains(chunkPos);
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsFull(int3 chunkPos){
+        return fullChunks.Contains(chunkPos);
     }
 
     public void Dispose(){
