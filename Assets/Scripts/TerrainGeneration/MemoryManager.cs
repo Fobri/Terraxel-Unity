@@ -4,7 +4,7 @@ using UnityEngine;
 using Unity.Collections;
 using System;
 using Unity.Mathematics;
-using DataStructures;
+using WorldGeneration.DataStructures;
 using Unity.Collections.LowLevel.Unsafe;
 using WorldGeneration;
 
@@ -17,10 +17,10 @@ public class MemoryManager : IDisposable{
     public const int densityMapLength = (ChunkManager.chunkResolution)*(ChunkManager.chunkResolution)*(ChunkManager.chunkResolution);
     Queue<MeshData> freeMeshDatas;
     MeshData[] meshDatas;
-    Queue<NativeArray<ushort3>> freeVertexIndexBuffers;
+    Queue<TempBuffer> freeVertexIndexBuffers;
     Queue<NativeArray<sbyte>> freeDensityMaps;
     NativeArray<sbyte> densityMap;
-    NativeArray<ushort3>[] vertexIndexBuffers;
+    TempBuffer[] vertexIndexBuffers;
 
     public void Init(){
         AllocateMeshData();
@@ -28,10 +28,11 @@ public class MemoryManager : IDisposable{
     }
     void AllocateTempBuffers(){
 
-        var vertexIndexBufferLength = densityMapLength;
-        freeVertexIndexBuffers = new Queue<NativeArray<ushort3>>();
+        freeVertexIndexBuffers = new Queue<TempBuffer>();
         for(int i = 0; i < maxConcurrentOperations; i++){
-            freeVertexIndexBuffers.Enqueue(new NativeArray<ushort3>(vertexIndexBufferLength, Allocator.Persistent));
+            var buf1 = new NativeArray<ushort3>(densityMapLength, Allocator.Persistent);
+            var buf2 = new NativeArray<TransitionCorners<ushort>>((ChunkManager.chunkResolution)*(ChunkManager.chunkResolution)*4, Allocator.Persistent);
+            freeVertexIndexBuffers.Enqueue(new TempBuffer(buf1, buf2));
         }
         vertexIndexBuffers = freeVertexIndexBuffers.ToArray();
     }
@@ -54,10 +55,9 @@ public class MemoryManager : IDisposable{
         if(freeMeshDatas.Count == 0) throw new Exception("No free mesh data available", new InvalidOperationException());
         return freeMeshDatas.Dequeue();
     }
-    public NativeArray<ushort3> GetVertexIndexBuffer(){
+    public TempBuffer GetVertexIndexBuffer(){
         if(freeVertexIndexBuffers.Count == 0) throw new Exception("No free vertex index buffer available", new InvalidOperationException());
         var thing = freeVertexIndexBuffers.Dequeue();
-        if(thing == default) Debug.Log("wut");
         return thing;
     }
     public NativeArray<sbyte> GetDensityMap(){
@@ -74,9 +74,10 @@ public class MemoryManager : IDisposable{
     public void ReturnDensityMap(NativeArray<sbyte> map){
         freeDensityMaps.Enqueue(map);
     }
-    public void ReturnVertexIndexBuffer(NativeArray<ushort3> buffer){
-        if(buffer == default) throw new Exception("Tried to return invalid buffer", new InvalidCastException());
-        ClearArray(buffer, buffer.Length);
+    public void ReturnVertexIndexBuffer(TempBuffer buffer){
+        if(buffer.vertexIndices == default) throw new Exception("Tried to return invalid buffer", new InvalidCastException());
+        ClearArray(buffer.transitionVertexIndices, buffer.transitionVertexIndices.Length);
+        ClearArray(buffer.vertexIndices, buffer.vertexIndices.Length);
         freeVertexIndexBuffers.Enqueue(buffer);
     }
 

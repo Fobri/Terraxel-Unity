@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Unity.Mathematics;
-using DataStructures;
+using WorldGeneration.DataStructures;
 
 public abstract class Octree : JobRunner
 {
@@ -21,8 +21,16 @@ public abstract class Octree : JobRunner
             return depthMultipliers[depth];
         }
     }
+    public float negativeDepthMultiplier{
+        get{
+            return negativeDepthMultipliers[depth];
+        }
+    }
     public static readonly int[] depthMultipliers = {
         1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024
+    };
+    public static readonly float[] negativeDepthMultipliers = {
+        1, 0.5f, 0.25f, 0.125f, 0.0625f, 0.03125f, 0.015625f
     };
     public Octree(BoundingBox size, int depth)
     {

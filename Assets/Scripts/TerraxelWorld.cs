@@ -5,7 +5,7 @@ using System;
 using Unity.Collections;
 using Unity.Mathematics;
 using Unity.Jobs;
-using DataStructures;
+using WorldGeneration.DataStructures;
 
 public class TerraxelWorld : MonoBehaviour
 {

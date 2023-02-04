@@ -7,7 +7,7 @@ using Unity.Mathematics;
 using Unity.Jobs;
 using WorldGeneration;
 using Unity.Collections.LowLevel.Unsafe;
-using DataStructures;
+using WorldGeneration.DataStructures;
 using System.Runtime.CompilerServices;
 using System.Threading;
 

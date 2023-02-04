@@ -5,13 +5,13 @@ using Unity.Mathematics;
 using WorldGeneration;
 using UnityEngine.Rendering;
 using System;
-using DataStructures;
+using WorldGeneration.DataStructures;
 
 public class ChunkData : Octree{
         public enum ChunkState { DIRTY, READY, INVALID, ROOT, QUEUED }
         public enum OnMeshReady { ALERT_PARENT, DISPOSE_CHILDREN }
         public enum DisposeState { NOTHING, POOL, FREE_MESH }
-        public NativeArray<ushort3> vertexIndexBuffer;
+        public TempBuffer vertexIndexBuffer;
         public MeshData meshData;
         public GameObject worldObject;
         public Counter vertexCounter;
@@ -83,6 +83,7 @@ public class ChunkData : Octree{
                 vertexCounter = vertexCounter,
                 indexCounter = indexCounter,
                 depthMultiplier = depthMultiplier,
+                negativeDepthMultiplier = negativeDepthMultiplier,
                 vertexIndices = vertexIndexBuffer,
                 triangles = meshData.indexBuffer,
                 neighbourDirectionMask = dirMask,

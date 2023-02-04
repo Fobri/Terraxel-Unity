@@ -5,7 +5,7 @@ using Unity.Collections.LowLevel.Unsafe;
 using System.Runtime.CompilerServices;
 using System;
 
-namespace DataStructures
+namespace WorldGeneration.DataStructures
 {
 
     
@@ -83,41 +83,18 @@ namespace DataStructures
             }
         }
     }
-    public struct VoxelCornerElement{
-        public sbyte density;
-        public VoxelCornerElement(sbyte density){
-            this.density = density;
+    public struct TempBuffer : IDisposable{
+        public NativeArray<ushort3> vertexIndices;
+        public NativeArray<TransitionCorners<ushort>> transitionVertexIndices;
+        public TempBuffer(NativeArray<ushort3> vertexIndices, NativeArray<TransitionCorners<ushort>> transitionVertexIndices){
+            this.vertexIndices = vertexIndices;
+            this.transitionVertexIndices = transitionVertexIndices;
+        }
+        public void Dispose(){
+            vertexIndices.Dispose();
+            transitionVertexIndices.Dispose();
         }
     }
-    public struct RegularCell
-    {
-        private byte geometryCounts;
-
-        // High nibble is vertex count, low nibble is triangle count.
-        private byte[] vertexIndex;
-        // Groups of 3 indexes giving the triangulation.
-
-        public RegularCell(byte gc, byte[] vi)
-        {
-            geometryCounts = gc;
-            vertexIndex = vi;
-        }
-
-        public long GetVertexCount()
-        {
-            return (geometryCounts >> 4);
-        }
-
-        public long GetTriangleCount()
-        {
-            return (geometryCounts & 0x0F);
-        }
-
-        public byte[] Indizes()
-        {
-            return vertexIndex;
-        }
-    };
     public class Utils{
         public static int XyzToIndex(int x, int y, int z, int size)
         {

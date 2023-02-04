@@ -50,6 +50,11 @@ public struct TransitionCorners<T>
         /// The ninth corner
         /// </summary>
         public T Corner9 { get; set; }
+        
+        /// <summary>
+        /// The ninth corner
+        /// </summary>
+        public T Corner10 { get; set; }
 
         /// <summary>
         /// The indexer for the voxel corners
@@ -71,6 +76,7 @@ public struct TransitionCorners<T>
                     case 6: return Corner7;
                     case 7: return Corner8;
                     case 8: return Corner9;
+                    case 9: return Corner10;
                     default: throw new System.IndexOutOfRangeException();
                 }
             }
@@ -104,6 +110,9 @@ public struct TransitionCorners<T>
                         break;
                     case 8:
                         Corner9 = value;
+                        break;
+                    case 9:
+                        Corner10 = value;
                         break;
                     default: throw new System.IndexOutOfRangeException();
                 }

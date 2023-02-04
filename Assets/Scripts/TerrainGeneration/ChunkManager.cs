@@ -4,7 +4,7 @@ using UnityEngine;
 using WorldGeneration;
 using Unity.Mathematics;
 using Unity.Collections;
-using DataStructures;
+using WorldGeneration.DataStructures;
 using Unity.Jobs;
 using UnityEngine.Rendering;
 using System;
