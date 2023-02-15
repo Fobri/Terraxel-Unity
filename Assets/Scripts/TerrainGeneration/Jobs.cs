@@ -63,13 +63,13 @@ namespace WorldGeneration
             var vertRowIndex = caseCode * 12;
             byte cellData = Tables.RegularCellData[triRowIndex];
             //ushort[] vertexLocations = Tables.RegularVertexData[caseCode];
-            long vertexCount = (cellData >> 4);
-            long triangleCount = (cellData & 0x0F);
+            int vertexCount = (cellData >> 4);
+            int triangleCount = (cellData & 0x0F);
             
             CellIndices cellIndices = new CellIndices();
             vertexIndices.vertexIndices[index] = new ushort3(0);
             var currentCell = vertexIndices.vertexIndices[index];
-            
+            int3 transition = new int3(0);
             for (int i = 0; i < vertexCount; i++)
             {
                 ushort edge = (ushort)(Tables.RegularVertexData[i + vertRowIndex]);
@@ -83,12 +83,14 @@ namespace WorldGeneration
                 //if ((t & 0x00FF) != 0){
                     if((edge >> 12) == 8){
                         // Vertex lies in the interior of the edge.
-                        var newVertexIndex = CreateNewVertex(voxelLocalPosition, v0, v1, density[v0], density[v1]);
+                        var newVertexIndex = CreateNewVertex((voxelLocalPosition + Tables.CubeCorners[v0]) * depthMultiplier,(voxelLocalPosition + Tables.CubeCorners[v1]) * depthMultiplier, density[v0], density[v1], out int3 transitionCell);
+                        transition += transitionCell;
                         currentCell[vertexEdgeIndex] = newVertexIndex;
                         cellIndices[i] = newVertexIndex;
                     }else{
                         if((cellDirection.x == -1 && voxelLocalPosition.x == 0) || (cellDirection.y == -1 && voxelLocalPosition.y == 0) || (cellDirection.z == -1 && voxelLocalPosition.z == 0)){
-                            cellIndices[i] = CreateNewVertex(voxelLocalPosition, v0, v1, density[v0], density[v1]);
+                            cellIndices[i] = CreateNewVertex((voxelLocalPosition + Tables.CubeCorners[v0]) * depthMultiplier,(voxelLocalPosition + Tables.CubeCorners[v1]) * depthMultiplier, density[v0], density[v1], out int3 transitionCell);
+                            transition += transitionCell;
                         }
                         else{
                             cellIndices[i] = GetCell(voxelLocalPosition + cellDirection)[vertexEdgeIndex];
@@ -127,19 +129,64 @@ namespace WorldGeneration
                 for(int v = 0; v < 3; v++){
                     triangles[idx + v] = cellIndices[Tables.RegularCellData[triRowIndex + i * 3 + v + 1]];
                 }
-                /*triangles[idx] = cellIndices[Tables.RegularCellData[triRowIndex + i * 3 + 1]];
-                triangles[idx + 1] = cellIndices[Tables.RegularCellData[triRowIndex + i * 3 + 2]];
-                triangles[idx + 2] = cellIndices[Tables.RegularCellData[triRowIndex + i * 3 + 3]];*/
             }
-            /*for(int i = 0; i < triangleCount; i += 3){
-                
-                
-                int triangleIndex = indexCounter.Increment() * 3;
-                triangles[triangleIndex + 0] = GetVertexIndex(Tables.RegularCellData[triRowIndex + i + 0], voxelLocalPosition, indices);
-                triangles[triangleIndex + 1] = GetVertexIndex(Tables.RegularCellData[triRowIndex + i + 1], voxelLocalPosition, indices);
-                triangles[triangleIndex + 2] = GetVertexIndex(Tables.RegularCellData[triRowIndex + i + 2], voxelLocalPosition, indices);
+            if(!transition.Equals(0)){
+                transition = math.clamp(transition, -1, 1);
+                if(transition.x == -1) GenerateTransitionCell(0, voxelLocalPosition, new int2(voxelLocalPosition.z, voxelLocalPosition.y));
+                else if(transition.x == 1) GenerateTransitionCell(1, voxelLocalPosition, new int2(voxelLocalPosition.z, voxelLocalPosition.y));
+                if(transition.z == -1) GenerateTransitionCell(2, voxelLocalPosition, new int2(voxelLocalPosition.x, voxelLocalPosition.y));
+                else if(transition.z == 1) GenerateTransitionCell(3, voxelLocalPosition, new int2(voxelLocalPosition.x, voxelLocalPosition.y));
+                if(transition.y == -1) GenerateTransitionCell(4, voxelLocalPosition, new int2(voxelLocalPosition.z, voxelLocalPosition.x));
             }
-            vertexIndices[index] = indices;*/
+        }
+        private void GenerateTransitionCell(int transitionIndex, int3 voxelLocalPosition, int2 voxel2DLocalPosition){
+            int index = Utils.XyzToIndex(voxel2DLocalPosition.x, transitionIndex, voxel2DLocalPosition.y, chunkSize);
+            var density = GetTransitionFace(voxelLocalPosition, transitionIndex);
+            int transitionCase = GetTransitionCase(density);
+            if(transitionCase == 0 || transitionCase == 511) return;
+            int transitionClass = Tables.transitionCellClass[transitionCase];
+
+            var vertRowIndex = transitionCase * 12;
+            var cellData = Tables.TransitionCellData[(transitionClass & 0x7F) * 37];
+            int vertexCount = (cellData >> 4);
+            int triangleCount = (cellData & 0x0F);
+
+            CellIndices transitionCellIndices = new CellIndices();
+            var currentCell = vertexIndices.transitionVertexIndices[index];
+            for (int i = 0; i < vertexCount; i++)
+            {
+                ushort edge = (ushort)(Tables.transitionVertexData[i + vertRowIndex]);
+
+                byte v0 = (byte)((edge >> 4) & 0x0F); //First Corner Index
+                byte v1 = (byte)(edge & 0x0F); //Second Corner Index
+
+
+                int2 cellDirection = DecodeTransitionCellIndices((byte)(edge >> 12));
+                int vertexEdgeIndex = (edge >> 8) & 0xF;
+                if((edge >> 12) == 8 || (edge >> 12) == 4){
+                    // Vertex lies in the interior of the edge.
+                    var newVertexIndex = CreateNewVertex(voxelLocalPosition * depthMultiplier + Tables.TransitionDirectionTable[transitionIndex * 9 + Tables.TransitionEdgeRemap[v0]] * depthMultiplier / 2,voxelLocalPosition * depthMultiplier + Tables.TransitionDirectionTable[transitionIndex * 9 + Tables.TransitionEdgeRemap[v1]] * depthMultiplier / 2, (sbyte)density[v0], (sbyte)density[v1], out int3 transitionCell, true, v0 > 8 && v1 > 8);
+                    transitionCellIndices[i] = newVertexIndex;
+                    if((edge >> 12) == 8)
+                        currentCell[vertexEdgeIndex] = newVertexIndex;
+                }else{
+                    if((cellDirection.x == -1 && voxel2DLocalPosition.x == 0) || (cellDirection.y == -1 && voxel2DLocalPosition.y == 0)){
+                        transitionCellIndices[i] = CreateNewVertex(voxelLocalPosition * depthMultiplier + Tables.TransitionDirectionTable[transitionIndex * 9 + Tables.TransitionEdgeRemap[v0]] * depthMultiplier / 2,voxelLocalPosition * depthMultiplier + Tables.TransitionDirectionTable[transitionIndex * 9 + Tables.TransitionEdgeRemap[v1]] * depthMultiplier / 2, (sbyte)density[v0], (sbyte)density[v1], out int3 transitionCell, true, v0 > 8 && v1 > 8);
+                    }
+                    else{
+                        transitionCellIndices[i] = GetTransitionCell(voxel2DLocalPosition + cellDirection, transitionIndex)[vertexEdgeIndex];
+                    }
+                }
+            }
+            vertexIndices.transitionVertexIndices[index] = currentCell;
+            bool reverse = (transitionClass >> 7) == 1;
+            if(transitionIndex == 1 || transitionIndex == 2) reverse = !reverse;
+            for(int i = 0; i < triangleCount; i++){
+                var idx = indexCounter.Increment() * 3;
+                for(int v = 0; v < 3; v++){
+                    triangles[idx + (reverse ? 2 - v : v)] = transitionCellIndices[Tables.TransitionCellData[((transitionClass & 0x7F) * 37) + i * 3 + v + 1]];
+                }
+            }
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         int3 DecodeCellIndices(byte idx){
@@ -150,15 +197,27 @@ namespace WorldGeneration
             return value;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        int2 DecodeTransitionCellIndices(byte idx){
+            int2 value = new int2();
+            if(idx == 1){
+                value.x = -1;
+            }else if(idx == 2){
+                value.y = -1;
+            }
+            return value;
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ushort3 GetCell(int3 voxelLocalPosition){
             return vertexIndices.vertexIndices[Utils.XyzToIndex(voxelLocalPosition, chunkSize)];
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ushort CreateNewVertex(int3 voxelLocalPosition, byte v0, byte v1, sbyte lowerEndPointDensity, sbyte higherEndPointDensity){
-            var lowerEndPointPos = (voxelLocalPosition + Tables.CubeCorners[v0]) * depthMultiplier;
-            var higherEndPointPos = (voxelLocalPosition + Tables.CubeCorners[v1]) * depthMultiplier;
+        private CellIndices GetTransitionCell(int2 voxelLocalPosition, int faceIdx){
+            return vertexIndices.transitionVertexIndices[Utils.XyzToIndex(voxelLocalPosition.x, faceIdx, voxelLocalPosition.y, chunkSize)];
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private ushort CreateNewVertex(int3 lowerEndPointPos, int3 higherEndPointPos, sbyte lowerEndPointDensity, sbyte higherEndPointDensity, out int3 transitionCellDirection, bool surfaceShift = true, bool transitionOffset = true){
             //Surface shift
-            if(depthMultiplier != 1){
+            if(surfaceShift && depthMultiplier != 1){
                 int3 posInDensityMap = new int3(0);
                 int3 oldPos = new int3(-1);
                 while(!oldPos.Equals(posInDensityMap)){
@@ -191,7 +250,8 @@ namespace WorldGeneration
             }
             vertPos = vertPos / 256f;
             vertNormal = math.normalize(vertNormal);
-            if(neighbourDirectionMask != 0){
+            transitionCellDirection = new int3(0);
+            if(transitionOffset && neighbourDirectionMask != 0){
                 
                 var offsetVector = new float3(0);
                 var highFence = depthMultiplier*(chunkSize-1);
@@ -212,6 +272,7 @@ namespace WorldGeneration
                 if(!(skirtDirections2.c0.x ^ skirtDirections2.c0.y ^ skirtDirections2.c0.z ^ skirtDirections2.c1.x ^ skirtDirections2.c1.y ^ skirtDirections2.c1.z)) {
                     offsetVector += math.select(new float3(0), (chunkSize - 1 - negativeDepthMultiplier * vertPos) * (depthMultiplier / 2), skirtDirections.c0);
                     offsetVector += math.select(new float3(0), (1 - negativeDepthMultiplier * vertPos) * (depthMultiplier / 2), skirtDirections.c1);
+                    transitionCellDirection = (int3)offsetVector;
                 }
 
                 vertPos.x += ((1 - math.pow(vertNormal.x, 2)) * offsetVector.x + (-vertNormal.x*vertNormal.y) * offsetVector.y + (-vertNormal.x*vertNormal.z) * offsetVector.z);
@@ -271,24 +332,24 @@ namespace WorldGeneration
             }
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public byte GetTransitionCase(int3 voxelLocalPosition, int transitionDirectionIndex){
-            var samples = GetTransitionFace(voxelLocalPosition, transitionDirectionIndex);
-            int caseCode = ((samples[0] >> 7) & 0x01)
+        public int GetTransitionCase(TransitionCorners<short> transitionFaceSamples){
+            var samples = transitionFaceSamples;
+            int caseCode =          ((samples[0] >> 7) & 0x01)
                                     | ((samples[1] >> 6) & 0x02)
                                     | ((samples[2] >> 5) & 0x04)
-                                    | ((samples[3] >> 4) & 0x08)
-                                    | ((samples[4] >> 3) & 0x10)
-                                    | ((samples[5] >> 2) & 0x20)
+                                    | (samples[3] & 0x80)
+                                    | ((samples[4] << 1) & 0x100)
+                                    | ((samples[5] >> 4) & 0x08)
                                     | ((samples[6] >> 1) & 0x40)
-                                    | (samples[7] & 0x80)
-                                    | ((samples[8] << 1) & 0x100);
-            return Tables.transitionCellClass[caseCode];
+                                    | ((samples[7] >> 2) & 0x20)
+                                    | ((samples[8] >> 3) & 0x10);
+            return caseCode;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public TransitionCorners<short> GetTransitionFace(int3 voxelLocalPosition, int transitionDirectionIndex){
             TransitionCorners<short> result = new TransitionCorners<short>();
             for(int i = 0; i < 9; i++){
-                result[i] = SampleDensityRaw(voxelLocalPosition * depthMultiplier + Tables.TransitionDirectionTable[transitionDirectionIndex * 9 + i]);
+                result[i] = SampleDensityRaw(voxelLocalPosition * depthMultiplier + Tables.TransitionDirectionTable[transitionDirectionIndex * 9 + i] * depthMultiplier / 2);
             }
             return result;
         }
@@ -385,14 +446,17 @@ namespace WorldGeneration
     //Tables used for marching cubes. Taken from https://github.com/Eldemarkki/Marching-Cubes-Terrain
     internal class Tables
     {
+        public static readonly byte[] TransitionEdgeRemap = {
+            0,1,2,3,4,5,6,7,8,0,2,6,8
+        };
         public static readonly int3[] TransitionDirectionTable = {
             //order: front, back, right, left, up, down
             new int3(2,0,0), new int3(2,0,1), new int3(2,0,2), new int3(2,1,0), new int3(2,1,1), new int3(2,1,2), new int3(2,2,0),new int3(2,2,1),new int3(2,2,2),
-            new int3(0,0,2), new int3(0,0,1), new int3(0,0,0), new int3(0,1,2), new int3(0,1,1), new int3(0,1,0), new int3(0,2,2),new int3(0,2,1),new int3(0,2,0),
-            new int3(2,0,2),new int3(1,0,2),new int3(0,0,2),new int3(2,1,2),new int3(1,1,2),new int3(0,1,2),new int3(2,2,2),new int3(1,2,2),new int3(0,2,2),
+            new int3(0,0,0), new int3(0,0,1), new int3(0,0,2), new int3(0,1,0), new int3(0,1,1), new int3(0,1,2), new int3(0,2,0),new int3(0,2,1),new int3(0,2,2),
+            new int3(0,0,2),new int3(1,0,2),new int3(2,0,2),new int3(0,1,2),new int3(1,1,2),new int3(2,1,2),new int3(0,2,2),new int3(1,2,2),new int3(2,2,2),
             new int3(0,0,0),new int3(1,0,0),new int3(2,0,0),new int3(0,1,0),new int3(1,1,0),new int3(2,1,0),new int3(0,2,0),new int3(1,2,0),new int3(2,2,0),
             new int3(2,2,0),new int3(2,2,1),new int3(2,2,2),new int3(1,2,0),new int3(1,2,1),new int3(1,2,2),new int3(0,2,0),new int3(0,2,1),new int3(0,2,2),
-            new int3(0,0,0),new int3(0,0,1),new int3(0,0,2),new int3(1,0,0),new int3(1,0,1),new int3(1,0,2),new int3(2,0,0),new int3(2,0,1),new int3(2,0,1)
+            new int3(2,0,0),new int3(2,0,1),new int3(2,0,2),new int3(1,0,0),new int3(1,0,1),new int3(1,0,2),new int3(0,0,0),new int3(0,0,1),new int3(0,0,2),
         };
         /// <summary>
         /// Lookup table for how the edges should be connected
@@ -832,7 +896,7 @@ namespace WorldGeneration
 
     // The transitionVertexData table gives the vertex locations for every one of the 512 possible
     // cases in the Tranvoxel Algorithm. Each 16-bit value also provides information about whether
-    // a vertex can be reused from a neighboring cell. See Section 4.5 for details. The low byte0x00FFFF
+    // a vertex can be reused from a neighboring cell. See Section 4.5 for details. The low byte
     // contains the indexes for the two endpoints of the edge on which the vertex lies, as numbered
     // in Figure 4.16. The high byte contains the vertex reuse data shown in Figure 4.17.
 

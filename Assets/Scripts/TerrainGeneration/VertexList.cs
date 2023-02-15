@@ -66,6 +66,30 @@ namespace WorldGeneration
         /// The twelfth vertex
         /// </summary>
         private ushort _c12;
+        
+
+        /// <summary>
+        /// The twelfth vertex
+        /// </summary>
+        private ushort _c13;
+        
+
+        /// <summary>
+        /// The twelfth vertex
+        /// </summary>
+        private ushort _c14;
+        
+
+        /// <summary>
+        /// The twelfth vertex
+        /// </summary>
+        private ushort _c15;
+        
+
+        /// <summary>
+        /// The twelfth vertex
+        /// </summary>
+        private ushort _c16;
 
         /// <summary>
         /// The indexer for the vertex list
@@ -90,6 +114,10 @@ namespace WorldGeneration
                     case 9: return _c10;
                     case 10: return _c11;
                     case 11: return _c12;
+                    case 12: return _c13;
+                    case 13: return _c14;
+                    case 14: return _c15;
+                    case 15: return _c16;
                     default: throw new System.IndexOutOfRangeException();
                 }
             }
@@ -132,6 +160,18 @@ namespace WorldGeneration
                         break;
                     case 11:
                         _c12 = value;
+                        break;
+                    case 12:
+                        _c13 = value;
+                        break;
+                    case 13:
+                        _c14 = value;
+                        break;
+                    case 14:
+                        _c15 = value;
+                        break;
+                    case 15:
+                        _c16 = value;
                         break;
                     default:
                         throw new System.IndexOutOfRangeException();

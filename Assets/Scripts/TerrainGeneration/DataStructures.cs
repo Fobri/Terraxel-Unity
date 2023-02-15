@@ -85,8 +85,8 @@ namespace WorldGeneration.DataStructures
     }
     public struct TempBuffer : IDisposable{
         public NativeArray<ushort3> vertexIndices;
-        public NativeArray<TransitionCorners<ushort>> transitionVertexIndices;
-        public TempBuffer(NativeArray<ushort3> vertexIndices, NativeArray<TransitionCorners<ushort>> transitionVertexIndices){
+        public NativeArray<CellIndices> transitionVertexIndices;
+        public TempBuffer(NativeArray<ushort3> vertexIndices, NativeArray<CellIndices> transitionVertexIndices){
             this.vertexIndices = vertexIndices;
             this.transitionVertexIndices = transitionVertexIndices;
         }
@@ -98,7 +98,7 @@ namespace WorldGeneration.DataStructures
     public class Utils{
         public static int XyzToIndex(int x, int y, int z, int size)
         {
-            return z * size * size + y * size + x;
+            return y * size * size + z * size + x;
         }
         public static int XyzToIndex(int3 index, int size)
         {
@@ -116,8 +116,8 @@ namespace WorldGeneration.DataStructures
         {
             int3 position = new int3(
                 index % size,
-                index / size % size,
-                index / (size * size));
+                index / (size * size),
+                index / size % size);
             return position;
         }
 
