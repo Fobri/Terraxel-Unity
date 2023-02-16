@@ -94,6 +94,8 @@ namespace WorldGeneration
                         }
                         else{
                             cellIndices[i] = GetCell(voxelLocalPosition + cellDirection)[vertexEdgeIndex];
+                            var vertPos = (voxelLocalPosition + Tables.CubeCorners[v0]) * depthMultiplier + (voxelLocalPosition + Tables.CubeCorners[v1]) * depthMultiplier;
+                            transition += (int3)GetTransitionDirection((float3)vertPos / 2f);
                         }
                     }
                 //}
@@ -137,6 +139,7 @@ namespace WorldGeneration
                 if(transition.z == -1) GenerateTransitionCell(2, voxelLocalPosition, new int2(voxelLocalPosition.x, voxelLocalPosition.y));
                 else if(transition.z == 1) GenerateTransitionCell(3, voxelLocalPosition, new int2(voxelLocalPosition.x, voxelLocalPosition.y));
                 if(transition.y == -1) GenerateTransitionCell(4, voxelLocalPosition, new int2(voxelLocalPosition.z, voxelLocalPosition.x));
+                else if(transition.y == 1) GenerateTransitionCell(5, voxelLocalPosition, new int2(voxelLocalPosition.z, voxelLocalPosition.x));
             }
         }
         private void GenerateTransitionCell(int transitionIndex, int3 voxelLocalPosition, int2 voxel2DLocalPosition){
@@ -180,7 +183,7 @@ namespace WorldGeneration
             }
             vertexIndices.transitionVertexIndices[index] = currentCell;
             bool reverse = (transitionClass >> 7) == 1;
-            if(transitionIndex == 1 || transitionIndex == 2) reverse = !reverse;
+            if(transitionIndex == 1 || transitionIndex == 2 || transitionIndex == 4) reverse = !reverse;
             for(int i = 0; i < triangleCount; i++){
                 var idx = indexCounter.Increment() * 3;
                 for(int v = 0; v < 3; v++){
@@ -253,28 +256,8 @@ namespace WorldGeneration
             transitionCellDirection = new int3(0);
             if(transitionOffset && neighbourDirectionMask != 0){
                 
-                var offsetVector = new float3(0);
-                var highFence = depthMultiplier*(chunkSize-1);
-                bool3x2 skirtDirections = new bool3x2();
-                skirtDirections.c0.x = vertPos.x > highFence && (neighbourDirectionMask & 0b_0000_0001) == 0b_0000_0001;
-                skirtDirections.c0.y = vertPos.y > highFence && (neighbourDirectionMask & 0b_0000_0100) == 0b_0000_0100;
-                skirtDirections.c0.z = vertPos.z > highFence && (neighbourDirectionMask & 0b_0010_0000) == 0b_0010_0000;
-                skirtDirections.c1.x = vertPos.x < depthMultiplier && (neighbourDirectionMask & 0b_0000_0010) == 0b_0000_0010;
-                skirtDirections.c1.y = vertPos.y < depthMultiplier && (neighbourDirectionMask & 0b_0000_1000) == 0b_0000_1000;
-                skirtDirections.c1.z = vertPos.z < depthMultiplier && (neighbourDirectionMask & 0b_0001_0000) == 0b_0001_0000;
-                bool3x2 skirtDirections2 = new bool3x2();
-                skirtDirections2.c0.x = vertPos.x == depthMultiplier * chunkSize && !((neighbourDirectionMask & 0b_0000_0001) == 0b_0000_0001);
-                skirtDirections2.c0.y = vertPos.y == depthMultiplier * chunkSize && !((neighbourDirectionMask & 0b_0000_0100) == 0b_0000_0100);
-                skirtDirections2.c0.z = vertPos.z == depthMultiplier * chunkSize && !((neighbourDirectionMask & 0b_0010_0000) == 0b_0010_0000);
-                skirtDirections2.c1.x = vertPos.x == 0 && !((neighbourDirectionMask & 0b_0000_0010) == 0b_0000_0010);
-                skirtDirections2.c1.y = vertPos.y == 0 && !((neighbourDirectionMask & 0b_0000_1000) == 0b_0000_1000);
-                skirtDirections2.c1.z = vertPos.z == 0 && !((neighbourDirectionMask & 0b_0001_0000) == 0b_0001_0000);
-                if(!(skirtDirections2.c0.x ^ skirtDirections2.c0.y ^ skirtDirections2.c0.z ^ skirtDirections2.c1.x ^ skirtDirections2.c1.y ^ skirtDirections2.c1.z)) {
-                    offsetVector += math.select(new float3(0), (chunkSize - 1 - negativeDepthMultiplier * vertPos) * (depthMultiplier / 2), skirtDirections.c0);
-                    offsetVector += math.select(new float3(0), (1 - negativeDepthMultiplier * vertPos) * (depthMultiplier / 2), skirtDirections.c1);
-                    transitionCellDirection = (int3)offsetVector;
-                }
-
+                var offsetVector = GetTransitionDirection(vertPos);
+                transitionCellDirection = (int3)offsetVector;
                 vertPos.x += ((1 - math.pow(vertNormal.x, 2)) * offsetVector.x + (-vertNormal.x*vertNormal.y) * offsetVector.y + (-vertNormal.x*vertNormal.z) * offsetVector.z);
                 vertPos.y += ((-vertNormal.x*vertNormal.y) * offsetVector.x + (1-math.pow(vertNormal.y, 2)) * offsetVector.y + (-vertNormal.y*vertNormal.z) * offsetVector.z);
                 vertPos.z += ((-vertNormal.x*vertNormal.z) * offsetVector.x + (-vertNormal.y*vertNormal.z) * offsetVector.y + (1-math.pow(vertNormal.z, 2)) * offsetVector.z);
@@ -283,6 +266,32 @@ namespace WorldGeneration
             int vertexIndex = vertexCounter.Increment();
             vertices[vertexIndex] = new VertexData(vertPos, vertNormal);
             return (ushort)vertexIndex;
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private float3 GetTransitionDirection(float3 vertPos){
+            if(neighbourDirectionMask == 0) return 0f;
+            var offsetVector = new float3(0);
+            var highFence = depthMultiplier*(chunkSize-1);
+            bool3x2 skirtDirections = new bool3x2();
+            skirtDirections.c0.x = vertPos.x > highFence && (neighbourDirectionMask & 0b_0000_0001) == 0b_0000_0001;
+            skirtDirections.c0.y = vertPos.y > highFence && (neighbourDirectionMask & 0b_0000_0100) == 0b_0000_0100;
+            skirtDirections.c0.z = vertPos.z > highFence && (neighbourDirectionMask & 0b_0010_0000) == 0b_0010_0000;
+            skirtDirections.c1.x = vertPos.x < depthMultiplier && (neighbourDirectionMask & 0b_0000_0010) == 0b_0000_0010;
+            skirtDirections.c1.y = vertPos.y < depthMultiplier && (neighbourDirectionMask & 0b_0000_1000) == 0b_0000_1000;
+            skirtDirections.c1.z = vertPos.z < depthMultiplier && (neighbourDirectionMask & 0b_0001_0000) == 0b_0001_0000;
+            bool3x2 skirtDirections2 = new bool3x2();
+            skirtDirections2.c0.x = vertPos.x == depthMultiplier * chunkSize && !((neighbourDirectionMask & 0b_0000_0001) == 0b_0000_0001);
+            skirtDirections2.c0.y = vertPos.y == depthMultiplier * chunkSize && !((neighbourDirectionMask & 0b_0000_0100) == 0b_0000_0100);
+            skirtDirections2.c0.z = vertPos.z == depthMultiplier * chunkSize && !((neighbourDirectionMask & 0b_0010_0000) == 0b_0010_0000);
+            skirtDirections2.c1.x = vertPos.x == 0 && !((neighbourDirectionMask & 0b_0000_0010) == 0b_0000_0010);
+            skirtDirections2.c1.y = vertPos.y == 0 && !((neighbourDirectionMask & 0b_0000_1000) == 0b_0000_1000);
+            skirtDirections2.c1.z = vertPos.z == 0 && !((neighbourDirectionMask & 0b_0001_0000) == 0b_0001_0000);
+            if(!(skirtDirections2.c0.x ^ skirtDirections2.c0.y ^ skirtDirections2.c0.z ^ skirtDirections2.c1.x ^ skirtDirections2.c1.y ^ skirtDirections2.c1.z)) {
+                offsetVector += math.select(new float3(0), (chunkSize - 1 - negativeDepthMultiplier * vertPos) * (depthMultiplier / 2), skirtDirections.c0);
+                offsetVector += math.select(new float3(0), (1 - negativeDepthMultiplier * vertPos) * (depthMultiplier / 2), skirtDirections.c1);
+                return offsetVector;
+            }
+            return 0;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private VoxelCorners<sbyte> GetDensities(int3 localPosition)
@@ -455,8 +464,8 @@ namespace WorldGeneration
             new int3(0,0,0), new int3(0,0,1), new int3(0,0,2), new int3(0,1,0), new int3(0,1,1), new int3(0,1,2), new int3(0,2,0),new int3(0,2,1),new int3(0,2,2),
             new int3(0,0,2),new int3(1,0,2),new int3(2,0,2),new int3(0,1,2),new int3(1,1,2),new int3(2,1,2),new int3(0,2,2),new int3(1,2,2),new int3(2,2,2),
             new int3(0,0,0),new int3(1,0,0),new int3(2,0,0),new int3(0,1,0),new int3(1,1,0),new int3(2,1,0),new int3(0,2,0),new int3(1,2,0),new int3(2,2,0),
-            new int3(2,2,0),new int3(2,2,1),new int3(2,2,2),new int3(1,2,0),new int3(1,2,1),new int3(1,2,2),new int3(0,2,0),new int3(0,2,1),new int3(0,2,2),
-            new int3(2,0,0),new int3(2,0,1),new int3(2,0,2),new int3(1,0,0),new int3(1,0,1),new int3(1,0,2),new int3(0,0,0),new int3(0,0,1),new int3(0,0,2),
+            new int3(0,2,0),new int3(0,2,1),new int3(0,2,2),new int3(1,2,0),new int3(1,2,1),new int3(1,2,2),new int3(2,2,0),new int3(2,2,1),new int3(2,2,2),
+            new int3(0,0,0),new int3(0,0,1),new int3(0,0,2),new int3(1,0,0),new int3(1,0,1),new int3(1,0,2),new int3(2,0,0),new int3(2,0,1),new int3(2,0,2),
         };
         /// <summary>
         /// Lookup table for how the edges should be connected
