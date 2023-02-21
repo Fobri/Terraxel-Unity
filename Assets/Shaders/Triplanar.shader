@@ -10,6 +10,7 @@ Shader "Custom/Triplanar"
 
         _BumpScale("Normal Strength", Float) = 1
         _BumpMap("Normal texture", 2D) = "bump" {}
+        _DirectionMask("Direction mask", Int) = 0
     }
     SubShader
     {
@@ -19,9 +20,9 @@ Shader "Custom/Triplanar"
         CGPROGRAM
         // Physically based Standard lighting model, and enable shadows on all light types
         #pragma surface surf Standard vertex:vert fullforwardshadows addshadow
-
+        #pragma multi_compile_instancing
         // Use shader model 3.0 target, to get nicer looking lighting
-        #pragma target 3.0
+        #pragma target 4.0
 
         sampler2D _MainTex;
 
@@ -30,24 +31,41 @@ Shader "Custom/Triplanar"
             float3 localCoord;
             float3 localNormal;
         };
+        struct output {
+            float4 vertex : POSITION;
+            float3 normal : NORMAL;
+            float4 tangent : TANGENT;
+            int near : COLOR;
+            UNITY_VERTEX_INPUT_INSTANCE_ID
+        };
         half _Glossiness;
         half _Metallic;
         fixed4 _Color;
         half _MapScale;
         half _BumpScale;
         sampler2D _BumpMap;
+        
+        int _DirectionMask;
 
         // Add instancing support for this shader. You need to check 'Enable Instancing' on materials that use the shader.
         // See https://docs.unity3d.com/Manual/GPUInstancing.html for more information about instancing.
-        // #pragma instancing_options assumeuniformscaling
+        /*#pragma instancing_options assumeuniformscaling
         UNITY_INSTANCING_BUFFER_START(Props)
+        UNITY_DEFINE_INSTANCED_PROP(int, _DirectionMask);
             // put more per-instance properties here
-        UNITY_INSTANCING_BUFFER_END(Props)
+        UNITY_INSTANCING_BUFFER_END(Props)*/
 
-        void vert(inout appdata_full v, out Input data)
+        void vert(inout output v, out Input data)
         {
             UNITY_INITIALIZE_OUTPUT(Input, data);
-            data.localCoord = v.vertex.xyz;
+            float4 vertPos;
+            if(((v.near & _DirectionMask) == v.near)){
+                vertPos = v.tangent;
+            }else{
+                vertPos = v.vertex;
+            }
+            v.vertex = vertPos;
+            data.localCoord = vertPos.xyz;
             data.localNormal = v.normal.xyz;
         }
 

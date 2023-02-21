@@ -171,7 +171,6 @@ public abstract class Octree : JobRunner
             }
             children[i].UpdateTreeRecursive();
         }
-
     }
     private ChunkData thisAsChunkData(){
         return this as ChunkData;

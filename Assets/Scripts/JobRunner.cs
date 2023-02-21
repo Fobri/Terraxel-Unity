@@ -21,11 +21,14 @@ public abstract class JobRunner
         jobHandle = JobHandle.CombineDependencies(jobHandle, IJobParallelForExtensions.Schedule(job, length, 32, default));
         hasCompleted = false;
     }
-    internal void ScheduleJob<T>(T job, int length) where T : struct, IJobFor{
+    internal void ScheduleJob<T>(T job, int length, bool dependency = false) where T : struct, IJobFor{
         if(IsReady){
             activeJobRunners.Add(this);
         }
-        jobHandle = JobHandle.CombineDependencies(jobHandle, IJobForExtensions.Schedule(job, length, default));
+        if(!dependency)
+            jobHandle = JobHandle.CombineDependencies(jobHandle, IJobForExtensions.Schedule(job, length, default));
+        else
+            jobHandle = IJobForExtensions.Schedule(job, length, jobHandle);
         hasCompleted = false;
     }
     internal void CheckIsReadyAndComplete(){

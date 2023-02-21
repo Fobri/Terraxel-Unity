@@ -218,6 +218,9 @@ public TextMeshProUGUI[] debugLabels;
         if(shouldUpdateTree){
             shouldUpdateTree = false;
             chunkTree.UpdateTreeRecursive();
+            for(int i = 0; i < chunkDatas.Count; i++){
+                chunkDatas[i].RefreshRenderState();
+            }
         }
     }
     public static void DisposeChunk(ChunkData chunk){
@@ -244,6 +247,9 @@ public TextMeshProUGUI[] debugLabels;
             chunk.worldObject.name = "Pooled chunk";
             chunk.worldObject.transform.SetParent(poolParent);
             chunk.worldObject.GetComponent<MeshFilter>().sharedMesh.Clear();
+            for(int i = 0; i < 6; i++){
+                chunk.worldObject.transform.GetChild(i).GetComponent<MeshFilter>().sharedMesh.Clear();
+            }
             objectPool.Enqueue(chunk.worldObject);
         }
         chunk.hasMesh = false;
@@ -262,6 +268,9 @@ public TextMeshProUGUI[] debugLabels;
         else{
             var chunk = Instantiate(staticChunkPrefab);
             chunk.GetComponent<MeshFilter>().sharedMesh = new Mesh();
+            for(int i = 0; i < 6; i++){
+                chunk.transform.GetChild(i).GetComponent<MeshFilter>().sharedMesh = new Mesh();
+            }
             chunk.transform.SetParent(activeParent);
             return chunk;
         }
@@ -300,7 +309,6 @@ public TextMeshProUGUI[] debugLabels;
         }else{
          newChunkData = new ChunkData(null, bounds, depth);
         }
-        
         newChunkData.hasMesh = true;
         UpdateChunk(newChunkData);
 

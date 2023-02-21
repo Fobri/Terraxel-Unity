@@ -13,6 +13,7 @@ public class ChunkData : Octree{
         public enum DisposeState { NOTHING, POOL, FREE_MESH }
         public TempBuffer vertexIndexBuffer;
         public MeshData meshData;
+        private NativeArray<int2> meshStarts;
         public GameObject worldObject;
         public Counter vertexCounter;
         public Counter indexCounter;
@@ -28,7 +29,9 @@ public class ChunkData : Octree{
         static VertexAttributeDescriptor[] layout = new[]
                 {
                     new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float32, 3),
-                    new VertexAttributeDescriptor(VertexAttribute.Normal, VertexAttributeFormat.Float32, 3)
+                    new VertexAttributeDescriptor(VertexAttribute.Normal, VertexAttributeFormat.Float32, 3),
+                    new VertexAttributeDescriptor(VertexAttribute.Tangent, VertexAttributeFormat.Float32, 3),
+                    new VertexAttributeDescriptor(VertexAttribute.Color, VertexAttributeFormat.SInt32, 1)
                 };
         public ChunkData(GameObject worldObject, BoundingBox bounds, int depth) 
         : base(bounds, depth){
@@ -48,36 +51,49 @@ public class ChunkData : Octree{
         internal override void OnJobsReady(){
             ApplyMesh();
         }
-        public void UpdateMesh(){
-            //Check front
+        public void UpdateDirectionMask(bool refreshNeighbours = false){
             dirMask = 0;
             if(depth > 0){
-                if(CheckNeighbour(new int3(1, 0, 0))){
+                if(CheckNeighbour(new int3(1, 0, 0), refreshNeighbours)){
                     dirMask |= 0b_0000_0001;
                 }
-                if(CheckNeighbour(new int3(-1, 0, 0))){
+                if(CheckNeighbour(new int3(-1, 0, 0), refreshNeighbours)){
                     dirMask |= 0b_0000_0010;
                 }
-                if(CheckNeighbour(new int3(0, 1, 0))){
+                if(CheckNeighbour(new int3(0, 1, 0), refreshNeighbours)){
                     dirMask |= 0b_0000_0100;
                 }
-                if(CheckNeighbour(new int3(0, -1, 0))){
+                if(CheckNeighbour(new int3(0, -1, 0), refreshNeighbours)){
                     dirMask |= 0b_0000_1000;
                 }
-                if(CheckNeighbour(new int3(0, 0, -1))){
+                if(CheckNeighbour(new int3(0, 0, 1), refreshNeighbours)){
                     dirMask |= 0b_0001_0000;
                 }
-                if(CheckNeighbour(new int3(0, 0, 1))){
+                if(CheckNeighbour(new int3(0, 0, -1), refreshNeighbours)){
                     dirMask |= 0b_0010_0000;
                 }
             }
+        }
+        public void RefreshRenderState(bool refreshNeighbours = false){
+            if(worldObject == null) return;
+            UpdateDirectionMask(refreshNeighbours);
+            worldObject.GetComponent<MeshRenderer>().material.SetInt("_DirectionMask", dirMask);
+            worldObject.transform.GetChild(0).gameObject.SetActive((dirMask & 0b_0000_0001) != 0);
+            worldObject.transform.GetChild(1).gameObject.SetActive((dirMask & 0b_0000_0010) != 0);
+            worldObject.transform.GetChild(4).gameObject.SetActive((dirMask & 0b_0000_0100) != 0);
+            worldObject.transform.GetChild(5).gameObject.SetActive((dirMask & 0b_0000_1000) != 0);
+            worldObject.transform.GetChild(2).gameObject.SetActive((dirMask & 0b_0001_0000) != 0);
+            worldObject.transform.GetChild(3).gameObject.SetActive((dirMask & 0b_0010_0000) != 0);
+        }
+        public void UpdateMesh(){
             
             genTime = Time.realtimeSinceStartup;
+            var densityData = ChunkManager.densityManager.GetJobDensityData();
+            var cache = new DensityCacheInstance(new int3(int.MaxValue));
             var marchingJob = new MeshJob()
             {
-                densities = ChunkManager.densityManager.GetJobDensityData(),
+                densities = densityData,
                 chunkPos = (int3)WorldPosition,
-                isolevel = 0f,
                 chunkSize = ChunkManager.chunkResolution,
                 vertices = meshData.vertexBuffer,
                 vertexCounter = vertexCounter,
@@ -86,10 +102,27 @@ public class ChunkData : Octree{
                 negativeDepthMultiplier = negativeDepthMultiplier,
                 vertexIndices = vertexIndexBuffer,
                 triangles = meshData.indexBuffer,
-                neighbourDirectionMask = dirMask,
-                cache = new DensityCacheInstance(new int3(int.MaxValue))
+                cache = cache
             };
-            base.ScheduleJob(marchingJob, (ChunkManager.chunkResolution) * (ChunkManager.chunkResolution) * (ChunkManager.chunkResolution));
+            base.ScheduleJob(marchingJob, (ChunkManager.chunkResolution) * (ChunkManager.chunkResolution) * (ChunkManager.chunkResolution), false);
+            meshStarts = new NativeArray<int2>(7, Allocator.Persistent);
+            var transitionJob = new TransitionMeshJob()
+            {
+                densities = densityData,
+                chunkPos = (int3)WorldPosition,
+                chunkSize = ChunkManager.chunkResolution,
+                vertices = meshData.vertexBuffer,
+                vertexCounter = vertexCounter,
+                indexCounter = indexCounter,
+                depthMultiplier = depthMultiplier,
+                vertexIndices = vertexIndexBuffer,
+                triangles = meshData.indexBuffer,
+                cache = cache,
+                indexTracker = -1,
+                meshStarts = meshStarts,
+                negativeDepthMultiplier = negativeDepthMultiplier
+            };
+            base.ScheduleJob(transitionJob, 6 * (ChunkManager.chunkResolution) * (ChunkManager.chunkResolution), true);
 
             /*var vertexSharingJob = new VertexSharingJob()
             {
@@ -101,7 +134,7 @@ public class ChunkData : Octree{
             };
             jobHandle = vertexSharingJob.Schedule((ChunkManager.chunkResolution + 1) * (ChunkManager.chunkResolution + 1) * (ChunkManager.chunkResolution + 1), 32, marchingHandle);
         */}
-        bool CheckNeighbour(int3 relativeOffset){
+        bool CheckNeighbour(int3 relativeOffset, bool refreshNeighbours = false){
             float3 pos = ChunkManager.chunkResolution * depthMultiplier * relativeOffset;
             var tree = ChunkManager.chunkTree as Octree;
             var queryResult = tree.Query(new BoundingBox(this.region.center + pos, this.region.bounds - 4));
@@ -111,21 +144,25 @@ public class ChunkData : Octree{
                 }else if(queryResult.depth == this.depth){
                     return false;
                 }
+                (queryResult as ChunkData).RefreshRenderState();
                 return false;
             }
             return false;
         }
         public void ApplyMesh(){
             chunkState = ChunkState.READY;
+            int2 totalCount = new int2(vertexCounter.Count, indexCounter.Count);
+            meshStarts[6] = totalCount;
             
-            var vertexCount = vertexCounter.Count;
-            var indexCount = indexCounter.Count * 3;
+            var vertexCount = meshStarts[0].x;
+            var indexCount = meshStarts[0].y * 3;
             if (vertexCount > 0)
             {
                 if(worldObject == null)
                     InitWorldObject();
                 var mesh = worldObject.GetComponent<MeshFilter>().sharedMesh;
-                mesh.bounds = new Bounds(new float3(ChunkManager.chunkResolution * depthMultiplier / 2), region.bounds);
+                var bounds = new Bounds(new float3(ChunkManager.chunkResolution * depthMultiplier / 2), region.bounds);
+                mesh.bounds = bounds;
                 //Set vertices and indices
                 mesh.SetVertexBufferParams(vertexCount, layout);
                 mesh.SetVertexBufferData(meshData.vertexBuffer, 0, 0, vertexCount, 0, MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);
@@ -134,10 +171,27 @@ public class ChunkData : Octree{
 
                 desc.indexCount = indexCount;
                 mesh.SetSubMesh(0, desc, MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);
-
-                //mesh.RecalculateNormals();
+                
                 this.vertCount = vertexCount;
                 this.indexCount = indexCount;
+                for(int i = 0; i < 6; i++){
+                    var vertexStart = meshStarts[i].x;
+                    var indexStart = meshStarts[i].y * 3;
+                    var vertexEnd = meshStarts[i+1].x;
+                    var indexEnd = meshStarts[i+1].y * 3;
+                    var transitionMesh = worldObject.transform.GetChild(i).GetComponent<MeshFilter>().sharedMesh;
+                    transitionMesh.bounds = bounds;
+                    //Set vertices and indices
+                    transitionMesh.SetVertexBufferParams(vertexEnd - vertexStart, layout);
+                    transitionMesh.SetVertexBufferData(meshData.vertexBuffer, vertexStart, 0, vertexEnd - vertexStart, 0, MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);
+                    transitionMesh.SetIndexBufferParams(indexEnd - indexStart, IndexFormat.UInt16);
+                    transitionMesh.SetIndexBufferData(meshData.indexBuffer, indexStart, 0, indexEnd - indexStart,  MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);
+
+                    desc.indexCount = indexEnd - indexStart;
+                    transitionMesh.SetSubMesh(0, desc, MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);
+                    this.vertCount += vertexEnd - vertexStart;
+                    this.indexCount += indexEnd - indexStart;
+                }
             }else{
                 vertCount = 0;
                 indexCount = 0;
@@ -148,12 +202,14 @@ public class ChunkData : Octree{
             genTime = Time.realtimeSinceStartup - genTime;
             ChunkManager.memoryManager.ReturnVertexIndexBuffer(vertexIndexBuffer);
             vertexIndexBuffer = default;
+            meshStarts.Dispose();
             if(onMeshReady == OnMeshReady.ALERT_PARENT){
                 base.NotifyParentMeshReady();
             }else if(onMeshReady == OnMeshReady.DISPOSE_CHILDREN){
                 onMeshReady = OnMeshReady.ALERT_PARENT;
                 PruneChunksRecursive();
             }
+            RefreshRenderState(true);
         }
         public void FreeChunkMesh(){
             disposeStatus = DisposeState.FREE_MESH;

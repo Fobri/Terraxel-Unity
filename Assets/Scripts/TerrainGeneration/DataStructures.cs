@@ -28,10 +28,14 @@ namespace WorldGeneration.DataStructures
         }
     }
     public struct VertexData{
-        public float3 vertex;
+        public float3 Primary;
         public float3 normal;
-        public VertexData(float3 vertex, float3 normal){
-            this.vertex = vertex;
+        public float3 Secondary;
+        public int near;
+        public VertexData(float3 Primary, float3 Secondary, int near, float3 normal){
+            this.Primary = Primary;
+            this.Secondary = Secondary;
+            this.near = near;
             this.normal = normal;
         }
     }
@@ -127,8 +131,8 @@ namespace WorldGeneration.DataStructures
             if((dirMask & 0b_0000_0010) == 0b_0000_0010) value += "Back, ";
             if((dirMask & 0b_0000_0100) == 0b_0000_0100) value += "Up, ";
             if((dirMask & 0b_0000_1000) == 0b_0000_1000) value += "Down, ";
-            if((dirMask & 0b_0001_0000) == 0b_0001_0000) value += "Right, ";
-            if((dirMask & 0b_0010_0000) == 0b_0010_0000) value += "Left, ";
+            if((dirMask & 0b_0001_0000) == 0b_0001_0000) value += "Left, ";
+            if((dirMask & 0b_0010_0000) == 0b_0010_0000) value += "Right, ";
             return value;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
