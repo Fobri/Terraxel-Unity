@@ -142,9 +142,12 @@ public class ChunkData : Octree{
                 if(queryResult.HasSubChunks){
                     return true;
                 }else if(queryResult.depth == this.depth){
+                    if(refreshNeighbours)
+                        (queryResult as ChunkData).RefreshRenderState();
                     return false;
                 }
-                (queryResult as ChunkData).RefreshRenderState();
+                if(refreshNeighbours)
+                    (queryResult as ChunkData).RefreshRenderState();
                 return false;
             }
             return false;

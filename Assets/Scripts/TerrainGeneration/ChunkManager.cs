@@ -219,6 +219,7 @@ public TextMeshProUGUI[] debugLabels;
             shouldUpdateTree = false;
             chunkTree.UpdateTreeRecursive();
             for(int i = 0; i < chunkDatas.Count; i++){
+                //TODO: useless, figure out better way to only refresh states of chunks that are adjacent to mesh updates
                 chunkDatas[i].RefreshRenderState();
             }
         }
