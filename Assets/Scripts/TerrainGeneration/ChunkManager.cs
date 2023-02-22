@@ -269,7 +269,7 @@ public TextMeshProUGUI[] debugLabels;
         else{
             var chunk = Instantiate(staticChunkPrefab);
             chunk.GetComponent<MeshFilter>().sharedMesh = new Mesh();
-            for(int i = 0; i < 6; i++){
+            for(int i = 0; i < 7; i++){
                 chunk.transform.GetChild(i).GetComponent<MeshFilter>().sharedMesh = new Mesh();
             }
             chunk.transform.SetParent(activeParent);
@@ -327,8 +327,8 @@ public TextMeshProUGUI[] debugLabels;
         chunkData.meshData = memoryManager.GetMeshData();
         chunkData.vertCount = 0;
         chunkData.indexCount = 0;
-        chunkData.vertexCounter = new Counter(Allocator.Persistent);
-        chunkData.indexCounter = new Counter(Allocator.Persistent);
+        //chunkData.vertexCounter = new Counter(Allocator.Persistent);
+       // chunkData.indexCounter = new Counter(Allocator.Persistent);
         chunkData.chunkState = ChunkData.ChunkState.DIRTY;
         chunkData.UpdateMesh();
     }

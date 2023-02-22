@@ -27,24 +27,32 @@ namespace WorldGeneration.DataStructures
             this.cachedPos = pos;
         }
     }
-    public struct VertexData{
+    public struct TransitionVertexData{
         public float3 Primary;
         public float3 normal;
         public float3 Secondary;
         public int near;
-        public VertexData(float3 Primary, float3 Secondary, int near, float3 normal){
+        public TransitionVertexData(float3 Primary, float3 Secondary, int near, float3 normal){
             this.Primary = Primary;
             this.Secondary = Secondary;
             this.near = near;
             this.normal = normal;
         }
     }
+    public struct VertexData{
+        public float3 vertex;
+        public float3 normal;
+        public VertexData(float3 vertex,float3 normal){
+            this.vertex = vertex;
+            this.normal = normal;
+        }
+    }
     public struct MeshData : System.IDisposable{
         
-        public NativeArray<VertexData> vertexBuffer;
-        public NativeArray<ushort> indexBuffer;
+        public NativeList<TransitionVertexData> vertexBuffer;
+        public NativeList<ushort> indexBuffer;
 
-        public MeshData(NativeArray<VertexData> vertexBuffer, NativeArray<ushort> indexBuffer){
+        public MeshData(NativeList<TransitionVertexData> vertexBuffer, NativeList<ushort> indexBuffer){
             this.vertexBuffer = vertexBuffer;
             this.indexBuffer = indexBuffer;
         }

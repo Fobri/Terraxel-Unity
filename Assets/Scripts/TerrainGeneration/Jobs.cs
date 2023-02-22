@@ -27,12 +27,12 @@ namespace WorldGeneration
         [ReadOnly] public DensityData densities;
         [ReadOnly] public int3 chunkPos;
         [ReadOnly] public int chunkSize;
-        [WriteOnly] public Counter vertexCounter;
+        //[WriteOnly] public Counter vertexCounter;
         
-        [WriteOnly] public Counter indexCounter;
-        [WriteOnly] public NativeArray<VertexData> vertices;
+        //[WriteOnly] public Counter indexCounter;
+         public NativeList<TransitionVertexData> vertices;
         
-        [WriteOnly, NativeDisableParallelForRestriction] public NativeArray<ushort> triangles;
+         public NativeList<ushort> triangles;
         public NativeArray<int2> meshStarts;
         [ReadOnly] public int depthMultiplier;
         [ReadOnly] public float negativeDepthMultiplier;
@@ -45,7 +45,7 @@ namespace WorldGeneration
             var localPos =  Utils.IndexToXyz(index, chunkSize);
             int transitionIndex = localPos.y;
             if(indexTracker != transitionIndex){
-                int2 counts = new int2(vertexCounter.Count, indexCounter.Count);
+                int2 counts = new int2(vertices.Length, triangles.Length);
                 //Debug.Log(counts.x + " verts, " + counts.y + " indices");
                 meshStarts[transitionIndex] = counts;
                 indexTracker = transitionIndex;
@@ -100,10 +100,10 @@ namespace WorldGeneration
             bool reverse = (transitionClass >> 7) == 1;
             if(transitionIndex == 1 || transitionIndex == 2 || transitionIndex == 4) reverse = !reverse;
             for(int i = 0; i < triangleCount; i++){
-                var idx = indexCounter.Increment() * 3;
+                //var idx = indexCounter.Increment() * 3;
                 for(int v = 0; v < 3; v++){
                     //Debug.Log(transitionCellIndices[Tables.TransitionCellData[((transitionClass & 0x7F) * 37) + i * 3 + v + 1]] + " - " + meshStarts[transitionIndex].x + " = " + (transitionCellIndices[Tables.TransitionCellData[((transitionClass & 0x7F) * 37) + i * 3 + v + 1]] - meshStarts[transitionIndex].x));
-                    triangles[idx + (reverse ? 2 - v : v)] = (ushort)(transitionCellIndices[Tables.TransitionCellData[((transitionClass & 0x7F) * 37) + i * 3 + v + 1]] - meshStarts[transitionIndex].x);
+                    triangles.Add((ushort)(transitionCellIndices[Tables.TransitionCellData[((transitionClass & 0x7F) * 37) + i * 3 + (reverse ? 2 - v : v) + 1]] - meshStarts[transitionIndex].x));
                 }
             }
         }
@@ -167,8 +167,9 @@ namespace WorldGeneration
             }
             byte near = 0;
             
-            int vertexIndex = vertexCounter.Increment();
-            vertices[vertexIndex] = new VertexData(vertPos, vertPos, near, vertNormal);
+            //int vertexIndex = vertexCounter.Increment();
+            vertices.Add(new TransitionVertexData(vertPos, vertPos, near, vertNormal));
+            int vertexIndex = vertices.Length - 1;
             return (ushort)vertexIndex;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -251,12 +252,12 @@ namespace WorldGeneration
         [ReadOnly] public DensityData densities;
         [ReadOnly] public int3 chunkPos;
         [ReadOnly] public int chunkSize;
-        [WriteOnly] public Counter vertexCounter;
+        //[WriteOnly] public Counter vertexCounter;
         
-        [WriteOnly] public Counter indexCounter;
-        [WriteOnly] public NativeArray<VertexData> vertices;
+        //[WriteOnly] public Counter indexCounter;
+         public NativeList<TransitionVertexData> vertices;
         
-        [WriteOnly] public NativeArray<ushort> triangles;
+         public NativeList<ushort> triangles;
         [ReadOnly] public int depthMultiplier;
         [ReadOnly] public float negativeDepthMultiplier;
         public TempBuffer vertexIndices;
@@ -346,9 +347,9 @@ namespace WorldGeneration
             }
             vertexIndices.vertexIndices[index] = currentCell;
             for(int i = 0; i < triangleCount; i++){
-                var idx = indexCounter.Increment() * 3;
+                //var idx = indexCounter.Increment() * 3;
                 for(int v = 0; v < 3; v++){
-                    triangles[idx + v] = cellIndices[Tables.RegularCellData[triRowIndex + i * 3 + v + 1]];
+                    triangles.Add(cellIndices[Tables.RegularCellData[triRowIndex + i * 3 + v + 1]]);
                 }
             }
             /*if(!transition.Equals(0)){
@@ -418,8 +419,9 @@ namespace WorldGeneration
                 secondaryPos.z += ((-vertNormal.x*vertNormal.z) * offsetVector.x + (-vertNormal.y*vertNormal.z) * offsetVector.y + (1-math.pow(vertNormal.z, 2)) * offsetVector.z);
             }
             
-            int vertexIndex = vertexCounter.Increment();
-            vertices[vertexIndex] = new VertexData(vertPos, secondaryPos, near, vertNormal);
+            //int vertexIndex = vertexCounter.Increment();
+            vertices.Add(new TransitionVertexData(vertPos, secondaryPos, near, vertNormal));
+            int vertexIndex = vertices.Length - 1;
             return (ushort)vertexIndex;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -1,4 +1,4 @@
-Shader "Custom/Triplanar"
+Shader "Custom/TriplanarSimple"
 {
     Properties
     {
@@ -10,7 +10,6 @@ Shader "Custom/Triplanar"
 
         _BumpScale("Normal Strength", Float) = 1
         _BumpMap("Normal texture", 2D) = "bump" {}
-        _DirectionMask("Direction mask", Int) = 0
     }
     SubShader
     {
@@ -35,7 +34,6 @@ Shader "Custom/Triplanar"
             float4 vertex : POSITION;
             float3 normal : NORMAL;
             float4 tangent : TANGENT;
-            int near : COLOR;
             UNITY_VERTEX_INPUT_INSTANCE_ID
         };
         half _Glossiness;
@@ -58,14 +56,7 @@ Shader "Custom/Triplanar"
         void vert(inout output v, out Input data)
         {
             UNITY_INITIALIZE_OUTPUT(Input, data);
-            float4 vertPos;
-            if(((v.near & _DirectionMask) == v.near)){
-                vertPos = v.tangent;
-            }else{
-                vertPos = v.vertex;
-            }
-            v.vertex = vertPos;
-            data.localCoord = vertPos.xyz;
+            data.localCoord = v.vertex.xyz;
             data.localNormal = v.normal.xyz;
         }
 

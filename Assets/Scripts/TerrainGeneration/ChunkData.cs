@@ -15,8 +15,8 @@ public class ChunkData : Octree{
         public MeshData meshData;
         private NativeArray<int2> meshStarts;
         public GameObject worldObject;
-        public Counter vertexCounter;
-        public Counter indexCounter;
+        //public Counter vertexCounter;
+        //public Counter indexCounter;
         public ChunkState chunkState = ChunkState.INVALID;
         public OnMeshReady onMeshReady = OnMeshReady.ALERT_PARENT;
         public DisposeState disposeStatus = DisposeState.NOTHING;
@@ -39,6 +39,7 @@ public class ChunkData : Octree{
             desc.topology = MeshTopology.Triangles;
             chunkState = ChunkState.INVALID;
             disposeStatus = DisposeState.NOTHING;
+            meshStarts = ChunkManager.memoryManager.GetMeshCounterArray();
         }
         //ROOT chunk
         public ChunkData() : base() {
@@ -86,7 +87,7 @@ public class ChunkData : Octree{
             worldObject.transform.GetChild(3).gameObject.SetActive((dirMask & 0b_0010_0000) != 0);
         }
         public void UpdateMesh(){
-            
+            MemoryManager.ClearArray(meshStarts, 7);
             genTime = Time.realtimeSinceStartup;
             var densityData = ChunkManager.densityManager.GetJobDensityData();
             var cache = new DensityCacheInstance(new int3(int.MaxValue));
@@ -96,8 +97,6 @@ public class ChunkData : Octree{
                 chunkPos = (int3)WorldPosition,
                 chunkSize = ChunkManager.chunkResolution,
                 vertices = meshData.vertexBuffer,
-                vertexCounter = vertexCounter,
-                indexCounter = indexCounter,
                 depthMultiplier = depthMultiplier,
                 negativeDepthMultiplier = negativeDepthMultiplier,
                 vertexIndices = vertexIndexBuffer,
@@ -105,15 +104,13 @@ public class ChunkData : Octree{
                 cache = cache
             };
             base.ScheduleJob(marchingJob, (ChunkManager.chunkResolution) * (ChunkManager.chunkResolution) * (ChunkManager.chunkResolution), false);
-            meshStarts = new NativeArray<int2>(7, Allocator.Persistent);
+            
             var transitionJob = new TransitionMeshJob()
             {
                 densities = densityData,
                 chunkPos = (int3)WorldPosition,
                 chunkSize = ChunkManager.chunkResolution,
                 vertices = meshData.vertexBuffer,
-                vertexCounter = vertexCounter,
-                indexCounter = indexCounter,
                 depthMultiplier = depthMultiplier,
                 vertexIndices = vertexIndexBuffer,
                 triangles = meshData.indexBuffer,
@@ -154,11 +151,11 @@ public class ChunkData : Octree{
         }
         public void ApplyMesh(){
             chunkState = ChunkState.READY;
-            int2 totalCount = new int2(vertexCounter.Count, indexCounter.Count);
+            int2 totalCount = new int2(meshData.vertexBuffer.Length, meshData.indexBuffer.Length);
             meshStarts[6] = totalCount;
             
             var vertexCount = meshStarts[0].x;
-            var indexCount = meshStarts[0].y * 3;
+            var indexCount = meshStarts[0].y;
             if (vertexCount > 0)
             {
                 if(worldObject == null)
@@ -168,9 +165,9 @@ public class ChunkData : Octree{
                 mesh.bounds = bounds;
                 //Set vertices and indices
                 mesh.SetVertexBufferParams(vertexCount, layout);
-                mesh.SetVertexBufferData(meshData.vertexBuffer, 0, 0, vertexCount, 0, MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);
+                mesh.SetVertexBufferData(meshData.vertexBuffer.AsArray(), 0, 0, vertexCount, 0, MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);
                 mesh.SetIndexBufferParams(indexCount, IndexFormat.UInt16);
-                mesh.SetIndexBufferData(meshData.indexBuffer, 0, 0, indexCount,  MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);
+                mesh.SetIndexBufferData(meshData.indexBuffer.AsArray(), 0, 0, indexCount,  MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);
 
                 desc.indexCount = indexCount;
                 mesh.SetSubMesh(0, desc, MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);
@@ -179,16 +176,16 @@ public class ChunkData : Octree{
                 this.indexCount = indexCount;
                 for(int i = 0; i < 6; i++){
                     var vertexStart = meshStarts[i].x;
-                    var indexStart = meshStarts[i].y * 3;
+                    var indexStart = meshStarts[i].y;
                     var vertexEnd = meshStarts[i+1].x;
-                    var indexEnd = meshStarts[i+1].y * 3;
+                    var indexEnd = meshStarts[i+1].y;
                     var transitionMesh = worldObject.transform.GetChild(i).GetComponent<MeshFilter>().sharedMesh;
                     transitionMesh.bounds = bounds;
                     //Set vertices and indices
                     transitionMesh.SetVertexBufferParams(vertexEnd - vertexStart, layout);
-                    transitionMesh.SetVertexBufferData(meshData.vertexBuffer, vertexStart, 0, vertexEnd - vertexStart, 0, MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);
+                    transitionMesh.SetVertexBufferData(meshData.vertexBuffer.AsArray(), vertexStart, 0, vertexEnd - vertexStart, 0, MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);
                     transitionMesh.SetIndexBufferParams(indexEnd - indexStart, IndexFormat.UInt16);
-                    transitionMesh.SetIndexBufferData(meshData.indexBuffer, indexStart, 0, indexEnd - indexStart,  MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);
+                    transitionMesh.SetIndexBufferData(meshData.indexBuffer.AsArray(), indexStart, 0, indexEnd - indexStart,  MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);
 
                     desc.indexCount = indexEnd - indexStart;
                     transitionMesh.SetSubMesh(0, desc, MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);
@@ -200,12 +197,11 @@ public class ChunkData : Octree{
                 indexCount = 0;
                 FreeChunkMesh();
             }
-            indexCounter.Dispose();
-            vertexCounter.Dispose();
+            //indexCounter.Dispose();
+            //vertexCounter.Dispose();
             genTime = Time.realtimeSinceStartup - genTime;
             ChunkManager.memoryManager.ReturnVertexIndexBuffer(vertexIndexBuffer);
             vertexIndexBuffer = default;
-            meshStarts.Dispose();
             if(onMeshReady == OnMeshReady.ALERT_PARENT){
                 base.NotifyParentMeshReady();
             }else if(onMeshReady == OnMeshReady.DISPOSE_CHILDREN){
