@@ -1572,11 +1572,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   player: {fileID: 963194225}
   noiseData:
-    surfaceLevel: -11.57
+    surfaceLevel: 11
     freq: 0.006
     ampl: 24.1
     oct: 2
-    offset: 136.5
+    seed: 136.5
   chunkPrefab: {fileID: 4194868686972551607, guid: 6c35f3c6ef85df74c950c7dc8cd341fc, type: 3}
   debugMode: 1
   chunkCount: 0

@@ -12,15 +12,6 @@ using WorldGeneration.DataStructures;
 
 namespace WorldGeneration
 {
-    [Serializable]
-    public class NoiseData
-    {
-        public float surfaceLevel;
-        public float freq;
-        public float ampl;
-        public int oct;
-        public float offset;
-    }
     [BurstCompile]
     public struct TransitionMeshJob : IJobFor
     {
@@ -50,6 +41,7 @@ namespace WorldGeneration
                 meshStarts[transitionIndex] = counts;
                 indexTracker = transitionIndex;
             }
+            if(depthMultiplier == 1) return;
             int3 voxelLocalPosition = 0;
             int2 voxel2DLocalPosition = new int2(localPos.x, localPos.z);
             if(transitionIndex == 0) {voxelLocalPosition = new int3(chunkSize - 1, localPos.x, localPos.z);}
@@ -148,9 +140,9 @@ namespace WorldGeneration
             int u = 0x0100 - t;
             float3 vertPos;
             float3 vertNormal;
-            float3 N0 = GetVertexNormal(lowerEndPointPos);
+            float3 N0 = GetVertexNormal(lowerEndPointPos, depthMultiplier);
             if(!lowerEndPointPos.Equals(higherEndPointPos)){
-                float3 N1 = GetVertexNormal(higherEndPointPos);
+                float3 N1 = GetVertexNormal(higherEndPointPos, depthMultiplier);
                 vertPos = (t * lowerEndPointPos + u * higherEndPointPos);
                 vertNormal = (t * N0 + u * N1);
             }else{
@@ -212,12 +204,12 @@ namespace WorldGeneration
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public float3 GetVertexNormal(int3 voxelLocalPosition){
+        public float3 GetVertexNormal(int3 voxelLocalPosition, int step){
             //if(voxelLocalPosition.x >= chunkSize || voxelLocalPosition.y >= chunkSize || voxelLocalPosition.z >= chunkSize) return new float3(0);
-            float nx = (SampleDensityRaw(voxelLocalPosition + new int3(depthMultiplier, 0, 0)) - SampleDensityRaw(voxelLocalPosition - new int3(depthMultiplier, 0, 0)));
-            float ny = (SampleDensityRaw(voxelLocalPosition + new int3(0, depthMultiplier, 0)) - SampleDensityRaw(voxelLocalPosition - new int3(0, depthMultiplier, 0)));
-            float nz = (SampleDensityRaw(voxelLocalPosition + new int3(0, 0, depthMultiplier)) - SampleDensityRaw(voxelLocalPosition - new int3(0, 0, depthMultiplier)));
-            return math.normalize((new float3(nx,ny,nz)));
+            float nx = (SampleDensityRaw(voxelLocalPosition + new int3(step, 0, 0)) - SampleDensityRaw(voxelLocalPosition - new int3(step, 0, 0)));
+            float ny = (SampleDensityRaw(voxelLocalPosition + new int3(0, step, 0)) - SampleDensityRaw(voxelLocalPosition - new int3(0, step, 0)));
+            float nz = (SampleDensityRaw(voxelLocalPosition + new int3(0, 0, step)) - SampleDensityRaw(voxelLocalPosition - new int3(0, 0, step)));
+            return (new float3(nx,ny,nz));
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public sbyte SampleDensity(int3 pos){
@@ -238,7 +230,7 @@ namespace WorldGeneration
                 }else if(densities.IsEmpty(chunkPos)) {return 127;}
                 else if(densities.IsFull(chunkPos)) {return -127;}
                 else{
-                    return 127;
+                    return DensityGenerator.FinalNoise(worldPos, densities.noiseProperties);
                 }
             }
             unsafe{
@@ -479,7 +471,7 @@ namespace WorldGeneration
             float nx = (SampleDensityRaw(voxelLocalPosition + new int3(depthMultiplier, 0, 0)) - SampleDensityRaw(voxelLocalPosition - new int3(depthMultiplier, 0, 0)));
             float ny = (SampleDensityRaw(voxelLocalPosition + new int3(0, depthMultiplier, 0)) - SampleDensityRaw(voxelLocalPosition - new int3(0, depthMultiplier, 0)));
             float nz = (SampleDensityRaw(voxelLocalPosition + new int3(0, 0, depthMultiplier)) - SampleDensityRaw(voxelLocalPosition - new int3(0, 0, depthMultiplier)));
-            return math.normalize((new float3(nx,ny,nz)));
+            return (new float3(nx,ny,nz));
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public sbyte SampleDensity(int3 pos){
@@ -500,7 +492,7 @@ namespace WorldGeneration
                 }else if(densities.IsEmpty(chunkPos)) {return 127;}
                 else if(densities.IsFull(chunkPos)) {return -127;}
                 else{
-                    return 127;
+                    return DensityGenerator.FinalNoise(worldPos, densities.noiseProperties);
                 }
             }
             unsafe{
@@ -546,22 +538,16 @@ namespace WorldGeneration
     [BurstCompile]
     public struct NoiseJob : IJobParallelFor
     {
-        [ReadOnly] public float surfaceLevel;
         [ReadOnly] public float3 offset;
-        [ReadOnly] public float3 seed;
-        [ReadOnly] public float ampl;
-        [ReadOnly] public float freq;
-        [ReadOnly] public int oct;
         [ReadOnly] public int depthMultiplier;
         [ReadOnly] public int size;
         [NativeDisableParallelForRestriction, WriteOnly]
         public DensityResultData data;
-
-
+        [ReadOnly] public NoiseProperties noiseProperties;
 
         public void Execute(int index)
         {
-            var value = FinalNoise(Utils.IndexToXyz(index, size) * depthMultiplier);
+            var value = DensityGenerator.FinalNoise(Utils.IndexToXyz(index, size) * depthMultiplier + offset, noiseProperties);
             if(value != 127){
                 data.isEmpty.Value = false;
             }
@@ -570,31 +556,7 @@ namespace WorldGeneration
             }
             data.densityMap[index] = value;
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        sbyte FinalNoise(float3 pos)
-        {
-            //pos -= depthMultiplier;
-            float value = SurfaceNoise2D(pos.x, pos.z);
-            float yPos = offset.y + pos.y;
-            float density = (value + surfaceLevel - yPos) * 0.1f;
-            return Convert.ToSByte(math.clamp(-density * 127f, -127f, 127f));
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        float SurfaceNoise2D(float x, float z)
-        {
-            float total = 0;
-            var ampl = this.ampl;
-            var freq = this.freq;
-            for (int i = 0; i < oct; i++)
-            {
-                total += noise.snoise(math.float2((x + offset.x + seed.x) * freq, (z + offset.z + seed.z) * freq)) * ampl;
-
-                ampl *= 2;
-                freq *= 0.5f;
-            }
-            //total = total % 5f;
-            return total;
-        }
+        
     }
 
     //Tables used for marching cubes. Taken from https://github.com/Eldemarkki/Marching-Cubes-Terrain

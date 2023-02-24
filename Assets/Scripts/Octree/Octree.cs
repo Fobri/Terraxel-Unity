@@ -57,7 +57,7 @@ public abstract class Octree : JobRunner
     private Octree CreateNode(BoundingBox region)
     {
         var multiplier = ChunkManager.chunkResolution * depthMultipliers[depth - 1] / 2;
-        ChunkData ret = ChunkManager.GenerateChunk(new Vector3(region.center.x - multiplier,region.center.y - multiplier,region.center.z - multiplier), depth - 1, region);
+        ChunkData ret = ChunkManager.GenerateChunk(region.center - multiplier, depth - 1, region);
         if(ret != null) 
             ret.parent = this;
         return ret;
@@ -111,24 +111,50 @@ public abstract class Octree : JobRunner
         if(this.parent == null) return null;
         return this;
     }
+    public void RepositionOctets(List<int3> newOctetPositions){
+        if(!HasSubChunks) return;
+        Queue<Octree> freeNodes = new Queue<Octree>();
+        var multiplier = ChunkManager.chunkResolution * depthMultipliers[depth - 1] / 2;
+        for(int i = 0; i < 8; i++){
+            var pos = (int3)(children[i].region.center - multiplier);
+            if(!newOctetPositions.Contains(pos)){
+                children[i].PruneChunksRecursiveNow();
+                ChunkManager.FreeChunkBuffers(children[i] as ChunkData);
+                freeNodes.Enqueue(children[i]);
+            }else{
+                newOctetPositions.Remove(pos);
+            }
+        }
+        for(int i = 0; i < newOctetPositions.Count; i++){
+            var octet = freeNodes.Dequeue();
+            octet.region.center = newOctetPositions[i] + multiplier;
+            ChunkManager.RegenerateChunk(octet as ChunkData);
+            (octet as ChunkData).UpdateTreeRecursive();
+        }
+    }
     public bool HasSubChunks{
         get{
             return children[0] != null && children[1] != null && children[2] != null && children[3] != null
                  && children[4] != null && children[5] != null && children[6] != null && children[7] != null;
         }
     }
-    public bool PruneChunksRecursive(){
-        
-        bool hadChildren = false;
+    public void PruneChunksRecursive(){
         for (int i = 0; i < 8; i++){
             if(children[i] != null){
                 children[i].PruneChunksRecursive();
                 (children[i] as ChunkData).PoolChunk();
-                hadChildren = true;
                 children[i] = null;
             }
         }
-        return hadChildren;
+    }
+    public void PruneChunksRecursiveNow(){
+        for (int i = 0; i < 8; i++){
+            if(children[i] != null){
+                children[i].PruneChunksRecursiveNow();
+                ChunkManager.PoolChunk(children[i] as ChunkData);
+                children[i] = null;
+            }
+        }
     }
     public void NotifyParentMeshReady(){
         parent?.CheckSubMeshesReady();
@@ -144,14 +170,14 @@ public abstract class Octree : JobRunner
     public void UpdateTreeRecursive()
     {
         float dst = math.distance(ChunkManager.playerBounds.center, region.center);
-        if(dst > ChunkManager.chunkResolution * depthMultiplier * 2f){
+        if(dst > ChunkManager.chunkResolution * depthMultiplier * 1.5f){
             if(HasSubChunks){
                 var chunk = this as ChunkData;
                 if(!chunk.hasMesh){
-                    chunk.onMeshReady = ChunkData.OnMeshReady.DISPOSE_CHILDREN;
+                    chunk.onMeshReady = ChunkData.OnMeshReadyAction.DISPOSE_CHILDREN;
                     ChunkManager.RegenerateChunk(chunk);
-                }else if(chunk.onMeshReady != ChunkData.OnMeshReady.DISPOSE_CHILDREN){
-                    chunk.onMeshReady = ChunkData.OnMeshReady.ALERT_PARENT;
+                }else if(chunk.onMeshReady != ChunkData.OnMeshReadyAction.DISPOSE_CHILDREN){
+                    chunk.onMeshReady = ChunkData.OnMeshReadyAction.ALERT_PARENT;
                     PruneChunksRecursive();
                 }
             }

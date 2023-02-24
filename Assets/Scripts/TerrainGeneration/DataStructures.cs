@@ -47,6 +47,43 @@ namespace WorldGeneration.DataStructures
             this.normal = normal;
         }
     }
+    [Serializable]
+    public struct NoiseProperties
+    {
+        public float surfaceLevel;
+        public float freq;
+        public float ampl;
+        public int oct;
+        public float seed;
+    }
+    public struct DensityGenerator{
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static sbyte FinalNoise(float3 worldPos, NoiseProperties noiseProperties)
+        {
+            //pos -= depthMultiplier;
+            float value = SurfaceNoise2D(worldPos, noiseProperties);
+            float yPos = noiseProperties.surfaceLevel + worldPos.y;
+            float density = (value + noiseProperties.surfaceLevel - yPos) * 0.1f;
+            return Convert.ToSByte(math.clamp(-density * 127f, -127f, 127f));
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static float SurfaceNoise2D(float3 worldPos, NoiseProperties noiseProperties)
+        {
+            float total = 0;
+            var _ampl = noiseProperties.ampl;
+            var _freq = noiseProperties.freq;
+            for (int i = 0; i < noiseProperties.oct; i++)
+            {
+                total += noise.snoise(math.float2((worldPos.x + noiseProperties.seed) * _freq, (worldPos.z + noiseProperties.seed) * _freq)) * _ampl;
+
+                _ampl *= 2;
+                _freq *= 0.5f;
+            }
+            //total = total % 5f;
+            return total;
+        }
+    }
     public struct MeshData : System.IDisposable{
         
         public NativeList<TransitionVertexData> vertexBuffer;
@@ -117,11 +154,13 @@ namespace WorldGeneration.DataStructures
             return XyzToIndex(index.x, index.y, index.z, size);
         }
         public static int3 WorldPosToChunkPos(int3 worldPos){
+            //var chunkPos = math.select((int3)(math.floor(worldPos / ChunkManager.chunkResolution) * ChunkManager.chunkResolution), (int3)(math.floor(worldPos / ChunkManager.chunkResolution) * ChunkManager.chunkResolution - ChunkManager.chunkResolution), (worldPos < 0) & (worldPos % ChunkManager.chunkResolution != 0));
+            
             var chunkPos = (int3)(math.floor(worldPos / ChunkManager.chunkResolution)) * ChunkManager.chunkResolution;
-            //chunkPos -= math.select(new int3(ChunkManager.chunkResolution), new int3(0), (worldPos < 0) & (worldPos % ChunkManager.chunkResolution != 0));
-            if(worldPos.x < 0 && worldPos.x % ChunkManager.chunkResolution != 0) chunkPos.x -= ChunkManager.chunkResolution;
-            if(worldPos.y < 0 && worldPos.y % ChunkManager.chunkResolution != 0) chunkPos.y -= ChunkManager.chunkResolution;
-            if(worldPos.z < 0 && worldPos.z % ChunkManager.chunkResolution != 0) chunkPos.z -= ChunkManager.chunkResolution;
+            chunkPos -= math.select(new int3(0), new int3(ChunkManager.chunkResolution), (worldPos < 0) & (worldPos % ChunkManager.chunkResolution != 0));
+            //if(worldPos.x < 0 && worldPos.x % ChunkManager.chunkResolution != 0) chunkPos.x -= ChunkManager.chunkResolution;
+            //if(worldPos.y < 0 && worldPos.y % ChunkManager.chunkResolution != 0) chunkPos.y -= ChunkManager.chunkResolution;
+            //if(worldPos.z < 0 && worldPos.z % ChunkManager.chunkResolution != 0) chunkPos.z -= ChunkManager.chunkResolution;
             return chunkPos;
         }
         public static int3 IndexToXyz(int index, int size)

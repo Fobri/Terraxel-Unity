@@ -8,7 +8,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: TerrainMaterial
-  m_Shader: {fileID: 4800000, guid: f9e4ec310217faa489daa62a9628e230, type: 3}
+  m_Shader: {fileID: 4800000, guid: 2cd89601ba64d8841b955b028f5924c4, type: 3}
   m_ValidKeywords: []
   m_InvalidKeywords: []
   m_LightmapFlags: 4
@@ -61,6 +61,7 @@ Material:
     - _BumpScale: 2.1
     - _Cutoff: 0.5
     - _DetailNormalMapScale: 1
+    - _DirectionMask: 0
     - _DstBlend: 0
     - _GlossMapScale: 1
     - _Glossiness: 0.267

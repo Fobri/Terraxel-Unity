@@ -24,12 +24,29 @@ public class DensityManager : JobRunner, IDisposable {
         densityData.densities = new NativeHashMap<int3, IntPtr>(50, Allocator.Persistent);
         densityData.emptyChunks = new NativeHashSet<int3>(100, Allocator.Persistent);
         densityData.fullChunks = new NativeHashSet<int3>(100, Allocator.Persistent);
+        
+                        
+        NoiseProperties noiseProperties = new NoiseProperties();
+        noiseProperties.ampl = ChunkManager.staticNoiseData.ampl;
+        noiseProperties.freq = ChunkManager.staticNoiseData.freq;
+        noiseProperties.oct = ChunkManager.staticNoiseData.oct;
+        noiseProperties.seed = ChunkManager.staticNoiseData.seed;
+        noiseProperties.surfaceLevel = ChunkManager.staticNoiseData.surfaceLevel;
+        densityData.noiseProperties = noiseProperties;
     }
 
     public BoundingBox[] GetDebugArray(){
         List<BoundingBox> value = new List<BoundingBox>();
         foreach(var key in densityData.densities){
             var bound = new BoundingBox((float3)key.Key + ChunkManager.chunkResolution / 2, new float3(ChunkManager.chunkResolution));
+            value.Add(bound);
+        }
+        foreach(var key in densityData.fullChunks){
+            var bound = new BoundingBox((float3)key + ChunkManager.chunkResolution / 2, new float3(ChunkManager.chunkResolution));
+            value.Add(bound);
+        }
+        foreach(var key in densityData.emptyChunks){
+            var bound = new BoundingBox((float3)key + ChunkManager.chunkResolution / 2, new float3(ChunkManager.chunkResolution));
             value.Add(bound);
         }
         return value.ToArray();
@@ -84,31 +101,62 @@ public class DensityManager : JobRunner, IDisposable {
             return operationQueue.Count > 0;
         }
     }
+    public bool ChunkIsFullOrEmpty(int3 pos){
+        return densityData.fullChunks.Contains(pos) || densityData.emptyChunks.Contains(pos);
+    }
 
     public void LoadDensityData(float3 center){
+        HashSet<int3> alreadyDataExists = new HashSet<int3>();
         int3 startPos = (int3)center - ChunkManager.chunkResolution * Octree.depthMultipliers[ChunkManager.lodLevels-1];
-        for(int y = startPos.y; y < math.abs(startPos.y); y+=ChunkManager.chunkResolution){
-            for(int z = startPos.z; z < math.abs(startPos.z); z+=ChunkManager.chunkResolution){
-                for(int x = startPos.x; x < math.abs(startPos.x); x+=ChunkManager.chunkResolution){
-                    float3 pos = new float3(x,y,z);
+        for(int x = 0; x < 16; x++){
+            for(int y = 0; y < 16; y++){
+                for(int z = 0; z < 16; z++){
+                    int3 pos = new int3(x,y,z) * ChunkManager.chunkResolution + startPos;
+                    if(densityData.ContainsPos(pos) ||densityData.emptyChunks.Contains(pos) ||densityData.fullChunks.Contains(pos)){
+                        alreadyDataExists.Add(pos);
+                        continue;
+                    }
                     var noiseJob = new NoiseJob()
                     {
-                        ampl = ChunkManager.staticNoiseData.ampl,
-                        freq = ChunkManager.staticNoiseData.freq,
-                        oct = ChunkManager.staticNoiseData.oct,
                         offset = pos,
-                        seed = ChunkManager.staticNoiseData.offset,
-                        surfaceLevel = ChunkManager.staticNoiseData.surfaceLevel,
-                        //noiseMap = densityMap,
                         size = ChunkManager.chunkResolution,
-                        depthMultiplier = Octree.depthMultipliers[0]
-                        //pos = WorldSetup.positions
+                        depthMultiplier = Octree.depthMultipliers[0],
+                        noiseProperties = densityData.noiseProperties
                     };
                     operationQueue.Enqueue(noiseJob);
                 }
             }
         }
+        using (var keys = densityData.densities.GetKeyArray(Allocator.Temp)){
+            for(int i = 0; i < keys.Length; i++){
+                if(!alreadyDataExists.Contains(keys[i])){
+                    UnloadDensityData(keys[i]);
+                }
+            }
+        }
+        using(var keys = densityData.fullChunks.ToNativeArray(Allocator.Temp)){
+            for(int i = 0; i < keys.Length; i++){
+                if(!alreadyDataExists.Contains(keys[i])){
+                    densityData.fullChunks.Remove(keys[i]);
+                }
+            }
+        }
+        using(var keys = densityData.emptyChunks.ToNativeArray(Allocator.Temp)){
+            for(int i = 0; i < keys.Length; i++){
+                if(!alreadyDataExists.Contains(keys[i])){
+                    densityData.emptyChunks.Remove(keys[i]);
+                }
+            }
+        }
         ScheduleBatch();
+    }
+    private void UnloadDensityData(int3 pos){
+        unsafe{
+            var densityMap = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<sbyte>((void*)densityData.densities[pos], MemoryManager.densityMapLength, Allocator.None);
+            //NativeArrayUnsafeUtility.SetAtomicSafetyHandle(ref densityMap, new AtomicSafetyHandle());
+            ChunkManager.memoryManager.ReturnDensityMap(densityMap, true);
+        }
+        densityData.densities.Remove(pos);
     }
 
     /*private void Unload(int3 pos){
@@ -134,6 +182,7 @@ public struct DensityData : IDisposable{
     public NativeHashMap<int3, IntPtr> densities;
     public NativeHashSet<int3> fullChunks;
     public NativeHashSet<int3> emptyChunks;
+    public NoiseProperties noiseProperties;
 
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -150,7 +199,11 @@ public struct DensityData : IDisposable{
             return UnsafeUtility.ReadArrayElement<sbyte>((void*)data, Utils.XyzToIndex(localPosInChunk, ChunkManager.chunkResolution));
             }
         }
-        return 127;
+        return GenerateDensity(worldPos);
+    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public sbyte GenerateDensity(int3 worldPos){
+        return DensityGenerator.FinalNoise(worldPos, noiseProperties);
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IntPtr GetDensityMap(int3 chunkPos){

@@ -23,11 +23,12 @@ public class ChunkManager : MonoBehaviour, IDisposable
     public static WorldState worldState = WorldState.IDLE;
     public GameObject player;
     public static BoundingBox playerBounds;
+    public static int3 worldOffset = Int16.MaxValue;
     public static bool shouldUpdateTree = false;
     public const int chunkResolution = 32;
-    public const int lodLevels = 4;
-    public WorldGeneration.NoiseData noiseData;
-    public static WorldGeneration.NoiseData staticNoiseData;
+    public const int lodLevels = 5;
+    public NoiseProperties noiseData;
+    public static NoiseProperties staticNoiseData;
     public GameObject chunkPrefab;
     static GameObject staticChunkPrefab;
     static Transform poolParent;
@@ -131,13 +132,12 @@ public TextMeshProUGUI[] debugLabels;
         disposeQueue = new Queue<ChunkData>();
         objectPool = new Queue<GameObject>();
         memoryManager.Init();
+        staticNoiseData = noiseData;
         densityManager.Init();
         chunkDatas = new List<ChunkData>();
         staticChunkPrefab = chunkPrefab;
-        staticNoiseData = noiseData;
         poolParent = transform.GetChild(0);
         activeParent = transform.GetChild(1);
-        densityManager.LoadDensityData(new float3(0));
         chunkTree = new ChunkData();
         chunkTree.chunkState = ChunkData.ChunkState.ROOT;
         chunkTree.UpdateTreeRecursive();
@@ -174,7 +174,6 @@ public TextMeshProUGUI[] debugLabels;
         vertCount = 0;
         indexCount = 0;
         totalGenTime = 0f;
-        bool meshUpdates = false;
         if(debugMode){
             for(int i = 0; i < chunkDatas.Count; i++){
                     vertCount += chunkDatas[i].vertCount;
@@ -203,26 +202,48 @@ public TextMeshProUGUI[] debugLabels;
                     }
                     UpdateChunk(toBeProcessed);
                 }
-            }else if(!meshUpdates){
+            }else if(memoryManager.GetFreeVertexIndexBufferCount() == MemoryManager.maxConcurrentOperations){
                 worldState = WorldState.IDLE;
             }
         }
         if(worldState == WorldState.IDLE){
+            var size = ChunkManager.chunkResolution * Octree.depthMultipliers[lodLevels-1];
+            int3 closestOctetToPlayer = (int3)(math.round(playerBounds.center / size)) * size;
+            if(!closestOctetToPlayer.Equals(worldOffset)){
+                //activeParent.parent.position = (float3)closestOctetToPlayer;
+                worldOffset = closestOctetToPlayer;
+                densityManager.LoadDensityData(worldOffset);
+                List<int3> newPositions = new List<int3>();
+                int3 startPos = worldOffset - size;
+                for(int x = 0; x < 2; x++){
+                        for(int y = 0; y < 2; y++){
+                            for(int z = 0; z < 2; z++){
+                                var pos = new int3(x,y,z) * size + startPos;
+                                newPositions.Add(pos);
+                        }
+                    }
+                }
+                chunkTree.RepositionOctets(newPositions);
+            }
             if(densityManager.HasPendingUpdates) worldState = WorldState.DENSITY_UPDATE;
-            else if(meshQueue.Count > 0 || meshUpdates) worldState = WorldState.MESH_UPDATE;
-        }
-        if(math.distance(playerBounds.center, player.transform.position) > 10f){
-            playerBounds.center = player.transform.position;
-            shouldUpdateTree = true;
-        }
-        if(shouldUpdateTree){
-            shouldUpdateTree = false;
-            chunkTree.UpdateTreeRecursive();
-            for(int i = 0; i < chunkDatas.Count; i++){
-                //TODO: useless, figure out better way to only refresh states of chunks that are adjacent to mesh updates
-                chunkDatas[i].RefreshRenderState();
+            else if(meshQueue.Count > 0) worldState = WorldState.MESH_UPDATE;
+            else{
+                if(math.distance(playerBounds.center, player.transform.position) > 10f){
+                playerBounds.center = player.transform.position;
+                shouldUpdateTree = true;
+                }
+                if(shouldUpdateTree){
+                    shouldUpdateTree = false;
+                    chunkTree.UpdateTreeRecursive();
+                    
+                    for(int i = 0; i < chunkDatas.Count; i++){
+                        //TODO: useless, figure out better way to only refresh states of chunks that are adjacent to mesh updates
+                        chunkDatas[i].RefreshRenderState();
+                    }
+                }
             }
         }
+        
     }
     public static void DisposeChunk(ChunkData chunk){
         if(chunk.chunkState == ChunkData.ChunkState.DIRTY){
@@ -269,7 +290,7 @@ public TextMeshProUGUI[] debugLabels;
         else{
             var chunk = Instantiate(staticChunkPrefab);
             chunk.GetComponent<MeshFilter>().sharedMesh = new Mesh();
-            for(int i = 0; i < 7; i++){
+            for(int i = 0; i < 6; i++){
                 chunk.transform.GetChild(i).GetComponent<MeshFilter>().sharedMesh = new Mesh();
             }
             chunk.transform.SetParent(activeParent);
@@ -317,6 +338,12 @@ public TextMeshProUGUI[] debugLabels;
         return newChunkData;
     }
     static void UpdateChunk(ChunkData chunkData){
+
+        if(chunkData.depth == 0){
+            if(densityManager.ChunkIsFullOrEmpty((int3)chunkData.WorldPosition)){
+                chunkData.OnMeshReady();
+            }
+        }
         
         if(memoryManager.GetFreeVertexIndexBufferCount() == 0 || worldState != WorldState.MESH_UPDATE){
             chunkData.chunkState = ChunkData.ChunkState.QUEUED;
@@ -362,7 +389,7 @@ public TextMeshProUGUI[] debugLabels;
                 Gizmos.DrawWireCube(bound.center, bound.bounds);
             }
         }
-        if(drawChunkVariables.draw){
+        if(drawChunkVariables.draw ||drawChunkBounds){
             GUI.color = Color.green;
             for(int i = 0; i < chunkDatas.Count; i++){
                 float3 offset = chunkDatas[i].WorldPosition + chunkResolution * chunkDatas[i].depthMultiplier / 2;

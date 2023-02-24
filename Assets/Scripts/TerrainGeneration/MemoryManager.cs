@@ -20,6 +20,7 @@ public class MemoryManager : IDisposable{
     Queue<TempBuffer> freeVertexIndexBuffers;
     Queue<NativeArray<sbyte>> freeDensityMaps;
     NativeArray<sbyte> densityMap;
+    AtomicSafetyHandle densitySafetyHandle;
     TempBuffer[] vertexIndexBuffers;
     List<NativeArray<int2>> meshStarts = new List<NativeArray<int2>>();
 
@@ -41,6 +42,9 @@ public class MemoryManager : IDisposable{
         freeMeshDatas = new Queue<MeshData>();
         freeDensityMaps = new Queue<NativeArray<sbyte>>();
         densityMap = new NativeArray<sbyte>(densityMapLength * densityCount, Allocator.Persistent);
+        unsafe{
+            densitySafetyHandle = NativeArrayUnsafeUtility.GetAtomicSafetyHandle(densityMap);
+        }
         for(int i = 0; i < maxBufferCount; i++){
             var verts = new NativeList<TransitionVertexData>(maxVertexCount, Allocator.Persistent);
             var indices = new NativeList<ushort>(maxVertexCount, Allocator.Persistent);
@@ -64,7 +68,6 @@ public class MemoryManager : IDisposable{
     public NativeArray<sbyte> GetDensityMap(){
         if(freeDensityMaps.Count == 0) throw new Exception("No free density map available", new InvalidOperationException());
         var thing = freeDensityMaps.Dequeue();
-        if(thing == default) Debug.Log("wut");
         return thing;
     }
     public NativeArray<int2> GetMeshCounterArray(){
@@ -81,7 +84,12 @@ public class MemoryManager : IDisposable{
         data.vertexBuffer.Capacity = maxVertexCount;
         freeMeshDatas.Enqueue(data);
     }
-    public void ReturnDensityMap(NativeArray<sbyte> map){
+    public void ReturnDensityMap(NativeArray<sbyte> map, bool assignSafetyHandle = false){
+        if(assignSafetyHandle){
+            unsafe{
+                NativeArrayUnsafeUtility.SetAtomicSafetyHandle(ref map, densitySafetyHandle);
+            }
+        }
         freeDensityMaps.Enqueue(map);
     }
     public void ReturnVertexIndexBuffer(TempBuffer buffer){

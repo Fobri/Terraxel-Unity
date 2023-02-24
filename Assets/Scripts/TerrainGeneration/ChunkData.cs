@@ -9,7 +9,7 @@ using WorldGeneration.DataStructures;
 
 public class ChunkData : Octree{
         public enum ChunkState { DIRTY, READY, INVALID, ROOT, QUEUED }
-        public enum OnMeshReady { ALERT_PARENT, DISPOSE_CHILDREN }
+        public enum OnMeshReadyAction { ALERT_PARENT, DISPOSE_CHILDREN }
         public enum DisposeState { NOTHING, POOL, FREE_MESH }
         public TempBuffer vertexIndexBuffer;
         public MeshData meshData;
@@ -18,7 +18,7 @@ public class ChunkData : Octree{
         //public Counter vertexCounter;
         //public Counter indexCounter;
         public ChunkState chunkState = ChunkState.INVALID;
-        public OnMeshReady onMeshReady = OnMeshReady.ALERT_PARENT;
+        public OnMeshReadyAction onMeshReady = OnMeshReadyAction.ALERT_PARENT;
         public DisposeState disposeStatus = DisposeState.NOTHING;
         public float genTime;
         public int vertCount;
@@ -104,7 +104,6 @@ public class ChunkData : Octree{
                 cache = cache
             };
             base.ScheduleJob(marchingJob, (ChunkManager.chunkResolution) * (ChunkManager.chunkResolution) * (ChunkManager.chunkResolution), false);
-            
             var transitionJob = new TransitionMeshJob()
             {
                 densities = densityData,
@@ -150,7 +149,6 @@ public class ChunkData : Octree{
             return false;
         }
         public void ApplyMesh(){
-            chunkState = ChunkState.READY;
             int2 totalCount = new int2(meshData.vertexBuffer.Length, meshData.indexBuffer.Length);
             meshStarts[6] = totalCount;
             
@@ -202,10 +200,14 @@ public class ChunkData : Octree{
             genTime = Time.realtimeSinceStartup - genTime;
             ChunkManager.memoryManager.ReturnVertexIndexBuffer(vertexIndexBuffer);
             vertexIndexBuffer = default;
-            if(onMeshReady == OnMeshReady.ALERT_PARENT){
+            OnMeshReady();
+        }
+        public void OnMeshReady(){
+            chunkState = ChunkState.READY;
+            if(onMeshReady == OnMeshReadyAction.ALERT_PARENT){
                 base.NotifyParentMeshReady();
-            }else if(onMeshReady == OnMeshReady.DISPOSE_CHILDREN){
-                onMeshReady = OnMeshReady.ALERT_PARENT;
+            }else if(onMeshReady == OnMeshReadyAction.DISPOSE_CHILDREN){
+                onMeshReady = OnMeshReadyAction.ALERT_PARENT;
                 PruneChunksRecursive();
             }
             RefreshRenderState(true);
