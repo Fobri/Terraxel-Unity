@@ -15,6 +15,7 @@ public class ChunkData : Octree{
         public MeshData meshData;
         private NativeArray<int2> meshStarts;
         public GameObject worldObject;
+        public SimpleMeshData simpleMesh;
         //public Counter vertexCounter;
         //public Counter indexCounter;
         public ChunkState chunkState = ChunkState.INVALID;
@@ -39,13 +40,13 @@ public class ChunkData : Octree{
             desc.topology = MeshTopology.Triangles;
             chunkState = ChunkState.INVALID;
             disposeStatus = DisposeState.NOTHING;
-            meshStarts = ChunkManager.memoryManager.GetMeshCounterArray();
+            meshStarts = MemoryManager.GetMeshCounterArray();
         }
         //ROOT chunk
         public ChunkData() : base() {
         }
         void InitWorldObject(){
-            worldObject = ChunkManager.GetChunkObject();
+            worldObject = TerraxelWorld.ChunkManager.GetChunkObject();
             worldObject.name = $"Chunk {WorldPosition.x}, {WorldPosition.y}, {WorldPosition.z}";
             worldObject.transform.position = WorldPosition;
         }
@@ -54,26 +55,25 @@ public class ChunkData : Octree{
         }
         public void UpdateDirectionMask(bool refreshNeighbours = false){
             dirMask = 0;
-            if(depth > 0){
-                if(CheckNeighbour(new int3(1, 0, 0), refreshNeighbours)){
-                    dirMask |= 0b_0000_0001;
-                }
-                if(CheckNeighbour(new int3(-1, 0, 0), refreshNeighbours)){
-                    dirMask |= 0b_0000_0010;
-                }
-                if(CheckNeighbour(new int3(0, 1, 0), refreshNeighbours)){
-                    dirMask |= 0b_0000_0100;
-                }
-                if(CheckNeighbour(new int3(0, -1, 0), refreshNeighbours)){
-                    dirMask |= 0b_0000_1000;
-                }
-                if(CheckNeighbour(new int3(0, 0, 1), refreshNeighbours)){
-                    dirMask |= 0b_0001_0000;
-                }
-                if(CheckNeighbour(new int3(0, 0, -1), refreshNeighbours)){
-                    dirMask |= 0b_0010_0000;
-                }
+            if(CheckNeighbour(new int3(1, 0, 0), refreshNeighbours)){
+                dirMask |= 0b_0000_0001;
             }
+            if(CheckNeighbour(new int3(-1, 0, 0), refreshNeighbours)){
+                dirMask |= 0b_0000_0010;
+            }
+            if(CheckNeighbour(new int3(0, 1, 0), refreshNeighbours)){
+                dirMask |= 0b_0000_0100;
+            }
+            if(CheckNeighbour(new int3(0, -1, 0), refreshNeighbours)){
+                dirMask |= 0b_0000_1000;
+            }
+            if(CheckNeighbour(new int3(0, 0, 1), refreshNeighbours)){
+                dirMask |= 0b_0001_0000;
+            }
+            if(CheckNeighbour(new int3(0, 0, -1), refreshNeighbours)){
+                dirMask |= 0b_0010_0000;
+            }
+            if(depth == 0) dirMask = 0;
         }
         public void RefreshRenderState(bool refreshNeighbours = false){
             if(worldObject == null) return;
@@ -89,7 +89,27 @@ public class ChunkData : Octree{
         public void UpdateMesh(){
             MemoryManager.ClearArray(meshStarts, 7);
             genTime = Time.realtimeSinceStartup;
-            var densityData = ChunkManager.densityManager.GetJobDensityData();
+            if(simpleMesh != null){
+                var pos = (int3)WorldPosition;
+                var noiseJob = new NoiseJob2D{
+                    offset = new float2(pos.x, pos.z),
+                    depthMultiplier = depthMultiplier,
+                    size = ChunkManager.chunkResolution + 1,
+                    heightMap = simpleMesh.heightMap,
+                    noiseProperties = TerraxelWorld.DensityManager.GetNoiseProperties()
+                };
+                base.ScheduleParallelJob(noiseJob, 1089);
+                var meshJob = new Mesh2DJob(){
+                    heightMap = simpleMesh.heightMap,
+                    chunkSize = ChunkManager.chunkResolution + 1,
+                    vertices = simpleMesh.buffer,
+                    chunkPos = new int2(pos.x, pos.z),
+                    surfaceLevel = TerraxelWorld.DensityManager.GetNoiseProperties().surfaceLevel
+                };
+                base.ScheduleParallelJob(meshJob, 1089, true);
+                return;
+            }
+            var densityData = TerraxelWorld.DensityManager.GetJobDensityData();
             var cache = new DensityCacheInstance(new int3(int.MaxValue));
             var marchingJob = new MeshJob()
             {
@@ -119,36 +139,40 @@ public class ChunkData : Octree{
                 negativeDepthMultiplier = negativeDepthMultiplier
             };
             base.ScheduleJob(transitionJob, 6 * (ChunkManager.chunkResolution) * (ChunkManager.chunkResolution), true);
-
-            /*var vertexSharingJob = new VertexSharingJob()
-            {
-                triangles = meshData.indexBuffer,
-                chunkSize = ChunkManager.chunkResolution + 1,
-                counter = indexCounter,
-                vertexIndices = vertexIndexBuffer,
-                neighbourDirectionMask = dirMask
-            };
-            jobHandle = vertexSharingJob.Schedule((ChunkManager.chunkResolution + 1) * (ChunkManager.chunkResolution + 1) * (ChunkManager.chunkResolution + 1), 32, marchingHandle);
-        */}
+        }
         bool CheckNeighbour(int3 relativeOffset, bool refreshNeighbours = false){
             float3 pos = ChunkManager.chunkResolution * depthMultiplier * relativeOffset;
-            var tree = ChunkManager.chunkTree as Octree;
+            var tree = TerraxelWorld.ChunkManager.chunkTree as Octree;
             var queryResult = tree.Query(new BoundingBox(this.region.center + pos, this.region.bounds - 4));
             if(queryResult != null){
+                if(refreshNeighbours)
+                    (queryResult as ChunkData).RefreshRenderState();
                 if(queryResult.HasSubChunks){
                     return true;
                 }else if(queryResult.depth == this.depth){
-                    if(refreshNeighbours)
-                        (queryResult as ChunkData).RefreshRenderState();
                     return false;
                 }
-                if(refreshNeighbours)
-                    (queryResult as ChunkData).RefreshRenderState();
                 return false;
             }
             return false;
         }
         public void ApplyMesh(){
+            if(simpleMesh != null){
+                simpleMesh.worldObject.SetActive(true);
+                simpleMesh.worldObject.transform.localScale = new float3(depthMultiplier, 1, depthMultiplier);
+                var mesh = simpleMesh.worldObject.GetComponent<MeshFilter>().sharedMesh;
+                mesh.SetVertexBufferData(simpleMesh.buffer, 0, 0, 1089,0,MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);
+                mesh.SetIndexBufferData(SimpleMeshData.indices, 0, 0, 6144);
+                desc.indexCount = 6144;
+                mesh.SetSubMesh(0, desc, MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);
+                var bounds = new Bounds(new float3(ChunkManager.chunkResolution * depthMultiplier / 2), region.bounds);
+                mesh.bounds = bounds;
+                mesh.RecalculateNormals();
+                simpleMesh.worldObject.transform.position = WorldPosition;
+                genTime = Time.realtimeSinceStartup - genTime;
+                OnMeshReady();
+                return;
+            }
             int2 totalCount = new int2(meshData.vertexBuffer.Length, meshData.indexBuffer.Length);
             meshStarts[6] = totalCount;
             
@@ -198,7 +222,7 @@ public class ChunkData : Octree{
             //indexCounter.Dispose();
             //vertexCounter.Dispose();
             genTime = Time.realtimeSinceStartup - genTime;
-            ChunkManager.memoryManager.ReturnVertexIndexBuffer(vertexIndexBuffer);
+            MemoryManager.ReturnVertexIndexBuffer(vertexIndexBuffer);
             vertexIndexBuffer = default;
             OnMeshReady();
         }
@@ -214,11 +238,11 @@ public class ChunkData : Octree{
         }
         public void FreeChunkMesh(){
             disposeStatus = DisposeState.FREE_MESH;
-            ChunkManager.DisposeChunk(this);
+            TerraxelWorld.ChunkManager.DisposeChunk(this);
         }
         public void PoolChunk(){
             disposeStatus = DisposeState.POOL;
-            ChunkManager.DisposeChunk(this);
+            TerraxelWorld.ChunkManager.DisposeChunk(this);
         }
         /*public bool HasMesh(){
             return worldObject != null;

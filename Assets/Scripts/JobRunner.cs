@@ -6,6 +6,11 @@ using Unity.Jobs;
 public abstract class JobRunner
 {
     static List<JobRunner> activeJobRunners = new List<JobRunner>();
+    public static void CompleteAll(){
+        foreach(var job in activeJobRunners){
+            job.CompleteJobs();
+        }
+    }
     public static void Update(){
         for(int i = 0; i < activeJobRunners.Count; i++){
             activeJobRunners[i].CheckIsReadyAndComplete();
@@ -14,11 +19,14 @@ public abstract class JobRunner
 
     JobHandle jobHandle = default;
     bool hasCompleted = true;
-    internal void ScheduleParallelJob<T>(T job, int length) where T : struct, IJobParallelFor{
+    internal void ScheduleParallelJob<T>(T job, int length, bool dependency = false) where T : struct, IJobParallelFor{
         if(IsReady){
             activeJobRunners.Add(this);
         }
-        jobHandle = JobHandle.CombineDependencies(jobHandle, IJobParallelForExtensions.Schedule(job, length, 32, default));
+        if(!dependency)
+            jobHandle = JobHandle.CombineDependencies(jobHandle, IJobParallelForExtensions.Schedule(job, length, 32, default));
+        else
+            jobHandle = IJobParallelForExtensions.Schedule(job, length, 32, jobHandle);
         hasCompleted = false;
     }
     internal void ScheduleJob<T>(T job, int length, bool dependency = false) where T : struct, IJobFor{

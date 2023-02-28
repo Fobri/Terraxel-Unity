@@ -19,20 +19,16 @@ public class DensityManager : JobRunner, IDisposable {
     Queue<NoiseJob> operationQueue = new Queue<NoiseJob>();
     Dictionary<int3, DensityResultData> currentlyProcessedPositions = new Dictionary<int3, DensityResultData>();
 
-    public void Init(){
+    public void Init(NoiseProperties noiseProperties){
         densityData = new DensityData();
         densityData.densities = new NativeHashMap<int3, IntPtr>(50, Allocator.Persistent);
         densityData.emptyChunks = new NativeHashSet<int3>(100, Allocator.Persistent);
         densityData.fullChunks = new NativeHashSet<int3>(100, Allocator.Persistent);
-        
-                        
-        NoiseProperties noiseProperties = new NoiseProperties();
-        noiseProperties.ampl = ChunkManager.staticNoiseData.ampl;
-        noiseProperties.freq = ChunkManager.staticNoiseData.freq;
-        noiseProperties.oct = ChunkManager.staticNoiseData.oct;
-        noiseProperties.seed = ChunkManager.staticNoiseData.seed;
-        noiseProperties.surfaceLevel = ChunkManager.staticNoiseData.surfaceLevel;
+
         densityData.noiseProperties = noiseProperties;
+    }
+    public NoiseProperties GetNoiseProperties(){
+        return densityData.noiseProperties;
     }
 
     public BoundingBox[] GetDebugArray(){
@@ -56,7 +52,7 @@ public class DensityManager : JobRunner, IDisposable {
         foreach(var key in currentlyProcessedPositions.Keys){
             var instance = currentlyProcessedPositions[key];
             if(instance.isEmpty.Value || instance.isFull.Value){
-                ChunkManager.memoryManager.ReturnDensityMap(instance.densityMap);
+                MemoryManager.ReturnDensityMap(instance.densityMap);
                 if(instance.isEmpty.Value) densityData.emptyChunks.Add(key);
                 if(instance.isFull.Value) densityData.fullChunks.Add(key);
             }else{
@@ -78,7 +74,7 @@ public class DensityManager : JobRunner, IDisposable {
             if(operationQueue.Count == 0) return;
             var job = operationQueue.Dequeue();
             var data = new DensityResultData();
-            data.densityMap = ChunkManager.memoryManager.GetDensityMap();
+            data.densityMap = MemoryManager.GetDensityMap();
             data.isEmpty = new NativeReference<bool>(true,Allocator.TempJob);
             data.isFull = new NativeReference<bool>(true,Allocator.TempJob);
             job.data = data;
@@ -90,27 +86,19 @@ public class DensityManager : JobRunner, IDisposable {
     public DensityData GetJobDensityData(){
         return densityData;
     }
-
-    public bool JobsReady{
-        get{
-            return IsReady;
-        }
-    }
-    public bool HasPendingUpdates{
-        get{
-            return operationQueue.Count > 0;
-        }
+    public bool GetIsReady(){
+        return IsReady && operationQueue.Count == 0;
     }
     public bool ChunkIsFullOrEmpty(int3 pos){
         return densityData.fullChunks.Contains(pos) || densityData.emptyChunks.Contains(pos);
     }
 
-    public void LoadDensityData(float3 center){
+    public void LoadDensityData(float3 center, int radius){
         HashSet<int3> alreadyDataExists = new HashSet<int3>();
-        int3 startPos = (int3)center - ChunkManager.chunkResolution * Octree.depthMultipliers[ChunkManager.lodLevels-1];
-        for(int x = 0; x < 16; x++){
-            for(int y = 0; y < 16; y++){
-                for(int z = 0; z < 16; z++){
+        int3 startPos = (int3)center - ChunkManager.chunkResolution * Octree.depthMultipliers[radius];
+        for(int x = 0; x < Octree.depthMultipliers[radius] * 2; x++){
+            for(int y = 0; y < Octree.depthMultipliers[radius] * 2; y++){
+                for(int z = 0; z < Octree.depthMultipliers[radius] * 2; z++){
                     int3 pos = new int3(x,y,z) * ChunkManager.chunkResolution + startPos;
                     if(densityData.ContainsPos(pos) ||densityData.emptyChunks.Contains(pos) ||densityData.fullChunks.Contains(pos)){
                         alreadyDataExists.Add(pos);
@@ -154,7 +142,7 @@ public class DensityManager : JobRunner, IDisposable {
         unsafe{
             var densityMap = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<sbyte>((void*)densityData.densities[pos], MemoryManager.densityMapLength, Allocator.None);
             //NativeArrayUnsafeUtility.SetAtomicSafetyHandle(ref densityMap, new AtomicSafetyHandle());
-            ChunkManager.memoryManager.ReturnDensityMap(densityMap, true);
+            MemoryManager.ReturnDensityMap(densityMap, true);
         }
         densityData.densities.Remove(pos);
     }

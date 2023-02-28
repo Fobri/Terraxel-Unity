@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Unity.Collections.LowLevel.Unsafe;
 using System.Runtime.CompilerServices;
 using System;
+using UnityEngine;
 
 namespace WorldGeneration.DataStructures
 {
@@ -56,26 +57,32 @@ namespace WorldGeneration.DataStructures
         public int oct;
         public float seed;
     }
+    public class SimpleMeshData{
+        public GameObject worldObject;
+        public NativeArray<VertexData> buffer;
+        public NativeArray<float> heightMap;
+        public static NativeArray<ushort> indices;
+    }
     public struct DensityGenerator{
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static sbyte FinalNoise(float3 worldPos, NoiseProperties noiseProperties)
         {
             //pos -= depthMultiplier;
-            float value = SurfaceNoise2D(worldPos, noiseProperties);
+            float value = SurfaceNoise2D(new float2(worldPos.x, worldPos.z), noiseProperties);
             float yPos = noiseProperties.surfaceLevel + worldPos.y;
             float density = (value + noiseProperties.surfaceLevel - yPos) * 0.1f;
             return Convert.ToSByte(math.clamp(-density * 127f, -127f, 127f));
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float SurfaceNoise2D(float3 worldPos, NoiseProperties noiseProperties)
+        public static float SurfaceNoise2D(float2 worldPos, NoiseProperties noiseProperties)
         {
             float total = 0;
             var _ampl = noiseProperties.ampl;
             var _freq = noiseProperties.freq;
             for (int i = 0; i < noiseProperties.oct; i++)
             {
-                total += noise.snoise(math.float2((worldPos.x + noiseProperties.seed) * _freq, (worldPos.z + noiseProperties.seed) * _freq)) * _ampl;
+                total += noise.snoise(math.float2((worldPos.x + noiseProperties.seed) * _freq, (worldPos.y + noiseProperties.seed) * _freq)) * _ampl;
 
                 _ampl *= 2;
                 _freq *= 0.5f;
@@ -170,6 +177,12 @@ namespace WorldGeneration.DataStructures
                 index / (size * size),
                 index / size % size);
             return position;
+        }
+        public static int2 IndexToXz(int index, int size){
+            return new int2(index % size, index / size);
+        }
+        public static int XzToIndex(int2 index, int size){
+            return index.y * size + index.x;
         }
 
         public static string DirectionMaskToString(byte dirMask){
