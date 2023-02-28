@@ -147,21 +147,6 @@ public class DensityManager : JobRunner, IDisposable {
         densityData.densities.Remove(pos);
     }
 
-    /*private void Unload(int3 pos){
-        
-        if(densityData.densities.ContainsKey(pos)){
-                unsafe{
-                var densityMap = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<sbyte>((void*)densityData.densities[pos], MemoryManager.densityMapLength, Allocator.None);
-                ChunkManager.memoryManager.ReturnDensityMap(densityMap);
-            }
-            densityData.densities.Remove(pos);
-        }
-    }
-    public void UnloadDensityAtPosition(int3 pos){
-        
-        unloadQueue.Enqueue(pos);
-    }*/
-
     public void Dispose(){
         densityData.Dispose();
     }

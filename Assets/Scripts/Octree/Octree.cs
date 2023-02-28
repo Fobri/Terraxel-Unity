@@ -111,31 +111,48 @@ public abstract class Octree : JobRunner
         if(this.parent == null) return null;
         return this;
     }
-    public void RepositionOctets(List<int3> newOctetPositions){
+    public void RepositionOctets(List<int3> newOctetPositions, int size){
         if(!HasSubChunks) return;
+        Dictionary<int3, Octree> instanceByPosition = new Dictionary<int3, Octree>();
         Queue<Octree> freeNodes = new Queue<Octree>();
-        var multiplier = ChunkManager.chunkResolution * depthMultipliers[depth - 1] / 2;
         for(int i = 0; i < 8; i++){
-            var pos = (int3)(children[i].region.center - multiplier);
-            if(!newOctetPositions.Contains(pos)){
-                children[i].PruneChunksRecursiveNow();
-                TerraxelWorld.ChunkManager.FreeChunkBuffers(children[i] as ChunkData);
-                freeNodes.Enqueue(children[i]);
-            }else{
-                newOctetPositions.Remove(pos);
+            for(int s = 0; s < 8; s++){
+                var pos = (int3)(children[i].children[s].region.center - size / 2);
+                if(!newOctetPositions.Contains(pos)){
+                    children[i].children[s].PruneChunksRecursiveNow();
+                    TerraxelWorld.ChunkManager.FreeChunkBuffers(children[i].children[s] as ChunkData);
+                    freeNodes.Enqueue(children[i].children[s]);
+                }else{
+                    newOctetPositions.Remove(pos);
+                    instanceByPosition.Add(pos, children[i].children[s]);
+                }
             }
         }
         for(int i = 0; i < newOctetPositions.Count; i++){
             var octet = freeNodes.Dequeue();
-            octet.region.center = newOctetPositions[i] + multiplier;
+            octet.region.center = newOctetPositions[i] + size / 2;
+            instanceByPosition.Add(newOctetPositions[i], octet);
             TerraxelWorld.ChunkManager.RegenerateChunk(octet as ChunkData);
             (octet as ChunkData).UpdateTreeRecursive();
+        }
+        if(newOctetPositions.Count > 0){
+            RecalculateChildren(instanceByPosition, size);
+        }
+    }
+    private void RecalculateChildren(Dictionary<int3, Octree> instanceByPosition, int size){
+        var octs = CreateOctants(region);
+        for(int i = 0; i < 8; i++){
+            children[i].region = octs[i];
+            var octants = CreateOctants(children[i].region);
+            for(int s = 0; s < 8; s++){
+                children[i].children[s] = instanceByPosition[(int3)octants[s].center - size / 2];
+            }
         }
     }
     public bool HasSubChunks{
         get{
-            return children[0] != null | children[1] != null | children[2] != null | children[3] != null
-                 | children[4] != null | children[5] != null | children[6] != null | children[7] != null;
+            return children[0] != null & children[1] != null & children[2] != null & children[3] != null
+                 & children[4] != null & children[5] != null & children[6] != null & children[7] != null;
         }
     }
     public void PruneChunksRecursive(){
@@ -171,7 +188,7 @@ public abstract class Octree : JobRunner
     public void UpdateTreeRecursive()
     {
         float dst = math.distance(TerraxelWorld.playerBounds.center, region.center);
-        if(dst > dstModifier * depthMultiplier){
+        if(dst > dstModifier * depthMultiplier && depth < ChunkManager.lodLevels - 1){
             if(HasSubChunks){
                 var chunk = this as ChunkData;
                 if(!chunk.hasMesh){

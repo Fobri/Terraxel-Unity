@@ -116,7 +116,6 @@ public class ChunkManager
     public void FreeChunkBuffers(ChunkData chunk){
         chunkDatas.Remove(chunk);
         if(chunk.simpleMesh != null){
-//            chunk.worldObject.name = "Pooled chunk";
             chunk.simpleMesh.worldObject.SetActive(false);
             chunk.simpleMesh.worldObject.transform.SetParent(poolParent);
             simpleChunkPool.Enqueue(chunk.simpleMesh);
@@ -159,9 +158,6 @@ public class ChunkManager
             shouldUpdateTree = true;
             return;
         }
-        /*GameObject newChunk = GetChunkObject();
-        newChunk.name = $"Chunk {chunk.WorldPosition.x}, {chunk.WorldPosition.y}, {chunk.WorldPosition.z}";
-        newChunk.transform.position = chunk.WorldPosition;*/
         chunk.chunkState = ChunkData.ChunkState.INVALID;
         chunk.disposeStatus = ChunkData.DisposeState.NOTHING;
         chunk.hasMesh = true;
@@ -174,9 +170,6 @@ public class ChunkManager
             shouldUpdateTree = true;
             return null;
         }
-        /*GameObject newChunk = GetChunkObject();
-        newChunk.name = $"Chunk {pos.x}, {pos.y}, {pos.z}";
-        newChunk.transform.position = pos;*/
         ChunkData newChunkData = null;
         if(chunkPool.Count > 0){
             newChunkData = chunkPool.Dequeue();
@@ -205,7 +198,7 @@ public class ChunkManager
                 chunkData.FreeChunkMesh();
                 return;
             }
-        }else if(chunkData.depth > 1){
+        }/*else if(chunkData.depth > 1){
             if(chunkData.WorldPosition.y != 0){
                 chunkData.OnMeshReady();
                 chunkData.FreeChunkMesh();
@@ -219,7 +212,23 @@ public class ChunkManager
             chunkData.chunkState = ChunkData.ChunkState.DIRTY;
             chunkData.UpdateMesh();
             return;
-        }
+        }*/
+        /*float dst = math.distance(new float2(TerraxelWorld.playerBounds.center.x, TerraxelWorld.playerBounds.center.z), new float2(chunkData.region.center.x, chunkData.region.center.z));
+        if(dst > 32f * Octree.depthMultipliers[2] && chunkData.depth > 1){
+            if(chunkData.WorldPosition.y != 0){
+                chunkData.OnMeshReady();
+                chunkData.FreeChunkMesh();
+                return;
+            }
+            
+            chunkData.simpleMesh = simpleChunkPool.Dequeue();
+            chunkData.simpleMesh.worldObject.transform.SetParent(activeParent);
+            chunkData.vertCount = 1089;
+            chunkData.indexCount = 6144;
+            chunkData.chunkState = ChunkData.ChunkState.DIRTY;
+            chunkData.UpdateMesh();
+            return;
+        }*/
         
         if(MemoryManager.GetFreeVertexIndexBufferCount() == 0){
             chunkData.chunkState = ChunkData.ChunkState.QUEUED;

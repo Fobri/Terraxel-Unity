@@ -21,7 +21,9 @@ public class MemoryManager{
     static Queue<TempBuffer> freeVertexIndexBuffers;
     static Queue<NativeArray<sbyte>> freeDensityMaps;
     static NativeArray<sbyte> densityMap;
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
     static AtomicSafetyHandle densitySafetyHandle;
+#endif
     static TempBuffer[] vertexIndexBuffers;
     static SimpleMeshData[] simpleMeshes;
     static List<NativeArray<int2>> meshStarts = new List<NativeArray<int2>>();
@@ -70,9 +72,11 @@ public class MemoryManager{
         freeMeshDatas = new Queue<MeshData>();
         freeDensityMaps = new Queue<NativeArray<sbyte>>();
         densityMap = new NativeArray<sbyte>(densityMapLength * densityCount, Allocator.Persistent);
+        #if ENABLE_UNITY_COLLECTIONS_CHECKS
         unsafe{
             densitySafetyHandle = NativeArrayUnsafeUtility.GetAtomicSafetyHandle(densityMap);
         }
+        #endif
         for(int i = 0; i < maxBufferCount; i++){
             var verts = new NativeList<TransitionVertexData>(maxVertexCount, Allocator.Persistent);
             var indices = new NativeList<ushort>(maxVertexCount, Allocator.Persistent);
@@ -113,11 +117,13 @@ public class MemoryManager{
         freeMeshDatas.Enqueue(data);
     }
     public static void ReturnDensityMap(NativeArray<sbyte> map, bool assignSafetyHandle = false){
+        #if ENABLE_UNITY_COLLECTIONS_CHECKS
         if(assignSafetyHandle){
             unsafe{
                 NativeArrayUnsafeUtility.SetAtomicSafetyHandle(ref map, densitySafetyHandle);
             }
         }
+        #endif
         freeDensityMaps.Enqueue(map);
     }
     public static void ReturnVertexIndexBuffer(TempBuffer buffer){

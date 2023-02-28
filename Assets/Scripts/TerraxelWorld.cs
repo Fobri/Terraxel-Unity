@@ -31,6 +31,8 @@ public class TerraxelWorld : MonoBehaviour
     public GameObject simpleChunkPrefab;
     public GameObject chunkPrefab;
     public int3 worldOffset = Int16.MaxValue;
+    
+    public int3 playerOffset = Int16.MaxValue;
     public static DensityManager DensityManager {get; private set;}
     public static ChunkManager ChunkManager {get; private set;}
 
@@ -145,7 +147,7 @@ public TextMeshProUGUI[] debugLabels;
             debugLabels[0].text = $"Total Memory allocated: {totalMemoryAllocated} Mb";
             debugLabels[1].text = $"Memory used: {memoryUsed} Mb";
             debugLabels[2].text = $"Free Memory: {memoryWasted} Mb";
-            debugLabels[3].text = $"Currently processing {MemoryManager.maxConcurrentOperations - freeDensityMaps}/{MemoryManager.maxConcurrentOperations}";
+            debugLabels[3].text = $"Currently processing {MemoryManager.maxConcurrentOperations - MemoryManager.GetFreeVertexIndexBufferCount()}/{MemoryManager.maxConcurrentOperations}";
             debugLabels[4].text = $"Chunk count: {chunkCount}/{MemoryManager.maxBufferCount}";
             debugLabels[5].text = $"Free vertex buffers: {freeBufferCount}";
             debugLabels[6].text = $"Total chunk generation time: {totalGenTime}";
@@ -173,39 +175,40 @@ public TextMeshProUGUI[] debugLabels;
             }
         }
         if(worldState == WorldState.IDLE){
-            var size = ChunkManager.chunkResolution;
-            int3 playerChunkPos = (int3)(math.round(player.transform.position / size)) * size;
-            if(!playerChunkPos.Equals(worldOffset)){
+            int3 playerChunkPos = (int3)(math.round(player.transform.position / ChunkManager.chunkResolution)) * ChunkManager.chunkResolution;
+            var size = ChunkManager.chunkResolution * Octree.depthMultipliers[ChunkManager.lodLevels - 2];
+            int3 lodChunkPos = (int3)(math.round(player.transform.position / size)) * size;
+            if(!playerChunkPos.Equals(playerOffset)){
                 //activeParent.parent.position = (float3)closestOctetToPlayer;
-                worldOffset = playerChunkPos;
-                DensityManager.LoadDensityData(worldOffset, 2);
+                playerOffset = playerChunkPos;
+                DensityManager.LoadDensityData(playerOffset, 2);
+            }
+            else if(!lodChunkPos.Equals(worldOffset)){
+                worldOffset = lodChunkPos;
+                int3 startPos = worldOffset - size * 2;
                 List<int3> newPositions = new List<int3>();
-                int3 startPos = worldOffset - size;
-                for(int x = 0; x < 2; x++){
-                        for(int y = 0; y < 2; y++){
-                            for(int z = 0; z < 2; z++){
+                for(int x = 0; x < 4; x++){
+                        for(int y = 0; y < 4; y++){
+                            for(int z = 0; z < 4; z++){
                                 var pos = new int3(x,y,z) * size + startPos;
                                 newPositions.Add(pos);
                         }
                     }
                 }
-                //chunkTree.RepositionOctets(newPositions);
+                ChunkManager.chunkTree.region.center = worldOffset;
+                ChunkManager.chunkTree.RepositionOctets(newPositions, size);
             }
             if(!DensityManager.GetIsReady()) worldState = WorldState.DENSITY_UPDATE;
             else if(!ChunkManager.IsReady) worldState = WorldState.MESH_UPDATE;
             else{
-                if(!playerBounds.center.Equals(worldOffset)){
-                playerBounds.center = worldOffset;
+                if(!playerBounds.center.Equals(playerOffset)){
+                playerBounds.center = playerOffset;
                 ChunkManager.shouldUpdateTree = true;
                 }
                 if(ChunkManager.shouldUpdateTree){
                     ChunkManager.shouldUpdateTree = false;
                     ChunkManager.chunkTree.UpdateTreeRecursive();
                     
-                    for(int i = 0; i < ChunkManager.GetDebugArray().Count; i++){
-                        //TODO: useless, figure out better way to only refresh states of chunks that are adjacent to mesh updates
-                        //ChunkManager.GetDebugArray()[i].RefreshRenderState();
-                    }
                 }
             }
         }
@@ -224,7 +227,7 @@ public TextMeshProUGUI[] debugLabels;
             Gizmos.DrawWireCube(playerBounds.center, playerBounds.bounds);
         }
         if(drawChunkBounds){
-            Gizmos.DrawWireCube(Vector3.zero, new float3(ChunkManager.chunkResolution * math.pow(2, ChunkManager.lodLevels)));
+            Gizmos.DrawWireCube((float3)worldOffset, new float3(ChunkManager.chunkResolution * math.pow(2, ChunkManager.lodLevels)));
         }
         if(drawDensityMaps){
             var maps = DensityManager.GetDebugArray();
