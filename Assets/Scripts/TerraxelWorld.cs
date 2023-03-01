@@ -30,11 +30,13 @@ public class TerraxelWorld : MonoBehaviour
     
     public GameObject simpleChunkPrefab;
     public GameObject chunkPrefab;
+    int baseChunkSize = ChunkManager.chunkResolution * Octree.depthMultipliers[ChunkManager.lodLevels - 2];
     public int3 worldOffset = Int16.MaxValue;
     
     public int3 playerOffset = Int16.MaxValue;
     public static DensityManager DensityManager {get; private set;}
     public static ChunkManager ChunkManager {get; private set;}
+    public static bool worldUpdatePending {get; private set;}
 
     //DEBUG
     [DisableInPlayMode]
@@ -116,7 +118,7 @@ public class TerraxelWorld : MonoBehaviour
 public TextMeshProUGUI[] debugLabels;
     public void Start(){
         MemoryManager.Init();
-        playerBounds = new BoundingBox(player.transform.position, new float3(ChunkManager.chunkResolution * (int)math.pow(2, 2)));
+        playerBounds = new BoundingBox(player.transform.position, new float3(ChunkManager.chunkResolution));
         DensityManager = new DensityManager();
         DensityManager.Init(noiseData);
         ChunkManager = new ChunkManager();
@@ -174,42 +176,37 @@ public TextMeshProUGUI[] debugLabels;
                 worldState = WorldState.IDLE;
             }
         }
+        int3 lodChunkPos = (int3)(math.round(player.transform.position / baseChunkSize)) * baseChunkSize;
+        worldUpdatePending = !lodChunkPos.Equals(worldOffset);
         if(worldState == WorldState.IDLE){
             int3 playerChunkPos = (int3)(math.round(player.transform.position / ChunkManager.chunkResolution)) * ChunkManager.chunkResolution;
-            var size = ChunkManager.chunkResolution * Octree.depthMultipliers[ChunkManager.lodLevels - 2];
-            int3 lodChunkPos = (int3)(math.round(player.transform.position / size)) * size;
             if(!playerChunkPos.Equals(playerOffset)){
                 //activeParent.parent.position = (float3)closestOctetToPlayer;
                 playerOffset = playerChunkPos;
+                playerBounds.center = playerOffset;
+                ChunkManager.shouldUpdateTree = true;
                 DensityManager.LoadDensityData(playerOffset, 2);
             }
-            else if(!lodChunkPos.Equals(worldOffset)){
+            else if(worldUpdatePending){
                 worldOffset = lodChunkPos;
-                int3 startPos = worldOffset - size * 2;
+                int3 startPos = worldOffset - baseChunkSize * 2;
                 List<int3> newPositions = new List<int3>();
                 for(int x = 0; x < 4; x++){
                         for(int y = 0; y < 4; y++){
                             for(int z = 0; z < 4; z++){
-                                var pos = new int3(x,y,z) * size + startPos;
+                                var pos = new int3(x,y,z) * baseChunkSize + startPos;
                                 newPositions.Add(pos);
                         }
                     }
                 }
                 ChunkManager.chunkTree.region.center = worldOffset;
-                ChunkManager.chunkTree.RepositionOctets(newPositions, size);
+                ChunkManager.chunkTree.RepositionOctets(newPositions, baseChunkSize);
             }
             if(!DensityManager.GetIsReady()) worldState = WorldState.DENSITY_UPDATE;
             else if(!ChunkManager.IsReady) worldState = WorldState.MESH_UPDATE;
-            else{
-                if(!playerBounds.center.Equals(playerOffset)){
-                playerBounds.center = playerOffset;
-                ChunkManager.shouldUpdateTree = true;
-                }
-                if(ChunkManager.shouldUpdateTree){
-                    ChunkManager.shouldUpdateTree = false;
-                    ChunkManager.chunkTree.UpdateTreeRecursive();
-                    
-                }
+            else if(ChunkManager.shouldUpdateTree){
+                ChunkManager.shouldUpdateTree = false;
+                ChunkManager.chunkTree.UpdateTreeRecursive();
             }
         }
     }

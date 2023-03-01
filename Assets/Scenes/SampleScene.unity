@@ -799,8 +799,8 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 963194225}
-  m_LocalRotation: {x: 0.1515258, y: 0.015340754, z: -0.0023519637, w: 0.9883315}
-  m_LocalPosition: {x: -277.999, y: 65.88532, z: 1079.5027}
+  m_LocalRotation: {x: 0.15152583, y: 0.015340756, z: -0.0023519644, w: 0.9883315}
+  m_LocalPosition: {x: -170, y: 12.1, z: 1093}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1616,7 +1616,7 @@ MonoBehaviour:
   vertCount: 0
   indexCount: 0
   totalGenTime: 0
-  drawPlayerBounds: 0
+  drawPlayerBounds: 1
   drawChunkBounds: 0
   drawDensityMaps: 0
   drawChunkVariables:

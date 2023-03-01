@@ -190,10 +190,13 @@ public abstract class Octree : JobRunner
         parent?.CheckSubMeshesReady();
     }
     const float dstModifier = 45.2548f;//55.42562f;
+    static readonly float[] maxDistances = { 0, 60,170f, 380, 700, 1000 };
     public void UpdateTreeRecursive()
     {
+        /*var maxCoord = TerraxelWorld.playerBounds.center + ChunkManager.chunkResolution * depthMultiplier * 0.8f;
+        var minCoord = TerraxelWorld.playerBounds.center - ChunkManager.chunkResolution * depthMultiplier * 0.8f;(math.any(region.center < minCoord) || math.any(region.center > maxCoord))*/
         float dst = math.distance(TerraxelWorld.playerBounds.center, region.center);
-        if(dst > dstModifier * depthMultiplier && depth < ChunkManager.lodLevels - 1){
+        if(dst > maxDistances[depth] && depth < ChunkManager.lodLevels - 1){
             if(HasSubChunks){
                 if(!chunkData.hasMesh){
                     chunkData.onMeshReady = ChunkData.OnMeshReadyAction.DISPOSE_CHILDREN;
@@ -201,6 +204,7 @@ public abstract class Octree : JobRunner
                 }else if(chunkData.onMeshReady != ChunkData.OnMeshReadyAction.DISPOSE_CHILDREN){
                     chunkData.onMeshReady = ChunkData.OnMeshReadyAction.ALERT_PARENT;
                     PruneChunksRecursive();
+                    chunkData.RefreshRenderState();
                 }
             }
             return;

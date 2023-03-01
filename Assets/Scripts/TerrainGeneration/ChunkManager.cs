@@ -70,7 +70,6 @@ public class ChunkManager
         chunkDatas = new List<ChunkData>();
         chunkTree = new ChunkData();
         chunkTree.chunkState = ChunkData.ChunkState.ROOT;
-        chunkTree.UpdateTreeRecursive();
     }
     public bool IsReady{
         get{
@@ -90,10 +89,10 @@ public class ChunkManager
             while(meshQueue.Count > 0 && MemoryManager.GetFreeVertexIndexBufferCount() > 0){
                 var nextMeshQueueIndex = meshQueue.PeekQueue();
                 if(currentMeshQueueIndex != nextMeshQueueIndex){
-                    if(!TerraxelWorld.DensityManager.IsReady){
+                    if(TerraxelWorld.worldUpdatePending){
                         while(meshQueue.Count > 0){
                             DisposeChunk(meshQueue.Dequeue());
-                            return true;
+                            return false;
                         }
                     }
                     currentMeshQueueIndex = nextMeshQueueIndex;
