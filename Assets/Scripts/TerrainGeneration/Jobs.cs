@@ -171,23 +171,31 @@ namespace WorldGeneration
             }
             vertPos = vertPos / 256f;
             vertNormal = math.normalize(vertNormal);
+            int near = 0;
+            var secondaryPos = vertPos;
             if(transitionOffset){
-                var offsetVector = GetTransitionDirection(vertPos);
-                vertPos.x += ((1 - math.pow(vertNormal.x, 2)) * offsetVector.x + (-vertNormal.x*vertNormal.y) * offsetVector.y + (-vertNormal.x*vertNormal.z) * offsetVector.z);
-                vertPos.y += ((-vertNormal.x*vertNormal.y) * offsetVector.x + (1-math.pow(vertNormal.y, 2)) * offsetVector.y + (-vertNormal.y*vertNormal.z) * offsetVector.z);
-                vertPos.z += ((-vertNormal.x*vertNormal.z) * offsetVector.x + (-vertNormal.y*vertNormal.z) * offsetVector.y + (1-math.pow(vertNormal.z, 2)) * offsetVector.z);
+                var offsetVector = GetTransitionDirection(vertPos, out near);
+                secondaryPos.x += ((1 - math.pow(vertNormal.x, 2)) * offsetVector.x + (-vertNormal.x*vertNormal.y) * offsetVector.y + (-vertNormal.x*vertNormal.z) * offsetVector.z);
+                secondaryPos.y += ((-vertNormal.x*vertNormal.y) * offsetVector.x + (1-math.pow(vertNormal.y, 2)) * offsetVector.y + (-vertNormal.y*vertNormal.z) * offsetVector.z);
+                secondaryPos.z += ((-vertNormal.x*vertNormal.z) * offsetVector.x + (-vertNormal.y*vertNormal.z) * offsetVector.y + (1-math.pow(vertNormal.z, 2)) * offsetVector.z);
             }
-            byte near = 0;
             
             //int vertexIndex = vertexCounter.Increment();
-            vertices.Add(new TransitionVertexData(vertPos, vertPos, near, vertNormal));
+            vertices.Add(new TransitionVertexData(vertPos, secondaryPos, near, vertNormal));
             int vertexIndex = vertices.Length - 1;
             return (ushort)vertexIndex;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private float3 GetTransitionDirection(float3 vertPos){
+        private float3 GetTransitionDirection(float3 vertPos, out int near){
+            near = 0;
             var offsetVector = new float3(0);
             var highFence = depthMultiplier*(chunkSize-1);
+            near = ((vertPos.x == depthMultiplier * chunkSize ? 0b_0000_0001 : 0) 
+                | (vertPos.x == 0 ? 0b_0000_0010 : 0) 
+                | (vertPos.y == depthMultiplier * chunkSize ? 0b_0000_0100 : 0) 
+                | (vertPos.y == 0 ? 0b_0000_1000 : 0) 
+                | (vertPos.z == depthMultiplier * chunkSize ? 0b_0001_0000 : 0)
+                | (vertPos.z == 0 ? 0b_0010_0000 : 0));
             bool3x2 skirtDirections = new bool3x2();
             skirtDirections.c0.x = vertPos.x > highFence;
             skirtDirections.c0.y = vertPos.y > highFence;
@@ -363,15 +371,6 @@ namespace WorldGeneration
                     triangles.Add(cellIndices[Tables.RegularCellData[cell][i * 3 + v + 1]]);
                 }
             }
-            /*if(!transition.Equals(0)){
-                transition = math.clamp(transition, -1, 1);
-                if(transition.x == -1) GenerateTransitionCell(0, voxelLocalPosition, new int2(voxelLocalPosition.z, voxelLocalPosition.y));
-                else if(transition.x == 1) GenerateTransitionCell(1, voxelLocalPosition, new int2(voxelLocalPosition.z, voxelLocalPosition.y));
-                if(transition.z == -1) GenerateTransitionCell(2, voxelLocalPosition, new int2(voxelLocalPosition.x, voxelLocalPosition.y));
-                else if(transition.z == 1) GenerateTransitionCell(3, voxelLocalPosition, new int2(voxelLocalPosition.x, voxelLocalPosition.y));
-                if(transition.y == -1) GenerateTransitionCell(4, voxelLocalPosition, new int2(voxelLocalPosition.z, voxelLocalPosition.x));
-                else if(transition.y == 1) GenerateTransitionCell(5, voxelLocalPosition, new int2(voxelLocalPosition.z, voxelLocalPosition.x));
-            }*/
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         int3 DecodeCellIndices(byte idx){

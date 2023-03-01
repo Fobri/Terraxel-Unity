@@ -30,18 +30,19 @@ public class ChunkManager
 #endif
     List<ChunkData> chunkDatas;
     Queue<ChunkData> disposeQueue;
-    Queue<ChunkData> meshQueue;
+    PriorityQueue<ChunkData> meshQueue;
     Queue<ChunkData> chunkPool;
     Queue<GameObject> objectPool;
     Queue<SimpleMeshData> simpleChunkPool;
     public ChunkData chunkTree {get; private set;}
+    int currentMeshQueueIndex = -1;
     public List<ChunkData> GetDebugArray(){
         return chunkDatas;
     }
     public void Init(Transform poolParent, Transform activeParent, GameObject simpleChunkPrefab, GameObject chunkPrefab){
         this.simpleChunkPrefab = simpleChunkPrefab;
         this.chunkPrefab = chunkPrefab;
-        meshQueue = new Queue<ChunkData>();
+        meshQueue = new PriorityQueue<ChunkData>(lodLevels);
         chunkPool = new Queue<ChunkData>();
         disposeQueue = new Queue<ChunkData>();
         objectPool = new Queue<GameObject>();
@@ -82,19 +83,32 @@ public class ChunkManager
             var chunk = disposeQueue.Dequeue();
             DisposeChunk(chunk);
         }
-        meshQueue = new Queue<ChunkData>(meshQueue.Where(x => x.disposeStatus == ChunkData.DisposeState.NOTHING));
-            if(meshQueue.Count > 0){
-                while(meshQueue.Count > 0 && MemoryManager.GetFreeVertexIndexBufferCount() > 0){
-                    var toBeProcessed = meshQueue.Dequeue();
+        for(int i = 0; i < lodLevels; i++){
+            meshQueue[i] = new Queue<ChunkData>(meshQueue[i].Where(x => x.disposeStatus == ChunkData.DisposeState.NOTHING));
+        }
+        if(meshQueue.Count > 0){
+            while(meshQueue.Count > 0 && MemoryManager.GetFreeVertexIndexBufferCount() > 0){
+                var nextMeshQueueIndex = meshQueue.PeekQueue();
+                if(currentMeshQueueIndex != nextMeshQueueIndex){
+                    if(!TerraxelWorld.DensityManager.IsReady){
+                        while(meshQueue.Count > 0){
+                            DisposeChunk(meshQueue.Dequeue());
+                            return true;
+                        }
+                    }
+                    currentMeshQueueIndex = nextMeshQueueIndex;
+                }
+                if(meshQueue.TryDequeue(currentMeshQueueIndex, out var toBeProcessed)){
                     if(!toBeProcessed.meshData.IsCreated && MemoryManager.GetFreeMeshDataCount() == 0) {
-                        meshQueue.Enqueue(toBeProcessed);
+                        meshQueue.Enqueue(toBeProcessed, toBeProcessed.depth);
                         break;
                     }
                     UpdateChunk(toBeProcessed);
                 }
-            }else if(MemoryManager.GetFreeVertexIndexBufferCount() == MemoryManager.maxConcurrentOperations){
-                return true;
             }
+        }else if(MemoryManager.GetFreeVertexIndexBufferCount() == MemoryManager.maxConcurrentOperations){
+            return true;
+        }
         return false;
     }
     public void DisposeChunk(ChunkData chunk){
@@ -189,7 +203,7 @@ public class ChunkManager
     void UpdateChunk(ChunkData chunkData){
         if(TerraxelWorld.worldState != TerraxelWorld.WorldState.MESH_UPDATE){
             chunkData.chunkState = ChunkData.ChunkState.QUEUED;
-            meshQueue.Enqueue(chunkData);
+            meshQueue.Enqueue(chunkData, chunkData.depth);
             return;
         }
         if(chunkData.depth == 0){
@@ -232,7 +246,7 @@ public class ChunkManager
         
         if(MemoryManager.GetFreeVertexIndexBufferCount() == 0){
             chunkData.chunkState = ChunkData.ChunkState.QUEUED;
-            meshQueue.Enqueue(chunkData);
+            meshQueue.Enqueue(chunkData, chunkData.depth);
             return;
         }
         chunkData.vertexIndexBuffer = MemoryManager.GetVertexIndexBuffer();

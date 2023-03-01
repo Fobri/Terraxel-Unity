@@ -181,7 +181,11 @@ public abstract class Octree : JobRunner
             if(children[i] == null) return;
             if((children[i] as ChunkData).chunkState != ChunkData.ChunkState.READY) return;
         }
+        for (int i = 0; i < 8; i++){
+            (children[i] as ChunkData).worldObject?.SetActive(true);
+        }
         thisAsChunkData().FreeChunkMesh();
+        thisAsChunkData().RefreshRenderState(true);
         parent?.CheckSubMeshesReady();
     }
     const float dstModifier = 45.2548f;//55.42562f;

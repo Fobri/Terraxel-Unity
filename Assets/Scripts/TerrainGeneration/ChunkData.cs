@@ -79,6 +79,9 @@ public class ChunkData : Octree{
             if(worldObject == null) return;
             UpdateDirectionMask(refreshNeighbours);
             worldObject.GetComponent<MeshRenderer>().material.SetInt("_DirectionMask", dirMask);
+            for(int i = 0; i < 6; i++){
+                worldObject.transform.GetChild(i).GetComponent<MeshRenderer>().material.SetInt("_DirectionMask", dirMask);
+            }
             worldObject.transform.GetChild(0).gameObject.SetActive((dirMask & 0b_0000_0001) != 0);
             worldObject.transform.GetChild(1).gameObject.SetActive((dirMask & 0b_0000_0010) != 0);
             worldObject.transform.GetChild(4).gameObject.SetActive((dirMask & 0b_0000_0100) != 0);

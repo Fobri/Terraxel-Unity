@@ -799,8 +799,8 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 963194225}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalRotation: {x: 0.1515258, y: 0.015340754, z: -0.0023519637, w: 0.9883315}
+  m_LocalPosition: {x: -277.999, y: 65.88532, z: 1079.5027}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1598,6 +1598,10 @@ MonoBehaviour:
   simpleChunkPrefab: {fileID: 7716612531577036198, guid: 66a8911691ea28847bec6afb69344e1d, type: 3}
   chunkPrefab: {fileID: 4194868686972551607, guid: 6c35f3c6ef85df74c950c7dc8cd341fc, type: 3}
   worldOffset:
+    x: 32767
+    y: 32767
+    z: 32767
+  playerOffset:
     x: 32767
     y: 32767
     z: 32767
