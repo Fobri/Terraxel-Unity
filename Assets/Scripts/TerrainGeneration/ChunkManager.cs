@@ -138,6 +138,7 @@ public class ChunkManager
         else if(chunk.worldObject != null){
             chunk.worldObject.name = "Pooled chunk";
             chunk.worldObject.transform.SetParent(poolParent);
+            chunk.worldObject.SetActive(true);
             chunk.worldObject.GetComponent<MeshFilter>().sharedMesh.Clear();
             for(int i = 0; i < 6; i++){
                 chunk.worldObject.transform.GetChild(i).GetComponent<MeshFilter>().sharedMesh.Clear();

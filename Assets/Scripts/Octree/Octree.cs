@@ -146,6 +146,7 @@ public abstract class Octree : JobRunner
             var octants = CreateOctants(children[i].region);
             for(int s = 0; s < 8; s++){
                 children[i].children[s] = instanceByPosition[(int3)octants[s].center - size / 2];
+                (children[i].children[s] as ChunkData).onMeshReady = ChunkData.OnMeshReadyAction.DISPOSE_CHILDREN;
             }
         }
     }
@@ -159,7 +160,7 @@ public abstract class Octree : JobRunner
         for (int i = 0; i < 8; i++){
             if(children[i] != null){
                 children[i].PruneChunksRecursive();
-                (children[i] as ChunkData).PoolChunk();
+                children[i].chunkData.PoolChunk();
                 children[i] = null;
             }
         }
@@ -168,7 +169,7 @@ public abstract class Octree : JobRunner
         for (int i = 0; i < 8; i++){
             if(children[i] != null){
                 children[i].PruneChunksRecursiveNow();
-                TerraxelWorld.ChunkManager.PoolChunk(children[i] as ChunkData);
+                TerraxelWorld.ChunkManager.PoolChunk(children[i].chunkData);
                 children[i] = null;
             }
         }
@@ -179,13 +180,13 @@ public abstract class Octree : JobRunner
     public void CheckSubMeshesReady(){
         for (int i = 0; i < 8; i++){
             if(children[i] == null) return;
-            if((children[i] as ChunkData).chunkState != ChunkData.ChunkState.READY) return;
+            if(children[i].chunkData.chunkState != ChunkData.ChunkState.READY) return;
         }
         for (int i = 0; i < 8; i++){
-            (children[i] as ChunkData).worldObject?.SetActive(true);
+            children[i].chunkData.worldObject?.SetActive(true);
         }
-        thisAsChunkData().FreeChunkMesh();
-        thisAsChunkData().RefreshRenderState(true);
+        chunkData.FreeChunkMesh();
+        chunkData.RefreshRenderState(true);
         parent?.CheckSubMeshesReady();
     }
     const float dstModifier = 45.2548f;//55.42562f;
@@ -194,12 +195,11 @@ public abstract class Octree : JobRunner
         float dst = math.distance(TerraxelWorld.playerBounds.center, region.center);
         if(dst > dstModifier * depthMultiplier && depth < ChunkManager.lodLevels - 1){
             if(HasSubChunks){
-                var chunk = this as ChunkData;
-                if(!chunk.hasMesh){
-                    chunk.onMeshReady = ChunkData.OnMeshReadyAction.DISPOSE_CHILDREN;
-                    TerraxelWorld.ChunkManager.RegenerateChunk(chunk);
-                }else if(chunk.onMeshReady != ChunkData.OnMeshReadyAction.DISPOSE_CHILDREN){
-                    chunk.onMeshReady = ChunkData.OnMeshReadyAction.ALERT_PARENT;
+                if(!chunkData.hasMesh){
+                    chunkData.onMeshReady = ChunkData.OnMeshReadyAction.DISPOSE_CHILDREN;
+                    TerraxelWorld.ChunkManager.RegenerateChunk(chunkData);
+                }else if(chunkData.onMeshReady != ChunkData.OnMeshReadyAction.DISPOSE_CHILDREN){
+                    chunkData.onMeshReady = ChunkData.OnMeshReadyAction.ALERT_PARENT;
                     PruneChunksRecursive();
                 }
             }
@@ -220,7 +220,9 @@ public abstract class Octree : JobRunner
             children[i].UpdateTreeRecursive();
         }
     }
-    private ChunkData thisAsChunkData(){
+    private ChunkData chunkData{
+        get{
         return this as ChunkData;
+        }
     }
 }

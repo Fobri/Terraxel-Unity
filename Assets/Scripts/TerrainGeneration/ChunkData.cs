@@ -49,6 +49,8 @@ public class ChunkData : Octree{
             worldObject = TerraxelWorld.ChunkManager.GetChunkObject();
             worldObject.name = $"Chunk {WorldPosition.x}, {WorldPosition.y}, {WorldPosition.z}";
             worldObject.transform.position = WorldPosition;
+            if(onMeshReady == OnMeshReadyAction.ALERT_PARENT)
+                worldObject.SetActive(false);
         }
         internal override void OnJobsReady(){
             ApplyMesh();
@@ -76,8 +78,8 @@ public class ChunkData : Octree{
             if(depth == 0) dirMask = 0;
         }
         public void RefreshRenderState(bool refreshNeighbours = false){
-            if(worldObject == null) return;
             UpdateDirectionMask(refreshNeighbours);
+            if(worldObject == null) return;
             worldObject.GetComponent<MeshRenderer>().material.SetInt("_DirectionMask", dirMask);
             for(int i = 0; i < 6; i++){
                 worldObject.transform.GetChild(i).GetComponent<MeshRenderer>().material.SetInt("_DirectionMask", dirMask);
@@ -151,6 +153,9 @@ public class ChunkData : Octree{
                 if(refreshNeighbours)
                     (queryResult as ChunkData).RefreshRenderState();
                 if(queryResult.HasSubChunks){
+                    for(int i = 0; i < 8; i++){
+                        if((queryResult.children[i] as ChunkData).chunkState != ChunkState.READY) return false;
+                    }
                     return true;
                 }else if(queryResult.depth == this.depth){
                     return false;
@@ -232,12 +237,13 @@ public class ChunkData : Octree{
         public void OnMeshReady(){
             chunkState = ChunkState.READY;
             if(onMeshReady == OnMeshReadyAction.ALERT_PARENT){
+                RefreshRenderState(false);
                 base.NotifyParentMeshReady();
             }else if(onMeshReady == OnMeshReadyAction.DISPOSE_CHILDREN){
                 onMeshReady = OnMeshReadyAction.ALERT_PARENT;
                 PruneChunksRecursive();
+                RefreshRenderState(true);
             }
-            RefreshRenderState(true);
         }
         public void FreeChunkMesh(){
             disposeStatus = DisposeState.FREE_MESH;
