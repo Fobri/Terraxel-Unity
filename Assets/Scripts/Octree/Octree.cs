@@ -111,6 +111,18 @@ public abstract class Octree : JobRunner
         if(this.parent == null) return null;
         return this;
     }
+    public void QueryColliding(BoundingBox region, List<Octree> result){
+        for(int i = 0; i < 8; i++){
+            if(children[i].region.IsColliding(region)){
+                if(!children[i].HasSubChunks){
+                    if(!result.Contains(children[i]))
+                        result.Add(children[i]);
+                }else{
+                    children[i].QueryColliding(region, result);
+                }
+            }
+        }
+    }
     public void RepositionOctets(List<int3> newOctetPositions, int size){
         if(!HasSubChunks) return;
         Dictionary<int3, Octree> instanceByPosition = new Dictionary<int3, Octree>();
@@ -190,7 +202,7 @@ public abstract class Octree : JobRunner
         parent?.CheckSubMeshesReady();
     }
     const float dstModifier = 45.2548f;//55.42562f;
-    static readonly float[] maxDistances = { 0, 60,170f, 380, 700, 1000 };
+    public static readonly float[] maxDistances = { 0, 60,170f, 380, 700, 1000 };
     public void UpdateTreeRecursive()
     {
         /*var maxCoord = TerraxelWorld.playerBounds.center + ChunkManager.chunkResolution * depthMultiplier * 0.8f;

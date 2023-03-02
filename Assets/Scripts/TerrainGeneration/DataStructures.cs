@@ -100,6 +100,10 @@ namespace WorldGeneration.DataStructures
             this.vertexBuffer = vertexBuffer;
             this.indexBuffer = indexBuffer;
         }
+        public void ClearBuffers(){
+            MemoryManager.ClearArray(vertexBuffer.AsArray(), vertexBuffer.Length);
+            MemoryManager.ClearArray(indexBuffer.AsArray(), indexBuffer.Length);
+        }
         public bool IsCreated{
             get{
                 return vertexBuffer.IsCreated;

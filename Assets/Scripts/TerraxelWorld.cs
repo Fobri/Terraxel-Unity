@@ -50,25 +50,13 @@ public class TerraxelWorld : MonoBehaviour
 #endif
     public int freeBufferCount;
 #if ODIN_INSPECTOR    
-    [BoxGroup("DEBUG"), HideIf("@!debugMode"), ReadOnly, InfoBox("This should be the total allocated vertex buffer count. Should be @MemoryManager.maxBufferCount")]
-#endif
-    public int totalChunksAccountedFor;
-#if ODIN_INSPECTOR    
     [BoxGroup("DEBUG"), HideIf("@!debugMode"), ReadOnly, InfoBox("Temporary buffers available. Should be @MemoryManager.densityMapCount")]
 #endif
     public int freeDensityMaps;
 #if ODIN_INSPECTOR    
-    [BoxGroup("DEBUG"), HideIf("@!debugMode"), ReadOnly, InfoBox("Memory amount displayed in MB")]
-#endif
-    public int totalMemoryAllocated;
-#if ODIN_INSPECTOR    
     [BoxGroup("DEBUG"), HideIf("@!debugMode"), ReadOnly]
 #endif
     public int memoryUsed;
-#if ODIN_INSPECTOR    
-    [BoxGroup("DEBUG"), HideIf("@!debugMode"), ReadOnly]
-#endif
-    public int memoryWasted;
 #if ODIN_INSPECTOR    
     [BoxGroup("DEBUG"), HideIf("@!debugMode"), ReadOnly]
 #endif
@@ -123,38 +111,26 @@ public TextMeshProUGUI[] debugLabels;
         DensityManager.Init(noiseData);
         ChunkManager = new ChunkManager();
         ChunkManager.Init(poolParent, activeParent, simpleChunkPrefab, chunkPrefab);
-        if(debugMode){
-            int elemCount = MemoryManager.maxBufferCount * MemoryManager.maxVertexCount;
-            var ns = ChunkManager.chunkResolution + 1;
-            var size = ns * ns * ns;
-            int nmSize = MemoryManager.maxBufferCount * size;
-            totalMemoryAllocated = elemCount * sizeof(float)*6 + elemCount * sizeof(ushort) + nmSize * sizeof(sbyte);
-            totalMemoryAllocated = totalMemoryAllocated / 1000000;
-        }
     }
     void Update(){
         JobRunner.Update();
         
         if(debugMode){
             var chunkDatas = ChunkManager.GetDebugArray();
-            memoryUsed = vertCount * sizeof(float) * 6 + 
+            memoryUsed = vertCount * sizeof(float) * 9 + vertCount * sizeof(int) + 
                         indexCount * sizeof(ushort) + 
-                        (ChunkManager.chunkResolution + 1) * (ChunkManager.chunkResolution + 1) * (ChunkManager.chunkResolution + 1) * sizeof(sbyte) * chunkCount;
+                        (ChunkManager.chunkResolution) * (ChunkManager.chunkResolution) * (ChunkManager.chunkResolution) * sizeof(sbyte) * Octree.depthMultipliers[2] * Octree.depthMultipliers[2] * Octree.depthMultipliers[2];
             memoryUsed = memoryUsed / 1000000;
-            memoryWasted = totalMemoryAllocated - memoryUsed;
             freeDensityMaps = MemoryManager.GetFreeDensityMapCount();
-            totalChunksAccountedFor = chunkCount + freeBufferCount;
             chunkCount = chunkDatas.Count;
             freeBufferCount = MemoryManager.GetFreeMeshDataCount();
-            debugLabels[0].text = $"Total Memory allocated: {totalMemoryAllocated} Mb";
-            debugLabels[1].text = $"Memory used: {memoryUsed} Mb";
-            debugLabels[2].text = $"Free Memory: {memoryWasted} Mb";
-            debugLabels[3].text = $"Currently processing {MemoryManager.maxConcurrentOperations - MemoryManager.GetFreeVertexIndexBufferCount()}/{MemoryManager.maxConcurrentOperations}";
-            debugLabels[4].text = $"Chunk count: {chunkCount}/{MemoryManager.maxBufferCount}";
-            debugLabels[5].text = $"Free vertex buffers: {freeBufferCount}";
-            debugLabels[6].text = $"Total chunk generation time: {totalGenTime}";
-            debugLabels[7].text = $"Vertex count: {vertCount}";
-            debugLabels[8].text = $"Index count: {indexCount}";
+            debugLabels[0].text = $"Memory used: {memoryUsed} Mb";
+            debugLabels[1].text = $"Currently processing {MemoryManager.maxConcurrentOperations - MemoryManager.GetFreeVertexIndexBufferCount()}/{MemoryManager.maxConcurrentOperations}";
+            debugLabels[2].text = $"Chunk count: {chunkCount}/{MemoryManager.maxBufferCount}";
+            debugLabels[3].text = $"Free vertex buffers: {freeBufferCount}";
+            debugLabels[4].text = $"Total chunk generation time: {totalGenTime}";
+            debugLabels[5].text = $"Vertex count: {vertCount}";
+            debugLabels[6].text = $"Index count: {indexCount}";
             vertCount = 0;
             indexCount = 0;
             totalGenTime = 0f;
@@ -202,13 +178,17 @@ public TextMeshProUGUI[] debugLabels;
                 ChunkManager.chunkTree.region.center = worldOffset;
                 ChunkManager.chunkTree.RepositionOctets(newPositions, baseChunkSize);
             }
-            if(!DensityManager.GetIsReady()) worldState = WorldState.DENSITY_UPDATE;
+            if(!DensityManager.IsReady) worldState = WorldState.DENSITY_UPDATE;
             else if(!ChunkManager.IsReady) worldState = WorldState.MESH_UPDATE;
             else if(ChunkManager.shouldUpdateTree){
                 ChunkManager.shouldUpdateTree = false;
                 ChunkManager.chunkTree.UpdateTreeRecursive();
             }
         }
+    }
+    public static void QueueModification(int3 pos, sbyte value){
+        DensityManager.QueueModification(pos, value);
+        ChunkManager.RegenerateChunkMesh(pos);
     }
     public void OnDisable(){
         JobRunner.CompleteAll();

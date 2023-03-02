@@ -139,6 +139,7 @@ public class ChunkManager
             chunk.worldObject.transform.SetParent(poolParent);
             chunk.worldObject.SetActive(true);
             chunk.worldObject.GetComponent<MeshFilter>().sharedMesh.Clear();
+            chunk.worldObject.GetComponent<MeshCollider>().sharedMesh = null;
             for(int i = 0; i < 6; i++){
                 chunk.worldObject.transform.GetChild(i).GetComponent<MeshFilter>().sharedMesh.Clear();
             }
@@ -165,6 +166,16 @@ public class ChunkManager
             }
             chunk.transform.SetParent(activeParent);
             return chunk;
+        }
+    }
+    public void RegenerateChunkMesh(int3 worldPos){
+        var chunk = chunkTree.Query(new BoundingBox((float3)worldPos, new float3(5f)));
+        List<Octree> toUpdate = new List<Octree>();
+        if(chunk != null) toUpdate.Add(chunk);
+        chunkTree.QueryColliding(new BoundingBox((float3)worldPos, new float3(5f)), toUpdate);
+        for(int i = 0; i < toUpdate.Count; i++){
+            UpdateChunk(toUpdate[i] as ChunkData);
+            shouldUpdateTree = true;
         }
     }
     public void RegenerateChunk(ChunkData chunk){
@@ -214,6 +225,22 @@ public class ChunkManager
             }
         }/*else if(chunkData.depth > 1){
             if(chunkData.WorldPosition.y != 0){
+                float dst = math.distance(new float2(TerraxelWorld.playerBounds.center.x, TerraxelWorld.playerBounds.center.z), new float2(chunkData.region.center.x, chunkData.region.center.z));
+                if(dst < 150){
+                    
+                    if(MemoryManager.GetFreeVertexIndexBufferCount() == 0){
+                        chunkData.chunkState = ChunkData.ChunkState.QUEUED;
+                        meshQueue.Enqueue(chunkData, chunkData.depth);
+                        return;
+                    }
+                    chunkData.vertexIndexBuffer = MemoryManager.GetVertexIndexBuffer();
+                    chunkData.meshData = MemoryManager.GetMeshData();
+                    chunkData.vertCount = 0;
+                    chunkData.indexCount = 0;
+                    chunkData.chunkState = ChunkData.ChunkState.DIRTY;
+                    chunkData.UpdateMesh();
+                    return;
+                }
                 chunkData.OnMeshReady();
                 chunkData.FreeChunkMesh();
                 return;
@@ -243,14 +270,17 @@ public class ChunkManager
             chunkData.UpdateMesh();
             return;
         }*/
-        
         if(MemoryManager.GetFreeVertexIndexBufferCount() == 0){
             chunkData.chunkState = ChunkData.ChunkState.QUEUED;
             meshQueue.Enqueue(chunkData, chunkData.depth);
             return;
         }
-        chunkData.vertexIndexBuffer = MemoryManager.GetVertexIndexBuffer();
-        chunkData.meshData = MemoryManager.GetMeshData();
+        if(chunkData.vertexIndexBuffer.vertexIndices == default)
+            chunkData.vertexIndexBuffer = MemoryManager.GetVertexIndexBuffer();
+        if(!chunkData.meshData.IsCreated)
+            chunkData.meshData = MemoryManager.GetMeshData();
+        else
+            chunkData.meshData.ClearBuffers();
         chunkData.vertCount = 0;
         chunkData.indexCount = 0;
         chunkData.chunkState = ChunkData.ChunkState.DIRTY;

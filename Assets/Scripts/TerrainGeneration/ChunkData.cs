@@ -8,9 +8,11 @@ using System;
 using WorldGeneration.DataStructures;
 
 public class ChunkData : Octree{
+    private const MeshUpdateFlags MESH_UPDATE_FLAGS = MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds | MeshUpdateFlags.DontResetBoneBounds;
         public enum ChunkState { DIRTY, READY, INVALID, ROOT, QUEUED }
         public enum OnMeshReadyAction { ALERT_PARENT, DISPOSE_CHILDREN }
         public enum DisposeState { NOTHING, POOL, FREE_MESH }
+        bool colliderBaking = false;
         public TempBuffer vertexIndexBuffer;
         public MeshData meshData;
         private NativeArray<int2> meshStarts;
@@ -53,7 +55,13 @@ public class ChunkData : Octree{
                 worldObject.SetActive(false);
         }
         internal override void OnJobsReady(){
-            ApplyMesh();
+            if(colliderBaking){
+                worldObject.GetComponent<MeshCollider>().sharedMesh = null;
+                worldObject.GetComponent<MeshCollider>().sharedMesh = worldObject.GetComponent<MeshFilter>().sharedMesh;
+                colliderBaking = false;
+            }
+            else
+                ApplyMesh();
         }
         public void UpdateDirectionMask(bool refreshNeighbours = false){
             dirMask = 0;
@@ -92,6 +100,7 @@ public class ChunkData : Octree{
             worldObject.transform.GetChild(3).gameObject.SetActive((dirMask & 0b_0010_0000) != 0);
         }
         public void UpdateMesh(){
+            colliderBaking = false;
             MemoryManager.ClearArray(meshStarts, 7);
             genTime = Time.realtimeSinceStartup;
             if(simpleMesh != null){
@@ -103,7 +112,7 @@ public class ChunkData : Octree{
                     heightMap = simpleMesh.heightMap,
                     noiseProperties = TerraxelWorld.DensityManager.GetNoiseProperties()
                 };
-                base.ScheduleParallelJob(noiseJob, 1089);
+                base.ScheduleParallelForJob(noiseJob, 1089);
                 var meshJob = new Mesh2DJob(){
                     heightMap = simpleMesh.heightMap,
                     chunkSize = ChunkManager.chunkResolution + 1,
@@ -111,7 +120,7 @@ public class ChunkData : Octree{
                     chunkPos = new int2(pos.x, pos.z),
                     surfaceLevel = TerraxelWorld.DensityManager.GetNoiseProperties().surfaceLevel
                 };
-                base.ScheduleParallelJob(meshJob, 1089, true);
+                base.ScheduleParallelForJob(meshJob, 1089, true);
                 return;
             }
             var densityData = TerraxelWorld.DensityManager.GetJobDensityData();
@@ -128,7 +137,7 @@ public class ChunkData : Octree{
                 triangles = meshData.indexBuffer,
                 cache = cache
             };
-            base.ScheduleJob(marchingJob, (ChunkManager.chunkResolution) * (ChunkManager.chunkResolution) * (ChunkManager.chunkResolution), false);
+            base.ScheduleJobFor(marchingJob, (ChunkManager.chunkResolution) * (ChunkManager.chunkResolution) * (ChunkManager.chunkResolution), false);
             var transitionJob = new TransitionMeshJob()
             {
                 densities = densityData,
@@ -143,7 +152,7 @@ public class ChunkData : Octree{
                 meshStarts = meshStarts,
                 negativeDepthMultiplier = negativeDepthMultiplier
             };
-            base.ScheduleJob(transitionJob, 6 * (ChunkManager.chunkResolution) * (ChunkManager.chunkResolution), true);
+            base.ScheduleJobFor(transitionJob, 6 * (ChunkManager.chunkResolution) * (ChunkManager.chunkResolution), true);
         }
         bool CheckNeighbour(int3 relativeOffset, bool refreshNeighbours = false){
             float3 pos = ChunkManager.chunkResolution * depthMultiplier * relativeOffset;
@@ -169,10 +178,10 @@ public class ChunkData : Octree{
                 simpleMesh.worldObject.SetActive(true);
                 simpleMesh.worldObject.transform.localScale = new float3(depthMultiplier, 1, depthMultiplier);
                 var mesh = simpleMesh.worldObject.GetComponent<MeshFilter>().sharedMesh;
-                mesh.SetVertexBufferData(simpleMesh.buffer, 0, 0, 1089,0,MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);
+                mesh.SetVertexBufferData(simpleMesh.buffer, 0, 0, 1089,0, MESH_UPDATE_FLAGS);
                 mesh.SetIndexBufferData(SimpleMeshData.indices, 0, 0, 6144);
                 desc.indexCount = 6144;
-                mesh.SetSubMesh(0, desc, MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);
+                mesh.SetSubMesh(0, desc, MESH_UPDATE_FLAGS);
                 var bounds = new Bounds(new float3(ChunkManager.chunkResolution * depthMultiplier / 2), region.bounds);
                 mesh.bounds = bounds;
                 mesh.RecalculateNormals();
@@ -195,12 +204,12 @@ public class ChunkData : Octree{
                 mesh.bounds = bounds;
                 //Set vertices and indices
                 mesh.SetVertexBufferParams(vertexCount, layout);
-                mesh.SetVertexBufferData(meshData.vertexBuffer.AsArray(), 0, 0, vertexCount, 0, MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);
+                mesh.SetVertexBufferData(meshData.vertexBuffer.AsArray(), 0, 0, vertexCount, 0, MESH_UPDATE_FLAGS);
                 mesh.SetIndexBufferParams(indexCount, IndexFormat.UInt16);
-                mesh.SetIndexBufferData(meshData.indexBuffer.AsArray(), 0, 0, indexCount,  MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);
+                mesh.SetIndexBufferData(meshData.indexBuffer.AsArray(), 0, 0, indexCount,  MESH_UPDATE_FLAGS);
 
                 desc.indexCount = indexCount;
-                mesh.SetSubMesh(0, desc, MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);
+                mesh.SetSubMesh(0, desc, MESH_UPDATE_FLAGS);
                 
                 this.vertCount = vertexCount;
                 this.indexCount = indexCount;
@@ -213,14 +222,21 @@ public class ChunkData : Octree{
                     transitionMesh.bounds = bounds;
                     //Set vertices and indices
                     transitionMesh.SetVertexBufferParams(vertexEnd - vertexStart, layout);
-                    transitionMesh.SetVertexBufferData(meshData.vertexBuffer.AsArray(), vertexStart, 0, vertexEnd - vertexStart, 0, MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);
+                    transitionMesh.SetVertexBufferData(meshData.vertexBuffer.AsArray(), vertexStart, 0, vertexEnd - vertexStart, 0, MESH_UPDATE_FLAGS);
                     transitionMesh.SetIndexBufferParams(indexEnd - indexStart, IndexFormat.UInt16);
-                    transitionMesh.SetIndexBufferData(meshData.indexBuffer.AsArray(), indexStart, 0, indexEnd - indexStart,  MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);
+                    transitionMesh.SetIndexBufferData(meshData.indexBuffer.AsArray(), indexStart, 0, indexEnd - indexStart,  MESH_UPDATE_FLAGS);
 
                     desc.indexCount = indexEnd - indexStart;
-                    transitionMesh.SetSubMesh(0, desc, MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);
+                    transitionMesh.SetSubMesh(0, desc, MESH_UPDATE_FLAGS);
                     this.vertCount += vertexEnd - vertexStart;
                     this.indexCount += indexEnd - indexStart;
+                }
+                if(depth < 3){
+                    var colliderJob = new ChunkColliderBakeJob(){
+                        meshId = mesh.GetInstanceID()
+                    };
+                    colliderBaking = true;
+                    ScheduleJob(colliderJob, false);
                 }
             }else{
                 vertCount = 0;

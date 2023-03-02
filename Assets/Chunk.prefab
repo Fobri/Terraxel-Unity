@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 8452006527701462677}
   - component: {fileID: 8076286575816100147}
   - component: {fileID: 7952701822012702324}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Chunk (5)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -94,7 +94,7 @@ GameObject:
   - component: {fileID: 2016062608713447523}
   - component: {fileID: 4059437901277120558}
   - component: {fileID: 2675458886265686921}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Chunk (3)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -177,7 +177,7 @@ GameObject:
   - component: {fileID: 5700258032985639088}
   - component: {fileID: 1018773393983700899}
   - component: {fileID: 1952526542492411856}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Chunk (1)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -260,7 +260,8 @@ GameObject:
   - component: {fileID: 5943626198165289053}
   - component: {fileID: 6357525784482361229}
   - component: {fileID: 4629437645942526792}
-  m_Layer: 0
+  - component: {fileID: -693880654801785923}
+  m_Layer: 6
   m_Name: Chunk
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -338,6 +339,20 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!64 &-693880654801785923
+MeshCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4194868686972551607}
+  m_Material: {fileID: 0}
+  m_IsTrigger: 0
+  m_Enabled: 1
+  serializedVersion: 4
+  m_Convex: 0
+  m_CookingOptions: -1
+  m_Mesh: {fileID: 0}
 --- !u!1 &5504884781570031434
 GameObject:
   m_ObjectHideFlags: 0
@@ -349,7 +364,7 @@ GameObject:
   - component: {fileID: 9093264364069839313}
   - component: {fileID: 3145402530568505854}
   - component: {fileID: 5690687542272988492}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Chunk (2)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -432,7 +447,7 @@ GameObject:
   - component: {fileID: 8023019394011064771}
   - component: {fileID: 8936073577667335611}
   - component: {fileID: 536843272851650112}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Chunk
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -515,7 +530,7 @@ GameObject:
   - component: {fileID: 8742229070654884690}
   - component: {fileID: 6843930043694207744}
   - component: {fileID: 6819176400175330451}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Chunk (4)
   m_TagString: Untagged
   m_Icon: {fileID: 0}

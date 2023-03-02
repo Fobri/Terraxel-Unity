@@ -17,6 +17,7 @@ public class DensityManager : JobRunner, IDisposable {
     //Queue<NoiseJob> operationQueue = new Queue<NoiseJob>();
     //Queue<KeyValuePair<int3, IntPtr>> operationQueue = new Queue<KeyValuePair<int3, IntPtr>>();
     Queue<NoiseJob> operationQueue = new Queue<NoiseJob>();
+    Queue<KeyValuePair<int3, sbyte>> modifications = new Queue<KeyValuePair<int3, sbyte>>();
     Dictionary<int3, DensityResultData> currentlyProcessedPositions = new Dictionary<int3, DensityResultData>();
 
     public void Init(NoiseProperties noiseProperties){
@@ -46,6 +47,26 @@ public class DensityManager : JobRunner, IDisposable {
             value.Add(bound);
         }
         return value.ToArray();
+    }
+    public void QueueModification(int3 pos, sbyte value){
+        if(TerraxelWorld.worldState == TerraxelWorld.WorldState.IDLE)
+            DoModification(pos, value);
+        else
+            modifications.Enqueue(new KeyValuePair<int3, sbyte>(pos, value));
+    }
+    void DoModification(int3 pos, sbyte value){
+        var chunkPos = Utils.WorldPosToChunkPos(pos);
+        var localPosInChunk = math.abs(pos - chunkPos);
+
+        if(densityData.fullChunks.Contains(chunkPos) || densityData.emptyChunks.Contains(chunkPos)){
+            //TODO
+        }
+        if(densityData.densities.ContainsKey(chunkPos)){
+            var data = densityData.densities[chunkPos];
+            unsafe{
+            UnsafeUtility.WriteArrayElement<sbyte>((void*)data, Utils.XyzToIndex(localPosInChunk, ChunkManager.chunkResolution), value);
+            }
+        }
     }
     internal override void OnJobsReady()
     {
@@ -79,7 +100,7 @@ public class DensityManager : JobRunner, IDisposable {
             data.isFull = new NativeReference<bool>(true,Allocator.TempJob);
             job.data = data;
             currentlyProcessedPositions.Add((int3)job.offset, data);
-            ScheduleParallelJob(job, MemoryManager.densityMapLength);
+            ScheduleParallelForJob(job, MemoryManager.densityMapLength);
         }
     }
 
@@ -87,7 +108,19 @@ public class DensityManager : JobRunner, IDisposable {
         return densityData;
     }
     public bool GetIsReady(){
-        return IsReady && operationQueue.Count == 0;
+        if(IsReady && operationQueue.Count == 0){
+            while(modifications.Count > 0){
+                var modification = modifications.Dequeue();
+                DoModification(modification.Key, modification.Value);
+            }
+            return true;
+        }
+        return false;
+    }
+    public new bool IsReady{
+        get{
+            return base.IsReady && operationQueue.Count == 0;
+        }
     }
     public bool ChunkIsFullOrEmpty(int3 pos){
         return densityData.fullChunks.Contains(pos) || densityData.emptyChunks.Contains(pos);
