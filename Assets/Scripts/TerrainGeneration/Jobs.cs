@@ -169,7 +169,7 @@ namespace WorldGeneration
                 vertPos = lowerEndPointPos;
                 vertNormal = N0;
             }
-            vertPos = vertPos / 256f;
+            vertPos = vertPos * 0.00390625f;
             vertNormal = math.normalize(vertNormal);
             int near = 0;
             var secondaryPos = vertPos;
@@ -304,13 +304,12 @@ namespace WorldGeneration
             byte cell = Tables.RegularCellClass[caseCode];
             var vertRowIndex = caseCode * 12;
             byte cellData = Tables.RegularCellData[cell][0];
-            //ushort[] vertexLocations = Tables.RegularVertexData[caseCode];
             int vertexCount = (cellData >> 4);
             int triangleCount = (cellData & 0x0F);
             
             CellIndices cellIndices = new CellIndices();
-            vertexIndices.vertexIndices[index] = new ushort3(0);
-            var currentCell = vertexIndices.vertexIndices[index];
+            var currentCell = new ReuseCell(0);
+            currentCell.caseIdx = (byte)caseCode;
             for (int i = 0; i < vertexCount; i++)
             {
                 ushort edge = (ushort)(Tables.RegularVertexData[caseCode][i]);
@@ -320,8 +319,9 @@ namespace WorldGeneration
 
 
                 int3 cellDirection = DecodeCellIndices((byte)(edge >> 12));
+                int t = (density[v1] << 8) / (density[v1] - density[v0]);
                 int vertexEdgeIndex = (edge >> 8) & 0xF;
-                //if ((t & 0x00FF) != 0){
+                if ((t & 0x00FF) != 0){
                     if((edge >> 12) == 8){
                         // Vertex lies in the interior of the edge.
                         var newVertexIndex = CreateNewVertex((voxelLocalPosition + Tables.CubeCorners[v0]) * depthMultiplier,(voxelLocalPosition + Tables.CubeCorners[v1]) * depthMultiplier, density[v0], density[v1]);
@@ -337,36 +337,41 @@ namespace WorldGeneration
                             cellIndices[i] = GetCell(voxelLocalPosition + cellDirection)[vertexEdgeIndex];
                         }
                     }
-                //}
-                /*else if (t == 0){
+                }
+                else if (t == 0 && v1 == 7){
                     // Vertex lies at the higher-numbered endpoint.
-                    if (v1 == 7){
                     // This cell owns the vertex.
-                        var newVertexIndex = CreateNewVertex(voxelLocalPosition, v1, v1, t);
-                        currentCell[vertexEdgeIndex] = newVertexIndex;
-                        cellIndices[i] = newVertexIndex;
+                    if(currentCell[1] == 0){
+                        var newVertexIndex = CreateNewVertex((voxelLocalPosition + Tables.CubeCorners[v1]) * depthMultiplier,(voxelLocalPosition + Tables.CubeCorners[v1]) * depthMultiplier, density[v1], density[v1], false);
+                        currentCell[1] = newVertexIndex;
+                    }
+                    cellIndices[i] = currentCell[1];
+                }
+                else{
+                    byte edg = t == 0 ? v1 : v0;
+                    cellDirection = DecodeCellIndices((byte)(edg ^ 7));
+                    if((cellDirection.x == -1 && voxelLocalPosition.x == 0) || (cellDirection.y == -1 && voxelLocalPosition.y == 0) || (cellDirection.z == -1 && voxelLocalPosition.z == 0)){
+                        cellIndices[i] = CreateNewVertex((voxelLocalPosition + Tables.CubeCorners[edg]) * depthMultiplier,(voxelLocalPosition + Tables.CubeCorners[edg]) * depthMultiplier, density[edg], density[edg], false);
                     }
                     else{
-                        if((cellDirection.x == -1 && voxelLocalPosition.x == 0) || (cellDirection.y == -1 && voxelLocalPosition.y == 0) || (cellDirection.z == -1 && voxelLocalPosition.z == 0)){
-                            cellIndices[i] = CreateNewVertex(voxelLocalPosition, v1, v1, t);
+                        var prevCell = GetCell(voxelLocalPosition + cellDirection);
+                        if(prevCell.caseIdx == 0 || prevCell.caseIdx == 255){
+                            cellIndices[i] = CreateNewVertex((voxelLocalPosition + Tables.CubeCorners[edg]) * depthMultiplier,(voxelLocalPosition + Tables.CubeCorners[edg]) * depthMultiplier, density[edg], density[edg], false);
                         }
                         else{
-                            cellIndices[i] = cellIndices[i] = GetCell(voxelLocalPosition + cellDirection)[vertexEdgeIndex];
+                            cellIndices[i] = GetCell(voxelLocalPosition + cellDirection)[1];
                         }
                     }
                 }
-                else{
-                    if((cellDirection.x == -1 && voxelLocalPosition.x == 0) || (cellDirection.y == -1 && voxelLocalPosition.y == 0) || (cellDirection.z == -1 && voxelLocalPosition.z == 0)){
-                        cellIndices[i] = CreateNewVertex(voxelLocalPosition, v0, v0, t);
-                    }
-                    else{
-                        cellIndices[i] = cellIndices[i] = GetCell(voxelLocalPosition + cellDirection)[vertexEdgeIndex];
-                    }
-                }*/
             }
             vertexIndices.vertexIndices[index] = currentCell;
             for(int i = 0; i < triangleCount; i++){
                 //var idx = indexCounter.Increment() * 3;
+                if(cellIndices[Tables.RegularCellData[cell][i * 3 + 1]].Equals(cellIndices[Tables.RegularCellData[cell][i * 3 + 2]]) ||
+                    cellIndices[Tables.RegularCellData[cell][i * 3 + 1]].Equals(cellIndices[Tables.RegularCellData[cell][i * 3 + 3]]) ||
+                    cellIndices[Tables.RegularCellData[cell][i * 3 + 2]].Equals(cellIndices[Tables.RegularCellData[cell][i * 3 + 3]])){
+                        continue;
+                    }
                 for(int v = 0; v < 3; v++){
                     triangles.Add(cellIndices[Tables.RegularCellData[cell][i * 3 + v + 1]]);
                 }
@@ -381,7 +386,7 @@ namespace WorldGeneration
             return value;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ushort3 GetCell(int3 voxelLocalPosition){
+        private ReuseCell GetCell(int3 voxelLocalPosition){
             return vertexIndices.vertexIndices[Utils.XyzToIndex(voxelLocalPosition, chunkSize)];
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -403,27 +408,25 @@ namespace WorldGeneration
                     }
                 }
             }
-            var divider = (higherEndPointDensity - lowerEndPointDensity);
-            if(divider == 0) divider = 1;
-            int t = (higherEndPointDensity << 8) / divider;
-            int u = 0x0100 - t;
             float3 vertPos;
             float3 vertNormal;
             float3 N0 = GetVertexNormal(lowerEndPointPos);
             if(!lowerEndPointPos.Equals(higherEndPointPos)){
+                int t = (higherEndPointDensity << 8) / (higherEndPointDensity - lowerEndPointDensity);
+                int u = 0x0100 - t;
                 float3 N1 = GetVertexNormal(higherEndPointPos);
                 vertPos = (t * lowerEndPointPos + u * higherEndPointPos);
+                vertPos = vertPos * 0.00390625f;
                 vertNormal = (t * N0 + u * N1);
             }else{
                 vertPos = lowerEndPointPos;
                 vertNormal = N0;
             }
-            vertPos = vertPos / 256f;
             vertNormal = math.normalize(vertNormal);
             float3 secondaryPos = vertPos;
-            int near = 0;
-            if(transitionOffset){
-                var offsetVector = GetTransitionDirection(vertPos, out near);
+            int near = GetVertexNearEdgeMask(vertPos);
+            if(transitionOffset && near != 0){
+                var offsetVector = GetTransitionDirection(vertPos);
                 secondaryPos.x += ((1 - math.pow(vertNormal.x, 2)) * offsetVector.x + (-vertNormal.x*vertNormal.y) * offsetVector.y + (-vertNormal.x*vertNormal.z) * offsetVector.z);
                 secondaryPos.y += ((-vertNormal.x*vertNormal.y) * offsetVector.x + (1-math.pow(vertNormal.y, 2)) * offsetVector.y + (-vertNormal.y*vertNormal.z) * offsetVector.z);
                 secondaryPos.z += ((-vertNormal.x*vertNormal.z) * offsetVector.x + (-vertNormal.y*vertNormal.z) * offsetVector.y + (1-math.pow(vertNormal.z, 2)) * offsetVector.z);
@@ -434,17 +437,19 @@ namespace WorldGeneration
             int vertexIndex = vertices.Length - 1;
             return (ushort)vertexIndex;
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private float3 GetTransitionDirection(float3 vertPos, out int near){
-            near = 0;
-            var offsetVector = new float3(0);
-            var highFence = depthMultiplier*(chunkSize-1);
-            near = ((vertPos.x == depthMultiplier * chunkSize ? 0b_0000_0001 : 0) 
+        private int GetVertexNearEdgeMask(float3 vertPos){
+            return ((vertPos.x == depthMultiplier * chunkSize ? 0b_0000_0001 : 0) 
                 | (vertPos.x == 0 ? 0b_0000_0010 : 0) 
                 | (vertPos.y == depthMultiplier * chunkSize ? 0b_0000_0100 : 0) 
                 | (vertPos.y == 0 ? 0b_0000_1000 : 0) 
                 | (vertPos.z == depthMultiplier * chunkSize ? 0b_0001_0000 : 0) 
                 | (vertPos.z == 0 ? 0b_0010_0000 : 0));
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private float3 GetTransitionDirection(float3 vertPos){
+            var offsetVector = new float3(0);
+            var highFence = depthMultiplier*(chunkSize-1);
+            
             //if(near == 0) return 0f;
             bool3x2 skirtDirections = new bool3x2();
             skirtDirections.c0.x = vertPos.x > highFence;
@@ -594,6 +599,16 @@ namespace WorldGeneration
 
     internal class Tables
     {
+        public static readonly int3[] CornerDirection = {
+            new int3(-1, -1, -1),
+            new int3(0, -1, -1),
+            new int3(-1, 0, -1),
+            new int3(0, 0, -1),
+            new int3(0, -1, -1),
+            new int3(0, -1, 0),
+            new int3(-1, 0, 0),
+            new int3(0, 0, 0),
+        };
         public static readonly byte[] TransitionEdgeRemap = {
             0,1,2,3,4,5,6,7,8,0,2,6,8
         };

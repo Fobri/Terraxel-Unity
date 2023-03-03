@@ -12,6 +12,12 @@ public class PriorityQueue<T> where T : class
             queues[i] = new Queue<T>();
         }
     }
+    public bool Contains(T t){
+        for(int i = queues.Length - 1; i >= 0; i--){
+            if(queues[i].Contains(t)) return true;
+        }
+        return false;
+    }
     public Queue<T> this[int index]{
         get{
             return queues[index];
@@ -21,7 +27,8 @@ public class PriorityQueue<T> where T : class
         }
     }
     public void Enqueue(T t, int queue){
-        queues[queue].Enqueue(t);
+        if(!queues[queue].Contains(t))
+            queues[queue].Enqueue(t);
     }
     public bool TryDequeue(int queue, out T t){
         if(queues[queue].Count > 0){

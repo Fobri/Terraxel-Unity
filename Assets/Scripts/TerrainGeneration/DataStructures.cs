@@ -114,14 +114,16 @@ namespace WorldGeneration.DataStructures
             vertexBuffer.Dispose();
         }
     }
-    public struct ushort3{
+    public struct ReuseCell{
         ushort x;
         ushort y;
         ushort z;
-        public ushort3(ushort value){
+        public byte caseIdx;
+        public ReuseCell(ushort value){
             x = value;
             y = value;
             z = value;
+            caseIdx = 0;
         }
         public ushort this[int index]{
             get{
@@ -144,9 +146,9 @@ namespace WorldGeneration.DataStructures
         }
     }
     public struct TempBuffer : IDisposable{
-        public NativeArray<ushort3> vertexIndices;
+        public NativeArray<ReuseCell> vertexIndices;
         public NativeArray<CellIndices> transitionVertexIndices;
-        public TempBuffer(NativeArray<ushort3> vertexIndices, NativeArray<CellIndices> transitionVertexIndices){
+        public TempBuffer(NativeArray<ReuseCell> vertexIndices, NativeArray<CellIndices> transitionVertexIndices){
             this.vertexIndices = vertexIndices;
             this.transitionVertexIndices = transitionVertexIndices;
         }

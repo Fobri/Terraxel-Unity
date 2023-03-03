@@ -62,7 +62,7 @@ public class MemoryManager{
 
         freeVertexIndexBuffers = new Queue<TempBuffer>();
         for(int i = 0; i < maxConcurrentOperations; i++){
-            var buf1 = new NativeArray<ushort3>(densityMapLength, Allocator.Persistent);
+            var buf1 = new NativeArray<ReuseCell>(densityMapLength, Allocator.Persistent);
             var buf2 = new NativeArray<CellIndices>((ChunkManager.chunkResolution)*(ChunkManager.chunkResolution)*6, Allocator.Persistent);
             freeVertexIndexBuffers.Enqueue(new TempBuffer(buf1, buf2));
         }
