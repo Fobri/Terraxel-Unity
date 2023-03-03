@@ -554,7 +554,8 @@ namespace WorldGeneration
         [ReadOnly] public int meshId;
         public void Execute()
         {
-            Physics.BakeMesh(meshId, false);
+            MeshColliderCookingOptions options = MeshColliderCookingOptions.CookForFasterSimulation | MeshColliderCookingOptions.WeldColocatedVertices | MeshColliderCookingOptions.UseFastMidphase;
+            Physics.BakeMesh(meshId, false, options);
         }
     }
     //Calculate noise in jobs
