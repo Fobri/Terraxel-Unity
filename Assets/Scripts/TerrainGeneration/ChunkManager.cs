@@ -168,16 +168,19 @@ public class ChunkManager
             return chunk;
         }
     }
-    public void RegenerateChunkMesh(int3 worldPos){
-        var chunk = chunkTree.Query(new BoundingBox((float3)worldPos, new float3(5f)));
+    public void RegenerateChunkMesh(int3 worldPos, float radius){
+        radius *= 2;
+        var chunk = chunkTree.Query(new BoundingBox((float3)worldPos, new float3(radius)));
         List<Octree> toUpdate = new List<Octree>();
         if(chunk != null) toUpdate.Add(chunk);
-        chunkTree.QueryColliding(new BoundingBox((float3)worldPos, new float3(5f)), toUpdate);
+        chunkTree.QueryColliding(new BoundingBox((float3)worldPos, new float3(radius)), toUpdate);
         for(int i = 0; i < toUpdate.Count; i++){
             if(!toUpdate[i].IsReady) continue;
             UpdateChunk(toUpdate[i] as ChunkData);
             shouldUpdateTree = true;
         }
+        if(chunk == null) chunk = chunkTree;
+        chunk.UpdateTreeRecursive();
     }
     public void RegenerateChunk(ChunkData chunk){
         if(chunkDatas.Count >= MemoryManager.maxBufferCount){ 
@@ -218,7 +221,7 @@ public class ChunkManager
             meshQueue.Enqueue(chunkData, chunkData.depth);
             return;
         }
-        if(chunkData.depth == 0){
+        /*if(chunkData.depth == 0){
             if(TerraxelWorld.DensityManager.ChunkIsFullOrEmpty((int3)chunkData.WorldPosition)){
                 chunkData.OnMeshReady();
                 chunkData.FreeChunkMesh();

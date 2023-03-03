@@ -241,7 +241,7 @@ public class ChunkData : Octree{
                     colliderBaking = true;
                     ScheduleJob(colliderJob, false);
                 }
-            }else{
+            }else if(depth > 1){
                 FreeChunkMesh();
             }
             //indexCounter.Dispose();

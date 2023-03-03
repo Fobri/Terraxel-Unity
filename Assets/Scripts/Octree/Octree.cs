@@ -222,6 +222,7 @@ public abstract class Octree : JobRunner
             return;
         }
         if(depth == 0){
+            //if(!chunkData.meshData.IsCreated) TerraxelWorld.ChunkManager.RegenerateChunk(chunkData);
             return;
         }
         

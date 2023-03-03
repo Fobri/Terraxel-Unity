@@ -430,7 +430,7 @@ namespace WorldGeneration
             vertNormal = math.normalize(vertNormal);
             float3 secondaryPos = vertPos;
             int near = GetVertexNearEdgeMask(vertPos);
-            if(transitionOffset && near != 0){
+            if(transitionOffset){
                 var offsetVector = GetTransitionDirection(vertPos);
                 secondaryPos.x += ((1 - math.pow(vertNormal.x, 2)) * offsetVector.x + (-vertNormal.x*vertNormal.y) * offsetVector.y + (-vertNormal.x*vertNormal.z) * offsetVector.z);
                 secondaryPos.y += ((-vertNormal.x*vertNormal.y) * offsetVector.x + (1-math.pow(vertNormal.y, 2)) * offsetVector.y + (-vertNormal.y*vertNormal.z) * offsetVector.z);
@@ -573,17 +573,19 @@ namespace WorldGeneration
         [NativeDisableParallelForRestriction, WriteOnly]
         public DensityResultData data;
         [ReadOnly] public NoiseProperties noiseProperties;
+        [ReadOnly] public bool allowEmptyOrFull;
 
         public void Execute(int index)
         {
             var value = DensityGenerator.FinalNoise(Utils.IndexToXyz(index, size) * depthMultiplier + offset, noiseProperties);
+            data.densityMap[index] = value;
+            if(!allowEmptyOrFull) return;
             if(value != 127){
                 data.isEmpty.Value = false;
             }
             if(value != -127){
                 data.isFull.Value = false;
             }
-            data.densityMap[index] = value;
         }
     }
     [BurstCompile]

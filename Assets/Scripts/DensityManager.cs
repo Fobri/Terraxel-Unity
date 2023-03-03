@@ -38,14 +38,14 @@ public class DensityManager : JobRunner, IDisposable {
             var bound = new BoundingBox((float3)key.Key + ChunkManager.chunkResolution / 2, new float3(ChunkManager.chunkResolution));
             value.Add(bound);
         }
-        foreach(var key in densityData.fullChunks){
+        /*foreach(var key in densityData.fullChunks){
             var bound = new BoundingBox((float3)key + ChunkManager.chunkResolution / 2, new float3(ChunkManager.chunkResolution));
             value.Add(bound);
         }
         foreach(var key in densityData.emptyChunks){
             var bound = new BoundingBox((float3)key + ChunkManager.chunkResolution / 2, new float3(ChunkManager.chunkResolution));
             value.Add(bound);
-        }
+        }*/
         return value.ToArray();
     }
     public void QueueModification(int3 pos, sbyte value){
@@ -55,15 +55,23 @@ public class DensityManager : JobRunner, IDisposable {
             modifications.Enqueue(new KeyValuePair<int3, sbyte>(pos, value));
     }
     void DoModification(int3 pos, sbyte value){
-        var chunkPos = Utils.WorldPosToChunkPos(pos);
+        if(value == 0) return;
+        var chunkPos = Utils.WorldPosToChunkPos(pos, true);
         var localPosInChunk = math.abs(pos - chunkPos);
 
         if(densityData.fullChunks.Contains(chunkPos) || densityData.emptyChunks.Contains(chunkPos)){
-            //TODO
+            LoadDensityAtPosition(chunkPos, false);
+            modifications.Enqueue(new KeyValuePair<int3, sbyte>(pos, value));
+            densityData.fullChunks.Remove(chunkPos);
+            densityData.emptyChunks.Remove(chunkPos);
         }
-        if(densityData.densities.ContainsKey(chunkPos)){
+        else if(densityData.densities.ContainsKey(chunkPos)){
             var data = densityData.densities[chunkPos];
             unsafe{
+            sbyte origValue = UnsafeUtility.ReadArrayElement<sbyte>((void*)data, Utils.XyzToIndex(localPosInChunk, ChunkManager.chunkResolution));
+            if(value > 0 && (int)origValue + (int)value > 127) value = 127;
+            else if(value < 0 && (int)origValue + (int)value < -127) value = -127;
+            else value += origValue;
             UnsafeUtility.WriteArrayElement<sbyte>((void*)data, Utils.XyzToIndex(localPosInChunk, ChunkManager.chunkResolution), value);
             }
         }
@@ -94,10 +102,11 @@ public class DensityManager : JobRunner, IDisposable {
         for(int i = 0; i < 8; i++){
             if(operationQueue.Count == 0) return;
             var job = operationQueue.Dequeue();
+            if(currentlyProcessedPositions.ContainsKey((int3)job.offset) || densityData.densities.ContainsKey((int3)job.offset)) continue;
             var data = new DensityResultData();
             data.densityMap = MemoryManager.GetDensityMap();
-            data.isEmpty = new NativeReference<bool>(true,Allocator.TempJob);
-            data.isFull = new NativeReference<bool>(true,Allocator.TempJob);
+            data.isEmpty = new NativeReference<bool>(job.allowEmptyOrFull ? true : false,Allocator.TempJob);
+            data.isFull = new NativeReference<bool>(job.allowEmptyOrFull ? true : false,Allocator.TempJob);
             job.data = data;
             currentlyProcessedPositions.Add((int3)job.offset, data);
             ScheduleParallelForJob(job, MemoryManager.densityMapLength);
@@ -107,13 +116,15 @@ public class DensityManager : JobRunner, IDisposable {
     public DensityData GetJobDensityData(){
         return densityData;
     }
-    public bool GetIsReady(){
+    public new bool Update(){
         if(IsReady && operationQueue.Count == 0){
             while(modifications.Count > 0){
                 var modification = modifications.Dequeue();
                 DoModification(modification.Key, modification.Value);
             }
             return true;
+        }else if(base.IsReady && operationQueue.Count > 0){
+            ScheduleBatch();
         }
         return false;
     }
@@ -125,7 +136,17 @@ public class DensityManager : JobRunner, IDisposable {
     public bool ChunkIsFullOrEmpty(int3 pos){
         return densityData.fullChunks.Contains(pos) || densityData.emptyChunks.Contains(pos);
     }
-
+    void LoadDensityAtPosition(int3 pos, bool allowEmptyOrFull = true){
+        var noiseJob = new NoiseJob()
+        {
+            offset = pos,
+            size = ChunkManager.chunkResolution,
+            depthMultiplier = Octree.depthMultipliers[0],
+            noiseProperties = densityData.noiseProperties,
+            allowEmptyOrFull = allowEmptyOrFull
+        };
+        operationQueue.Enqueue(noiseJob);
+    }
     public void LoadDensityData(float3 center, int radius){
         HashSet<int3> alreadyDataExists = new HashSet<int3>();
         int3 startPos = (int3)center - ChunkManager.chunkResolution * Octree.depthMultipliers[radius];
@@ -137,14 +158,7 @@ public class DensityManager : JobRunner, IDisposable {
                         alreadyDataExists.Add(pos);
                         continue;
                     }
-                    var noiseJob = new NoiseJob()
-                    {
-                        offset = pos,
-                        size = ChunkManager.chunkResolution,
-                        depthMultiplier = Octree.depthMultipliers[0],
-                        noiseProperties = densityData.noiseProperties
-                    };
-                    operationQueue.Enqueue(noiseJob);
+                    LoadDensityAtPosition(pos);
                 }
             }
         }

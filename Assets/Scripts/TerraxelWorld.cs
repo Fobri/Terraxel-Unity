@@ -124,7 +124,7 @@ public TextMeshProUGUI[] debugLabels;
             freeDensityMaps = MemoryManager.GetFreeDensityMapCount();
             chunkCount = chunkDatas.Count;
             freeBufferCount = MemoryManager.GetFreeMeshDataCount();
-            debugLabels[0].text = $"Memory used: {memoryUsed} Mb";
+            //debugLabels[0].text = $"Memory used: {memoryUsed} Mb";
             debugLabels[1].text = $"Currently processing {MemoryManager.maxConcurrentOperations - MemoryManager.GetFreeVertexIndexBufferCount()}/{MemoryManager.maxConcurrentOperations}";
             debugLabels[2].text = $"Chunk count: {chunkCount}/{MemoryManager.maxBufferCount}";
             debugLabels[3].text = $"Free vertex buffers: {freeBufferCount}";
@@ -143,7 +143,7 @@ public TextMeshProUGUI[] debugLabels;
             }
         }
         if(worldState == WorldState.DENSITY_UPDATE){
-            if(DensityManager.GetIsReady()){
+            if(DensityManager.Update()){
                 worldState = WorldState.IDLE;
             }
         }
@@ -186,9 +186,16 @@ public TextMeshProUGUI[] debugLabels;
             }
         }
     }
-    public static void QueueModification(int3 pos, sbyte value){
-        DensityManager.QueueModification(pos, value);
-        ChunkManager.RegenerateChunkMesh(pos);
+    public static void QueueModification(int3 pos, int value, int radius){
+        for(int x = -radius; x < radius; x++){
+            for(int y = -radius; y < radius; y++){
+                for(int z = -radius; z < radius; z++){
+                    float _value = math.clamp(math.clamp(radius - math.distance(new float3(x,y,z) + pos, pos), 0f, 127) * value, sbyte.MinValue, sbyte.MaxValue);
+                    DensityManager.QueueModification(pos + new int3(x,y,z), Convert.ToSByte(_value));
+                }
+            }
+        }
+        ChunkManager.RegenerateChunkMesh(pos, radius);
     }
     public void OnDisable(){
         JobRunner.CompleteAll();
