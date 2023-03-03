@@ -174,6 +174,7 @@ public class ChunkManager
         if(chunk != null) toUpdate.Add(chunk);
         chunkTree.QueryColliding(new BoundingBox((float3)worldPos, new float3(5f)), toUpdate);
         for(int i = 0; i < toUpdate.Count; i++){
+            if(!toUpdate[i].IsReady) continue;
             UpdateChunk(toUpdate[i] as ChunkData);
             shouldUpdateTree = true;
         }
@@ -277,12 +278,14 @@ public class ChunkManager
         }
         if(chunkData.vertexIndexBuffer.vertexIndices == default)
             chunkData.vertexIndexBuffer = MemoryManager.GetVertexIndexBuffer();
+        else
+            chunkData.vertexIndexBuffer.ClearBuffers();
         if(!chunkData.meshData.IsCreated)
             chunkData.meshData = MemoryManager.GetMeshData();
         else
             chunkData.meshData.ClearBuffers();
         chunkData.vertCount = 0;
-        chunkData.indexCount = 0;
+        chunkData.idxCount = 0;
         chunkData.chunkState = ChunkData.ChunkState.DIRTY;
         chunkData.UpdateMesh();
     }

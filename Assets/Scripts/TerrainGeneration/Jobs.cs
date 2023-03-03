@@ -372,6 +372,11 @@ namespace WorldGeneration
                     cellIndices[Tables.RegularCellData[cell][i * 3 + 2]].Equals(cellIndices[Tables.RegularCellData[cell][i * 3 + 3]])){
                         continue;
                     }
+                /*if(vertices[cellIndices[Tables.RegularCellData[cell][i * 3 + 1]]].Primary.Equals(vertices[cellIndices[Tables.RegularCellData[cell][i * 3 + 2]]].Primary) ||
+                vertices[cellIndices[Tables.RegularCellData[cell][i * 3 + 1]]].Primary.Equals(vertices[cellIndices[Tables.RegularCellData[cell][i * 3 + 3]]].Primary) ||
+                vertices[cellIndices[Tables.RegularCellData[cell][i * 3 + 2]]].Primary.Equals(vertices[cellIndices[Tables.RegularCellData[cell][i * 3 + 3]]].Primary)){
+                    Debug.Log("wtf");
+                }*/
                 for(int v = 0; v < 3; v++){
                     triangles.Add(cellIndices[Tables.RegularCellData[cell][i * 3 + v + 1]]);
                 }
@@ -554,7 +559,7 @@ namespace WorldGeneration
         [ReadOnly] public int meshId;
         public void Execute()
         {
-            MeshColliderCookingOptions options = MeshColliderCookingOptions.CookForFasterSimulation | MeshColliderCookingOptions.WeldColocatedVertices | MeshColliderCookingOptions.UseFastMidphase;
+            MeshColliderCookingOptions options = MeshColliderCookingOptions.CookForFasterSimulation | MeshColliderCookingOptions.WeldColocatedVertices | MeshColliderCookingOptions.UseFastMidphase | MeshColliderCookingOptions.EnableMeshCleaning;
             Physics.BakeMesh(meshId, false, options);
         }
     }

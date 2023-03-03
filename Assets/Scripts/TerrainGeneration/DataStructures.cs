@@ -102,7 +102,11 @@ namespace WorldGeneration.DataStructures
         }
         public void ClearBuffers(){
             MemoryManager.ClearArray(vertexBuffer.AsArray(), vertexBuffer.Length);
+            vertexBuffer.Length = 0;
+            vertexBuffer.Capacity = MemoryManager.maxVertexCount;
             MemoryManager.ClearArray(indexBuffer.AsArray(), indexBuffer.Length);
+            indexBuffer.Length = 0;
+            indexBuffer.Capacity = MemoryManager.maxVertexCount;
         }
         public bool IsCreated{
             get{
@@ -151,6 +155,10 @@ namespace WorldGeneration.DataStructures
         public TempBuffer(NativeArray<ReuseCell> vertexIndices, NativeArray<CellIndices> transitionVertexIndices){
             this.vertexIndices = vertexIndices;
             this.transitionVertexIndices = transitionVertexIndices;
+        }
+        public void ClearBuffers(){
+            MemoryManager.ClearArray(vertexIndices, vertexIndices.Length);
+            MemoryManager.ClearArray(transitionVertexIndices, transitionVertexIndices.Length);
         }
         public void Dispose(){
             vertexIndices.Dispose();

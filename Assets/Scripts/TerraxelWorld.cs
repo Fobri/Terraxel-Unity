@@ -137,7 +137,7 @@ public TextMeshProUGUI[] debugLabels;
             if(debugMode){
                 for(int i = 0; i < chunkDatas.Count; i++){
                         vertCount += chunkDatas[i].vertCount;
-                        indexCount += chunkDatas[i].indexCount;
+                        indexCount += chunkDatas[i].idxCount;
                         totalGenTime += chunkDatas[i].genTime;
                 }
             }
@@ -235,7 +235,7 @@ public TextMeshProUGUI[] debugLabels;
                 }
                 if(drawChunkVariables.indexCount){
                     offset.y += 4f;
-                    Handles.Label(offset, chunkDatas[i].indexCount.ToString());
+                    Handles.Label(offset, chunkDatas[i].idxCount.ToString());
                 }
                 if(drawChunkVariables.maxVertexCount){
                     offset.y += 4f;

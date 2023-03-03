@@ -25,7 +25,7 @@ public class ChunkData : Octree{
         public DisposeState disposeStatus = DisposeState.NOTHING;
         public float genTime;
         public int vertCount;
-        public int indexCount;
+        public int idxCount;
         public bool hasMesh;
         public byte dirMask;
         SubMeshDescriptor desc = new SubMeshDescriptor();
@@ -193,6 +193,9 @@ public class ChunkData : Octree{
             int2 totalCount = new int2(meshData.vertexBuffer.Length, meshData.indexBuffer.Length);
             meshStarts[6] = totalCount;
             
+            vertCount = 0;
+            idxCount = 0;
+            
             var vertexCount = meshStarts[0].x;
             var indexCount = meshStarts[0].y;
             if (vertexCount > 0)
@@ -212,7 +215,7 @@ public class ChunkData : Octree{
                 mesh.SetSubMesh(0, desc, MESH_UPDATE_FLAGS);
                 
                 this.vertCount = vertexCount;
-                this.indexCount = indexCount;
+                this.idxCount = indexCount;
                 for(int i = 0; i < 6; i++){
                     var vertexStart = meshStarts[i].x;
                     var indexStart = meshStarts[i].y;
@@ -229,7 +232,7 @@ public class ChunkData : Octree{
                     desc.indexCount = indexEnd - indexStart;
                     transitionMesh.SetSubMesh(0, desc, MESH_UPDATE_FLAGS);
                     this.vertCount += vertexEnd - vertexStart;
-                    this.indexCount += indexEnd - indexStart;
+                    this.idxCount += indexEnd - indexStart;
                 }
                 if(depth < 3){
                     var colliderJob = new ChunkColliderBakeJob(){
@@ -239,8 +242,6 @@ public class ChunkData : Octree{
                     ScheduleJob(colliderJob, false);
                 }
             }else{
-                vertCount = 0;
-                indexCount = 0;
                 FreeChunkMesh();
             }
             //indexCounter.Dispose();
