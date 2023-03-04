@@ -175,12 +175,11 @@ public class ChunkManager
         if(chunk != null) toUpdate.Add(chunk);
         chunkTree.QueryColliding(new BoundingBox((float3)worldPos, new float3(radius)), toUpdate);
         for(int i = 0; i < toUpdate.Count; i++){
-            if(!toUpdate[i].IsReady) continue;
+            if(!toUpdate[i].IsReady || meshQueue.Contains(toUpdate[i] as ChunkData)) continue;
             UpdateChunk(toUpdate[i] as ChunkData);
             shouldUpdateTree = true;
         }
         if(chunk == null) chunk = chunkTree;
-        chunk.UpdateTreeRecursive();
     }
     public void RegenerateChunk(ChunkData chunk){
         if(chunkDatas.Count >= MemoryManager.maxBufferCount){ 
@@ -227,7 +226,8 @@ public class ChunkManager
                 chunkData.FreeChunkMesh();
                 return;
             }
-        }/*else if(chunkData.depth > 1){
+        }*/
+        /*if(chunkData.depth > 1){
             if(chunkData.WorldPosition.y != 0){
                 float dst = math.distance(new float2(TerraxelWorld.playerBounds.center.x, TerraxelWorld.playerBounds.center.z), new float2(chunkData.region.center.x, chunkData.region.center.z));
                 if(dst < 150){
@@ -240,7 +240,7 @@ public class ChunkManager
                     chunkData.vertexIndexBuffer = MemoryManager.GetVertexIndexBuffer();
                     chunkData.meshData = MemoryManager.GetMeshData();
                     chunkData.vertCount = 0;
-                    chunkData.indexCount = 0;
+                    chunkData.idxCount = 0;
                     chunkData.chunkState = ChunkData.ChunkState.DIRTY;
                     chunkData.UpdateMesh();
                     return;
@@ -253,7 +253,7 @@ public class ChunkManager
             chunkData.simpleMesh = simpleChunkPool.Dequeue();
             chunkData.simpleMesh.worldObject.transform.SetParent(activeParent);
             chunkData.vertCount = 1089;
-            chunkData.indexCount = 6144;
+            chunkData.idxCount = 6144;
             chunkData.chunkState = ChunkData.ChunkState.DIRTY;
             chunkData.UpdateMesh();
             return;

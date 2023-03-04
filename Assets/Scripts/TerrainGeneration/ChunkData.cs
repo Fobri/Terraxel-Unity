@@ -56,6 +56,7 @@ public class ChunkData : Octree{
         }
         internal override void OnJobsReady(){
             if(colliderBaking){
+                if(worldObject == null) return;
                 worldObject.GetComponent<MeshCollider>().sharedMesh = null;
                 worldObject.GetComponent<MeshCollider>().sharedMesh = worldObject.GetComponent<MeshFilter>().sharedMesh;
                 colliderBaking = false;
