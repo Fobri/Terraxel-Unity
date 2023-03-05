@@ -10,7 +10,7 @@ Shader "Custom/Triplanar"
 
         _BumpScale("Normal Strength", Float) = 1
         _BumpMap("Normal texture", 2D) = "bump" {}
-        _DirectionMask("Direction mask", Int) = 0
+        [PerRendererData]_DirectionMask("Direction mask", Int) = 0
     }
     SubShader
     {

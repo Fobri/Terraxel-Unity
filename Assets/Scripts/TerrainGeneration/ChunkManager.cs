@@ -76,6 +76,9 @@ public class ChunkManager
             return meshQueue.Count == 0 && MemoryManager.GetFreeVertexIndexBufferCount() == MemoryManager.maxConcurrentOperations;
         }
     }
+    public void RenderChunks(Plane[] frustumPlanes){
+        chunkTree.RenderChunksRecursive(frustumPlanes);
+    }
     public bool Update(){
         var disposeCount = disposeQueue.Count;
         for(int i = 0; i < disposeCount; i++){
@@ -138,13 +141,10 @@ public class ChunkManager
             chunk.worldObject.name = "Pooled chunk";
             chunk.worldObject.transform.SetParent(poolParent);
             chunk.worldObject.SetActive(true);
-            chunk.worldObject.GetComponent<MeshFilter>().sharedMesh.Clear();
             chunk.worldObject.GetComponent<MeshCollider>().sharedMesh = null;
-            for(int i = 0; i < 6; i++){
-                chunk.worldObject.transform.GetChild(i).GetComponent<MeshFilter>().sharedMesh.Clear();
-            }
             objectPool.Enqueue(chunk.worldObject);
         }
+        chunk.ClearMesh();
         chunk.hasMesh = false;
         chunk.worldObject = null;
         if(chunk.meshData.IsCreated){

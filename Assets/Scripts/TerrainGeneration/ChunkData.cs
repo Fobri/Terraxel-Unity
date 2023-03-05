@@ -6,6 +6,7 @@ using WorldGeneration;
 using UnityEngine.Rendering;
 using System;
 using WorldGeneration.DataStructures;
+using System.Collections.Generic;
 
 public class ChunkData : Octree{
     private const MeshUpdateFlags MESH_UPDATE_FLAGS = MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds | MeshUpdateFlags.DontResetBoneBounds;
@@ -17,6 +18,11 @@ public class ChunkData : Octree{
         public MeshData meshData;
         private NativeArray<int2> meshStarts;
         public GameObject worldObject;
+        Mesh[] transitionMeshes = new Mesh[6];
+        MaterialPropertyBlock propertyBlock;
+        Mesh chunkMesh;
+        bool active = true;
+        static Material chunkMaterial;
         public SimpleMeshData simpleMesh;
         //public Counter vertexCounter;
         //public Counter indexCounter;
@@ -43,22 +49,49 @@ public class ChunkData : Octree{
             chunkState = ChunkState.INVALID;
             disposeStatus = DisposeState.NOTHING;
             meshStarts = MemoryManager.GetMeshCounterArray();
+            chunkMesh = new Mesh();
+            for(int i = 0; i < transitionMeshes.Length; i++){
+                transitionMeshes[i] = new Mesh();
+            }
+            propertyBlock = new MaterialPropertyBlock();
+        }
+        static ChunkData(){
+            chunkMaterial = Resources.Load("TerrainMaterial", typeof(Material)) as Material;
         }
         //ROOT chunk
         public ChunkData() : base() {
+        }
+        public void SetActive(bool active){
+            this.active = active;
         }
         void InitWorldObject(){
             worldObject = TerraxelWorld.ChunkManager.GetChunkObject();
             worldObject.name = $"Chunk {WorldPosition.x}, {WorldPosition.y}, {WorldPosition.z}";
             worldObject.transform.position = WorldPosition;
-            if(onMeshReady == OnMeshReadyAction.ALERT_PARENT)
-                worldObject.SetActive(false);
+        }
+        public void RenderChunk(){
+            if(!active) return;
+            Graphics.DrawMesh(chunkMesh, WorldPosition, Quaternion.identity, chunkMaterial, 0, null, 0, propertyBlock, true, true, true);
+            for(int i = 0; i < transitionMeshes.Length; i++){
+                if(transitionMeshes[i] == null || (dirMask & transitionMeshIndexMap[i]) == 0) continue;
+                Graphics.DrawMesh(transitionMeshes[i], WorldPosition, Quaternion.identity, chunkMaterial, 0, null, 0, propertyBlock, true, true, true);
+            }
+        }
+        static readonly int[] transitionMeshIndexMap = new int[] {
+            0b_0000_0001, 0b_0000_0010, 0b_0001_0000, 0b_0010_0000, 0b_0000_0100, 0b_0000_1000
+        };
+        public void ClearMesh(){
+            if(chunkMesh == null) return;
+            chunkMesh.Clear();
+            for(int i = 0; i < 6; i++){
+                transitionMeshes[i].Clear();
+            }
         }
         internal override void OnJobsReady(){
             if(colliderBaking){
                 if(worldObject == null) return;
                 worldObject.GetComponent<MeshCollider>().sharedMesh = null;
-                worldObject.GetComponent<MeshCollider>().sharedMesh = worldObject.GetComponent<MeshFilter>().sharedMesh;
+                worldObject.GetComponent<MeshCollider>().sharedMesh = chunkMesh;
                 colliderBaking = false;
             }
             else
@@ -88,17 +121,18 @@ public class ChunkData : Octree{
         }
         public void RefreshRenderState(bool refreshNeighbours = false){
             UpdateDirectionMask(refreshNeighbours);
-            if(worldObject == null) return;
-            worldObject.GetComponent<MeshRenderer>().material.SetInt("_DirectionMask", dirMask);
+            //if(worldObject == null) return;
+            /*worldObject.GetComponent<MeshRenderer>().material.SetInt("_DirectionMask", dirMask);
             for(int i = 0; i < 6; i++){
                 worldObject.transform.GetChild(i).GetComponent<MeshRenderer>().material.SetInt("_DirectionMask", dirMask);
-            }
-            worldObject.transform.GetChild(0).gameObject.SetActive((dirMask & 0b_0000_0001) != 0);
+            }*/
+            propertyBlock?.SetInt("_DirectionMask", dirMask);
+            /*worldObject.transform.GetChild(0).gameObject.SetActive((dirMask & 0b_0000_0001) != 0);
             worldObject.transform.GetChild(1).gameObject.SetActive((dirMask & 0b_0000_0010) != 0);
             worldObject.transform.GetChild(4).gameObject.SetActive((dirMask & 0b_0000_0100) != 0);
             worldObject.transform.GetChild(5).gameObject.SetActive((dirMask & 0b_0000_1000) != 0);
             worldObject.transform.GetChild(2).gameObject.SetActive((dirMask & 0b_0001_0000) != 0);
-            worldObject.transform.GetChild(3).gameObject.SetActive((dirMask & 0b_0010_0000) != 0);
+            worldObject.transform.GetChild(3).gameObject.SetActive((dirMask & 0b_0010_0000) != 0);*/
         }
         public void UpdateMesh(){
             colliderBaking = false;
@@ -201,19 +235,19 @@ public class ChunkData : Octree{
             var indexCount = meshStarts[0].y;
             if (vertexCount > 0)
             {
-                if(worldObject == null)
-                    InitWorldObject();
-                var mesh = worldObject.GetComponent<MeshFilter>().sharedMesh;
+                if(onMeshReady == OnMeshReadyAction.ALERT_PARENT)
+                    SetActive(false);
+                //var mesh = worldObject.GetComponent<MeshFilter>().sharedMesh;
                 var bounds = new Bounds(new float3(ChunkManager.chunkResolution * depthMultiplier / 2), region.bounds);
-                mesh.bounds = bounds;
+                chunkMesh.bounds = bounds;
                 //Set vertices and indices
-                mesh.SetVertexBufferParams(vertexCount, layout);
-                mesh.SetVertexBufferData(meshData.vertexBuffer.AsArray(), 0, 0, vertexCount, 0, MESH_UPDATE_FLAGS);
-                mesh.SetIndexBufferParams(indexCount, IndexFormat.UInt16);
-                mesh.SetIndexBufferData(meshData.indexBuffer.AsArray(), 0, 0, indexCount,  MESH_UPDATE_FLAGS);
+                chunkMesh.SetVertexBufferParams(vertexCount, layout);
+                chunkMesh.SetVertexBufferData(meshData.vertexBuffer.AsArray(), 0, 0, vertexCount, 0, MESH_UPDATE_FLAGS);
+                chunkMesh.SetIndexBufferParams(indexCount, IndexFormat.UInt16);
+                chunkMesh.SetIndexBufferData(meshData.indexBuffer.AsArray(), 0, 0, indexCount,  MESH_UPDATE_FLAGS);
 
                 desc.indexCount = indexCount;
-                mesh.SetSubMesh(0, desc, MESH_UPDATE_FLAGS);
+                chunkMesh.SetSubMesh(0, desc, MESH_UPDATE_FLAGS);
                 
                 this.vertCount = vertexCount;
                 this.idxCount = indexCount;
@@ -222,22 +256,24 @@ public class ChunkData : Octree{
                     var indexStart = meshStarts[i].y;
                     var vertexEnd = meshStarts[i+1].x;
                     var indexEnd = meshStarts[i+1].y;
-                    var transitionMesh = worldObject.transform.GetChild(i).GetComponent<MeshFilter>().sharedMesh;
-                    transitionMesh.bounds = bounds;
+                    //var transitionMesh = worldObject.transform.GetChild(i).GetComponent<MeshFilter>().sharedMesh;
+                    transitionMeshes[i].bounds = bounds;
                     //Set vertices and indices
-                    transitionMesh.SetVertexBufferParams(vertexEnd - vertexStart, layout);
-                    transitionMesh.SetVertexBufferData(meshData.vertexBuffer.AsArray(), vertexStart, 0, vertexEnd - vertexStart, 0, MESH_UPDATE_FLAGS);
-                    transitionMesh.SetIndexBufferParams(indexEnd - indexStart, IndexFormat.UInt16);
-                    transitionMesh.SetIndexBufferData(meshData.indexBuffer.AsArray(), indexStart, 0, indexEnd - indexStart,  MESH_UPDATE_FLAGS);
+                    transitionMeshes[i].SetVertexBufferParams(vertexEnd - vertexStart, layout);
+                    transitionMeshes[i].SetVertexBufferData(meshData.vertexBuffer.AsArray(), vertexStart, 0, vertexEnd - vertexStart, 0, MESH_UPDATE_FLAGS);
+                    transitionMeshes[i].SetIndexBufferParams(indexEnd - indexStart, IndexFormat.UInt16);
+                    transitionMeshes[i].SetIndexBufferData(meshData.indexBuffer.AsArray(), indexStart, 0, indexEnd - indexStart,  MESH_UPDATE_FLAGS);
 
                     desc.indexCount = indexEnd - indexStart;
-                    transitionMesh.SetSubMesh(0, desc, MESH_UPDATE_FLAGS);
+                    transitionMeshes[i].SetSubMesh(0, desc, MESH_UPDATE_FLAGS);
                     this.vertCount += vertexEnd - vertexStart;
                     this.idxCount += indexEnd - indexStart;
                 }
                 if(depth < 3){
+                    if(worldObject == null)
+                        InitWorldObject();
                     var colliderJob = new ChunkColliderBakeJob(){
-                        meshId = mesh.GetInstanceID()
+                        meshId = chunkMesh.GetInstanceID()
                     };
                     colliderBaking = true;
                     ScheduleJob(colliderJob, false);

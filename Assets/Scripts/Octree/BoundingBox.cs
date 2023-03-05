@@ -8,17 +8,41 @@ public struct BoundingBox
 {
     public BoundingBox(Vector3 center, Vector3 bounds)
     {
-        this.center = center;
-        this.bounds = bounds;
+        this._center = center;
+        this._bounds = bounds;
+        cullRadius = 0f;
+        CalculateCullRadius();
     }
 
-    public void Draw()
+    public void DebugDraw()
     {
+        
+        Gizmos.color = Color.white;
         Gizmos.DrawWireCube(center, bounds);
+        //Gizmos.DrawSphere(center, cullRadius);
     }
-
-    public float3 center;
-    public float3 bounds;
+    public float cullRadius;
+    private float3 _center;
+    public float3 center{
+        get{
+            return _center;
+        }
+        set{
+            _center = value;
+        }
+    }
+    public float3 _bounds;
+    public float3 bounds{
+        get{
+            return _bounds;
+        }set{
+            _bounds = value;
+            CalculateCullRadius();
+        }
+    }
+    private void CalculateCullRadius(){
+        cullRadius = math.sqrt(math.pow(_bounds.x / 2, 2) + math.pow(_bounds.y / 2, 2) + math.pow(bounds.z / 2, 2));
+    }
 
     public bool IsColliding(BoundingBox other)
     {
@@ -35,6 +59,14 @@ public struct BoundingBox
         bool xContains = (Mathf.Abs(center.x - other.center.x) + (other.bounds.x / 2 + bounds.x / 2)) < bounds.x;
         bool yContains = (Mathf.Abs(center.y - other.center.y) + (other.bounds.y / 2 + bounds.x / 2)) < bounds.y;
         bool zContains = (Mathf.Abs(center.z - other.center.z) + (other.bounds.z / 2 + bounds.x / 2)) < bounds.z;
+
+        return xContains && yContains && zContains;
+    }
+    public bool Contains(float3 other)
+    {
+        bool xContains = (Mathf.Abs(center.x - other.x) + (bounds.x / 2)) < bounds.x;
+        bool yContains = (Mathf.Abs(center.y - other.y) + (bounds.x / 2)) < bounds.y;
+        bool zContains = (Mathf.Abs(center.z - other.z) + (bounds.x / 2)) < bounds.z;
 
         return xContains && yContains && zContains;
     }

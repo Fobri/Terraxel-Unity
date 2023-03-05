@@ -195,7 +195,7 @@ public abstract class Octree : JobRunner
             if(children[i].chunkData.chunkState != ChunkData.ChunkState.READY) return;
         }
         for (int i = 0; i < 8; i++){
-            children[i].chunkData.worldObject?.SetActive(true);
+            children[i].chunkData.SetActive(true);
         }
         chunkData.FreeChunkMesh();
         chunkData.RefreshRenderState(true);
@@ -235,6 +235,31 @@ public abstract class Octree : JobRunner
                 if(children[i] == null) return;
             }
             children[i].UpdateTreeRecursive();
+        }
+    }
+    public void RenderChunksRecursive(Plane[] frustumPlanes){
+        chunkData.RenderChunk();
+        if(!HasSubChunks) return;
+        for(int s = 0; s < 8; s++){
+            if(GeometryUtility.TestPlanesAABB(frustumPlanes, new Bounds(children[s].region.center,children[s].region.bounds))){
+                children[s].RenderChunksRecursive(frustumPlanes);
+                //break;
+            }
+            /*for(int i = 0; i < 6; i++){
+                var dst = math.dot(frustumPlanes[i].normal, children[s].region.center) + frustumPlanes[i].distance;
+                if(math.abs(dst) < children[s].region.cullRadius){
+                    children[s].RenderChunksRecursive(frustumPlanes);
+                    break;
+                }
+            }
+            /*var corners = children[s].region.GetCorners();
+            for(int i = 0; i < 8; i++){
+                var viewPortPos = TerraxelWorld.renderCamera.WorldToViewportPoint(corners[i]);
+                if(viewPortPos.z >= 0 && (viewPortPos.x > 0 && viewPortPos.x < 1 && viewPortPos.y > 0 && viewPortPos.y < 1) || children[s].region.Contains(playerPos)){
+                    children[s].RenderChunksRecursive(playerPos);
+                    break;
+                }
+            }*/
         }
     }
     private ChunkData chunkData{

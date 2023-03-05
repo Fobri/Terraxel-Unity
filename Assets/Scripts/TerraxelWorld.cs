@@ -22,6 +22,7 @@ public class TerraxelWorld : MonoBehaviour
     public enum WorldState { DENSITY_UPDATE, MESH_UPDATE, IDLE }
     [ShowInInspector]
     public static WorldState worldState = WorldState.IDLE;
+    public static Camera renderCamera;
     public GameObject player;
     public static BoundingBox playerBounds;
     public NoiseProperties noiseData;
@@ -105,6 +106,7 @@ public class TerraxelWorld : MonoBehaviour
 #endif
 public TextMeshProUGUI[] debugLabels;
     public void Start(){
+        renderCamera = Camera.main;
         MemoryManager.Init();
         playerBounds = new BoundingBox(player.transform.position, new float3(ChunkManager.chunkResolution));
         DensityManager = new DensityManager();
@@ -142,6 +144,11 @@ public TextMeshProUGUI[] debugLabels;
                 }
             }
         }
+        /*for(int i = 0; i < ChunkManager.GetDebugArray().Count; i++){
+            ChunkManager.GetDebugArray()[i].RenderChunk();
+        }*/
+        var planes = GeometryUtility.CalculateFrustumPlanes(renderCamera);
+        ChunkManager.RenderChunks(planes);
         if(worldState == WorldState.DENSITY_UPDATE){
             if(DensityManager.Update()){
                 worldState = WorldState.IDLE;
@@ -253,7 +260,7 @@ public TextMeshProUGUI[] debugLabels;
                     Handles.Label(offset, Utils.DirectionMaskToString(chunkDatas[i].dirMask));
                 }
                 if(drawChunkBounds){
-                    Gizmos.DrawWireCube(chunkDatas[i].region.center, chunkDatas[i].region.bounds);
+                    chunkDatas[i].region.DebugDraw();
                 }
             }
         }
