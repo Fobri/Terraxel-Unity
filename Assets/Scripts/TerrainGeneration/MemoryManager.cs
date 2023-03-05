@@ -16,6 +16,7 @@ public class MemoryManager{
     public const int maxConcurrentOperations = 4;
     public const int maxVertexCount = 10000;
     public const int densityMapLength = (ChunkManager.chunkResolution)*(ChunkManager.chunkResolution)*(ChunkManager.chunkResolution);
+    public const int grassAmount = 10000;
     static Queue<MeshData> freeMeshDatas;
     static MeshData[] meshDatas;
     static Queue<TempBuffer> freeVertexIndexBuffers;
@@ -80,7 +81,8 @@ public class MemoryManager{
         for(int i = 0; i < maxBufferCount; i++){
             var verts = new NativeList<TransitionVertexData>(maxVertexCount, Allocator.Persistent);
             var indices = new NativeList<ushort>(maxVertexCount, Allocator.Persistent);
-            freeMeshDatas.Enqueue(new MeshData(verts, indices));
+            var grassPositions = new NativeList<Matrix4x4>(grassAmount, Allocator.Persistent);
+            freeMeshDatas.Enqueue(new MeshData(verts, indices, grassPositions));
         }
         for(int i = 0; i < densityCount; i++){
             var densities = densityMap.GetSubArray(i*densityMapLength, densityMapLength);

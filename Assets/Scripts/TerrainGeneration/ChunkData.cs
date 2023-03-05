@@ -23,6 +23,9 @@ public class ChunkData : Octree{
         Mesh chunkMesh;
         bool active = true;
         static Material chunkMaterial;
+        static Mesh grassMesh;
+        static Material grassMaterial;
+        public Matrix4x4[] grassPositions;
         public SimpleMeshData simpleMesh;
         //public Counter vertexCounter;
         //public Counter indexCounter;
@@ -57,6 +60,8 @@ public class ChunkData : Octree{
         }
         static ChunkData(){
             chunkMaterial = Resources.Load("TerrainMaterial", typeof(Material)) as Material;
+            grassMesh = Resources.Load("GrassMesh", typeof(Mesh)) as Mesh;
+            grassMaterial = Resources.Load("GrassMaterial", typeof(Material)) as Material;
         }
         //ROOT chunk
         public ChunkData() : base() {
@@ -74,7 +79,10 @@ public class ChunkData : Octree{
             Graphics.DrawMesh(chunkMesh, WorldPosition, Quaternion.identity, chunkMaterial, 0, null, 0, propertyBlock, true, true, true);
             for(int i = 0; i < transitionMeshes.Length; i++){
                 if(transitionMeshes[i] == null || (dirMask & transitionMeshIndexMap[i]) == 0) continue;
-                Graphics.DrawMesh(transitionMeshes[i], WorldPosition, Quaternion.identity, chunkMaterial, 0, null, 0, propertyBlock, true, true, true);
+                Graphics.DrawMesh(transitionMeshes[i], WorldPosition, Quaternion.identity, chunkMaterial, 0, null, 0, propertyBlock, false, true, true);
+            }
+            if(grassPositions != null){
+                Graphics.DrawMeshInstanced(grassMesh, 0, grassMaterial, grassPositions, meshData.grassPositions.Length, null, ShadowCastingMode.On, false, 0, null, LightProbeUsage.Off, null);
             }
         }
         static readonly int[] transitionMeshIndexMap = new int[] {
@@ -188,6 +196,16 @@ public class ChunkData : Octree{
                 negativeDepthMultiplier = negativeDepthMultiplier
             };
             base.ScheduleJobFor(transitionJob, 6 * (ChunkManager.chunkResolution) * (ChunkManager.chunkResolution), true);
+            var _pos = (int3)WorldPosition;
+            var grassJob = new GrassJob{
+                offset = new float2(_pos.x, _pos.z),
+                depthMultiplier = depthMultiplier,
+                size = ChunkManager.chunkResolution + 1,
+                noiseProperties = TerraxelWorld.DensityManager.GetNoiseProperties(),
+                positions = meshData.grassPositions,
+                rng = new Unity.Mathematics.Random(1)
+            };
+            base.ScheduleJobFor(grassJob, 1023, false);
         }
         bool CheckNeighbour(int3 relativeOffset, bool refreshNeighbours = false){
             float3 pos = ChunkManager.chunkResolution * depthMultiplier * relativeOffset;
@@ -209,6 +227,7 @@ public class ChunkData : Octree{
             return false;
         }
         public void ApplyMesh(){
+            grassPositions = meshData.grassPositions.ToArray();
             if(simpleMesh != null){
                 simpleMesh.worldObject.SetActive(true);
                 simpleMesh.worldObject.transform.localScale = new float3(depthMultiplier, 1, depthMultiplier);

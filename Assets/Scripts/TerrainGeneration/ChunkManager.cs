@@ -146,6 +146,7 @@ public class ChunkManager
         }
         chunk.ClearMesh();
         chunk.hasMesh = false;
+        chunk.grassPositions = null;
         chunk.worldObject = null;
         if(chunk.meshData.IsCreated){
             MemoryManager.ReturnMeshData(chunk.meshData);

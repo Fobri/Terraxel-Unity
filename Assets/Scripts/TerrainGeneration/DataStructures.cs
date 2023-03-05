@@ -95,10 +95,13 @@ namespace WorldGeneration.DataStructures
         
         public NativeList<TransitionVertexData> vertexBuffer;
         public NativeList<ushort> indexBuffer;
+        [WriteOnly]
+        public NativeList<Matrix4x4> grassPositions;
 
-        public MeshData(NativeList<TransitionVertexData> vertexBuffer, NativeList<ushort> indexBuffer){
+        public MeshData(NativeList<TransitionVertexData> vertexBuffer, NativeList<ushort> indexBuffer, NativeList<Matrix4x4> grassPositions){
             this.vertexBuffer = vertexBuffer;
             this.indexBuffer = indexBuffer;
+            this.grassPositions = grassPositions;
         }
         public void ClearBuffers(){
             MemoryManager.ClearArray(vertexBuffer.AsArray(), vertexBuffer.Length);
@@ -107,6 +110,9 @@ namespace WorldGeneration.DataStructures
             MemoryManager.ClearArray(indexBuffer.AsArray(), indexBuffer.Length);
             indexBuffer.Length = 0;
             indexBuffer.Capacity = MemoryManager.maxVertexCount;
+            MemoryManager.ClearArray(grassPositions.AsArray(), grassPositions.Length);
+            grassPositions.Length = 0;
+            grassPositions.Capacity = MemoryManager.grassAmount;
         }
         public bool IsCreated{
             get{
@@ -116,6 +122,7 @@ namespace WorldGeneration.DataStructures
         public void Dispose(){
             indexBuffer.Dispose();
             vertexBuffer.Dispose();
+            grassPositions.Dispose();
         }
     }
     public struct ReuseCell{

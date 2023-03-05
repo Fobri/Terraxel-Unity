@@ -596,13 +596,30 @@ namespace WorldGeneration
         [ReadOnly] public int size;
         [WriteOnly, NativeDisableParallelForRestriction] public NativeArray<float> heightMap;
         [ReadOnly] public NoiseProperties noiseProperties;
-
         public void Execute(int index)
         {
             var value = DensityGenerator.SurfaceNoise2D(Utils.IndexToXz(index, size) * depthMultiplier + offset, noiseProperties);
             heightMap[index] = value;
         }
         
+    }
+    [BurstCompile]
+    public struct GrassJob : IJobFor
+    {
+        [ReadOnly] public float2 offset;
+        [ReadOnly] public int depthMultiplier;
+        [ReadOnly] public int size;
+        [ReadOnly] public NoiseProperties noiseProperties;
+        public Unity.Mathematics.Random rng;
+        [WriteOnly] public NativeList<Matrix4x4> positions;
+        public void Execute(int index){
+            var pos = Utils.IndexToXz(index, size) * depthMultiplier + offset;
+            var value = DensityGenerator.SurfaceNoise2D(pos, noiseProperties);
+            var chance = rng.NextFloat(0f, 100f);
+            if(value > chance){
+                positions.Add(Matrix4x4.TRS(new float3(pos.x, value, pos.y), math.quaternion(0,0,0,1), (float3)1f));
+            }
+        }
     }
 
     internal class Tables
