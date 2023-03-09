@@ -5,6 +5,7 @@ using Unity.Collections.LowLevel.Unsafe;
 using System.Runtime.CompilerServices;
 using System;
 using UnityEngine;
+using System.Globalization;
 
 namespace WorldGeneration.DataStructures
 {
@@ -75,6 +76,15 @@ namespace WorldGeneration.DataStructures
             return Convert.ToSByte(math.clamp(-density * 127f, -127f, 127f));
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static sbyte FinalNoise(float3 worldPos, float ampl, float freq, int seed, int oct, int surfaceLevel)
+        {   
+            //pos -= depthMultiplier;
+            float value = SurfaceNoise2D(new float2(worldPos.x, worldPos.z), ampl, freq, seed, oct);
+            float yPos = surfaceLevel + worldPos.y;
+            float density = (value + surfaceLevel - yPos) * 0.1f;
+            return Convert.ToSByte(math.clamp(-density * 127f, -127f, 127f));
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float SurfaceNoise2D(float2 worldPos, NoiseProperties noiseProperties)
         {
             float total = 0;
@@ -90,6 +100,7 @@ namespace WorldGeneration.DataStructures
             //total = total % 5f;
             return total / noiseProperties.oct;
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float SurfaceNoise2D(float2 worldPos, float ampl, float freq, int seed, int oct)
         {
             float total = 0;
@@ -104,6 +115,18 @@ namespace WorldGeneration.DataStructures
             }
             //total = total % 5f;
             return total / oct;
+        }
+    }
+    public class NoiseGraphInput{
+        public string generatorString;
+        public float[] previewValues;
+        public float this[int index]{
+            get{
+            return previewValues[index];
+            }   
+            set{
+                previewValues[index] = value;
+            }
         }
     }
     public struct MeshData : System.IDisposable{
@@ -188,6 +211,9 @@ namespace WorldGeneration.DataStructures
         }
     }
     public class Utils{
+        public static string floatToString(float value){
+            return value.ToString("F4", new CultureInfo("en-US"))+"f";
+        }
         public static int XyzToIndex(int x, int y, int z, int size)
         {
             return y * size * size + z * size + x;

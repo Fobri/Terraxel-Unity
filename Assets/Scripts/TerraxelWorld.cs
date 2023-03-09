@@ -25,6 +25,7 @@ public class TerraxelWorld : MonoBehaviour
     public static Camera renderCamera;
     public GameObject player;
     public static BoundingBox playerBounds;
+    public static int seed = 1;
     public NoiseProperties noiseData;
     public Transform poolParent;
     public Transform activeParent;

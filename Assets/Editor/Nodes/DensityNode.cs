@@ -8,59 +8,42 @@ using WorldGeneration.DataStructures;
 using UnityEditor.UIElements;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine.UIElements;
-using System;
 
 [System.Serializable, NodeMenuItem("Density/Noise")]
-public class DensityNode : BaseNode
+public class DensityNode : TerraxelPreviewNode
 {
 	[Input(name = "X"), ShowAsDrawer]
-    public string               x = "1";
+    public float               x = 1;
 	[Input(name = "Y"), ShowAsDrawer]
-    public string               y = "1";
+    public float               y = 1;
 
 	[Input(name = "Frequency"), ShowAsDrawer]
-	public string frequency = "60";
+	public float frequency = 60;
 	[Input(name = "Amplitude"), ShowAsDrawer]
-	public string amplitude = "1";
+	public float amplitude = 1;
 	[Input(name = "Octaves"), ShowAsDrawer]
-	public string octaves = "2";
-	float[][] inputValues;
-
-	[Output(name = "Out")]
-	public string				output;
+	public int octaves = 2;
+	NoiseGraphInput[] inputValues;
 
 	public override string		name => "Noise";
 	private NoiseProperties noiseProperties;
-
-	[HideInInspector]
-	public float[] values;
 	//public static int2 curIndex = 0;
 
-	private float _x;
-	private float _y;
-	private float _frequency;
-	private float _amplitude;
-	private int _octaves;
-
 	protected override void Enable(){
+		base.Enable();
 		UpdateNoiseProperties();
-		inputValues = new float[5][];
-		values = new float[128*128];
+		inputValues = new NoiseGraphInput[5];
+		Process();
 	}
 	protected override void Process()
 	{
-		_x = float.Parse(x);
-		_y = float.Parse(y);
-		_frequency = float.Parse(frequency);
-		_amplitude = float.Parse(amplitude);
-		_octaves = int.Parse(octaves);
 		UpdateNoiseProperties();
 		//var value = DensityGenerator.SurfaceNoise2D(input + new Vector2(curIndex.x, curIndex.y), noiseProperties);
 		//output = value;
 		//values[curIndex.y * 128 + curIndex.x] = value;
 		for(int x = 0; x < 128; x++){
 			for(int y = 0; y < 128; y++){
-				float2 multiplier = new float2(_x,_y);
+				float2 multiplier = new float2(this.x,this.y);
 				if(inputValues[0] != null){
 					multiplier.x = inputValues[0][y * 128 + x];
 				}
@@ -76,18 +59,20 @@ public class DensityNode : BaseNode
 				if(inputValues[4] != null){
 					noiseProperties.oct = (int)inputValues[4][y * 128 + x];
 				}
-				var value = (DensityGenerator.SurfaceNoise2D(new float2(x,y) * multiplier, noiseProperties) + 1) / 2;
+				var value = (DensityGenerator.SurfaceNoise2D(new float2(x,y) + multiplier, noiseProperties) + 1) / 2;
 				values[y * 128 + x] = value;
 			}
 		}
-		output = $"DensityGenerator.SurfaceNoise2D(new float2(x, y) * new float2({x},{y}), {amplitude}, {frequency}, 300, {octaves});";
+		var seed = new Unity.Mathematics.Random((uint)TerraxelWorld.seed);
+		values.generatorString = "DensityGenerator.FinalNoise(pos + new float3("+(inputValues[0] != null ? inputValues[0].generatorString : Utils.floatToString(x))+",0,"+(inputValues[1] != null ? inputValues[1].generatorString : Utils.floatToString(y))+
+									"), "+(inputValues[3] != null ? inputValues[3].generatorString : Utils.floatToString(amplitude))+", "+(inputValues[2] != null ? inputValues[2].generatorString : Utils.floatToString(frequency * 0.0001f))+", "+seed.NextInt(-1_000_000, 1_000_000)+", "+(inputValues[4] != null ? inputValues[4].generatorString : octaves)+",11)";
 	    //outputs = DensityGenerator.SurfaceNoise2D(input, noiseProperties);
 	}
 	void UpdateNoiseProperties(){
 		if(noiseProperties.Equals(default)) noiseProperties = new NoiseProperties();
-		noiseProperties.ampl = _amplitude;
-		noiseProperties.freq = _frequency * 0.001f;
-		noiseProperties.oct = _octaves;
+		noiseProperties.ampl = amplitude;
+		noiseProperties.freq = frequency * 0.001f;
+		noiseProperties.oct = octaves;
 		noiseProperties.seed = 300;
 		noiseProperties.surfaceLevel = 0;
 	}
@@ -122,64 +107,78 @@ public class DensityNode : BaseNode
 	}*/
 	// This function will be called once per port created from the `inputs` custom port function
 	// will in parameter the list of the edges connected to this port
-	[CustomPortInput(nameof(x), typeof(string))]
+	[CustomPortInput(nameof(x), typeof(NoiseGraphInput))]
 	void PullX(List< SerializableEdge > inputEdges)
 	{
 		if(inputEdges.Count == 0){
 			inputValues[0] = null;
 			return;
 		}
-		inputValues[0] = (float[])inputEdges[0].passThroughBuffer;
+		inputValues[0] = new NoiseGraphInput();
+		var buffer = ((NoiseGraphInput)inputEdges.First().passThroughBuffer);
+		inputValues[0].previewValues = buffer.previewValues;
+		inputValues[0].generatorString = buffer.generatorString;
 		//values.AddRange(inputEdges.Select(e => e.passThroughBuffer).ToList());
 	}
-	[CustomPortInput(nameof(y), typeof(string))]
+	[CustomPortInput(nameof(y), typeof(NoiseGraphInput))]
 	void PullY(List< SerializableEdge > inputEdges)
 	{
 		if(inputEdges.Count == 0){
-			inputValues[1] = null;
+			inputValues[0] = null;
 			return;
 		}
-		inputValues[1] = (float[])inputEdges[0].passThroughBuffer;
+		inputValues[1] = new NoiseGraphInput();
+		var buffer = ((NoiseGraphInput)inputEdges.First().passThroughBuffer);
+		inputValues[1].previewValues = buffer.previewValues;
+		inputValues[1].generatorString = buffer.generatorString;
 		//values.AddRange(inputEdges.Select(e => e.passThroughBuffer).ToList());
 	}
-	[CustomPortInput(nameof(frequency), typeof(string))]
+	[CustomPortInput(nameof(frequency), typeof(NoiseGraphInput))]
 	void PullFrequency(List< SerializableEdge > inputEdges)
 	{
 		if(inputEdges.Count == 0){
-			inputValues[2] = null;
+			inputValues[0] = null;
 			return;
 		}
-		inputValues[2] = (float[])inputEdges[0].passThroughBuffer;
+		
+		inputValues[2] = new NoiseGraphInput();
+		var buffer = ((NoiseGraphInput)inputEdges.First().passThroughBuffer);
+		inputValues[2].previewValues = buffer.previewValues;
+		inputValues[2].generatorString = buffer.generatorString;
 		//values.AddRange(inputEdges.Select(e => e.passThroughBuffer).ToList());
 	}
-	[CustomPortInput(nameof(amplitude), typeof(string))]
+	[CustomPortInput(nameof(amplitude), typeof(NoiseGraphInput))]
 	void PullAmplitude(List< SerializableEdge > inputEdges)
 	{
 		if(inputEdges.Count == 0){
-			inputValues[3] = null;
+			inputValues[0] = null;
 			return;
 		}
-		inputValues[3] = (float[])inputEdges[0].passThroughBuffer;
+		
+		inputValues[3] = new NoiseGraphInput();
+		var buffer = ((NoiseGraphInput)inputEdges.First().passThroughBuffer);
+		inputValues[3].previewValues = buffer.previewValues;
+		inputValues[3].generatorString = buffer.generatorString;
 		//values.AddRange(inputEdges.Select(e => e.passThroughBuffer).ToList());
 	}
-	[CustomPortInput(nameof(octaves), typeof(string))]
+	[CustomPortInput(nameof(octaves), typeof(NoiseGraphInput))]
 	void PullOctaves(List< SerializableEdge > inputEdges)
 	{
 		if(inputEdges.Count == 0){
-			inputValues[4] = null;
+			inputValues[0] = null;
 			return;
 		}
-		inputValues[4] = (float[])inputEdges[0].passThroughBuffer;
+		
+		inputValues[4] = new NoiseGraphInput();
+		var buffer = ((NoiseGraphInput)inputEdges.First().passThroughBuffer);
+		inputValues[4].previewValues = buffer.previewValues;
+		inputValues[4].generatorString = buffer.generatorString;
 		//values.AddRange(inputEdges.Select(e => e.passThroughBuffer).ToList());
 	}
-	[CustomPortOutput(nameof(output), typeof(string))]
+	[CustomPortOutput(nameof(output), typeof(NoiseGraphInput))]
 	void PushOutputs(List< SerializableEdge > connectedEdges)
 	{
-		// Values length is supposed to match connected edges length
 		for (int i = 0; i < connectedEdges.Count; i++)
 			connectedEdges[i].passThroughBuffer = values;
-			
-		// once the outputs are pushed, we don't need the inputs data anymore
-		//values.Clear();
 	}
 }

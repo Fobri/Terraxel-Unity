@@ -258,7 +258,7 @@ namespace WorldGeneration
                 }else if(densities.IsEmpty(chunkPos)) {return 127;}
                 else if(densities.IsFull(chunkPos)) {return -127;}
                 else{
-                    return DensityGenerator.FinalNoise(worldPos, densities.noiseProperties);
+                    return GeneratedDensityJob.GenerateDensity(worldPos);
                 }
             }
             unsafe{
@@ -520,7 +520,7 @@ namespace WorldGeneration
                 }else if(densities.IsEmpty(chunkPos)) {return 127;}
                 else if(densities.IsFull(chunkPos)) {return -127;}
                 else{
-                    return DensityGenerator.FinalNoise(worldPos, densities.noiseProperties);
+                    return GeneratedDensityJob.GenerateDensity(worldPos);
                 }
             }
             unsafe{

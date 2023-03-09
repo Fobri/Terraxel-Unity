@@ -16,7 +16,7 @@ public class DensityManager : JobRunner, IDisposable {
     DensityData densityData;
     //Queue<NoiseJob> operationQueue = new Queue<NoiseJob>();
     //Queue<KeyValuePair<int3, IntPtr>> operationQueue = new Queue<KeyValuePair<int3, IntPtr>>();
-    Queue<NoiseJob> operationQueue = new Queue<NoiseJob>();
+    Queue<GeneratedDensityJob> operationQueue = new Queue<GeneratedDensityJob>();
     Queue<KeyValuePair<int3, sbyte>> modifications = new Queue<KeyValuePair<int3, sbyte>>();
     Dictionary<int3, DensityResultData> currentlyProcessedPositions = new Dictionary<int3, DensityResultData>();
 
@@ -137,7 +137,7 @@ public class DensityManager : JobRunner, IDisposable {
         return densityData.fullChunks.Contains(pos) || densityData.emptyChunks.Contains(pos);
     }
     void LoadDensityAtPosition(int3 pos, bool allowEmptyOrFull = true){
-        var noiseJob = new NoiseJob()
+        var noiseJob = new GeneratedDensityJob()
         {
             offset = pos,
             size = ChunkManager.chunkResolution,
@@ -223,7 +223,7 @@ public struct DensityData : IDisposable{
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public sbyte GenerateDensity(int3 worldPos){
-        return DensityGenerator.FinalNoise(worldPos, noiseProperties);
+        return GeneratedDensityJob.GenerateDensity(worldPos);
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IntPtr GetDensityMap(int3 chunkPos){
