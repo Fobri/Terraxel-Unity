@@ -84,11 +84,26 @@ namespace WorldGeneration.DataStructures
             {
                 total += noise.snoise(math.float2((worldPos.x + noiseProperties.seed) * _freq, (worldPos.y + noiseProperties.seed) * _freq)) * _ampl;
 
-                _ampl *= 2;
+                //_ampl *= 2;
                 _freq *= 0.5f;
             }
             //total = total % 5f;
-            return total;
+            return total / noiseProperties.oct;
+        }
+        public static float SurfaceNoise2D(float2 worldPos, float ampl, float freq, int seed, int oct)
+        {
+            float total = 0;
+            var _ampl = ampl;
+            var _freq = freq;
+            for (int i = 0; i < oct; i++)
+            {
+                total += noise.snoise(math.float2((worldPos.x + seed) * _freq, (worldPos.y + seed) * _freq)) * _ampl;
+
+                //_ampl *= 2;
+                _freq *= 0.5f;
+            }
+            //total = total % 5f;
+            return total / oct;
         }
     }
     public struct MeshData : System.IDisposable{
