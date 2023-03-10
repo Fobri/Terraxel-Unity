@@ -119,6 +119,7 @@ namespace WorldGeneration.DataStructures
     }
     public class NoiseGraphInput{
         public string generatorString;
+        public string generator2DString;
         public float[] previewValues;
         public float this[int index]{
             get{

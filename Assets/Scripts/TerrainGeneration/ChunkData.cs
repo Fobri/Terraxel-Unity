@@ -79,7 +79,7 @@ public class ChunkData : Octree{
             Graphics.DrawMesh(chunkMesh, WorldPosition, Quaternion.identity, chunkMaterial, 0, null, 0, propertyBlock, true, true, true);
             for(int i = 0; i < transitionMeshes.Length; i++){
                 if(transitionMeshes[i] == null || (dirMask & transitionMeshIndexMap[i]) == 0) continue;
-                Graphics.DrawMesh(transitionMeshes[i], WorldPosition, Quaternion.identity, chunkMaterial, 0, null, 0, propertyBlock, false, true, true);
+                Graphics.DrawMesh(transitionMeshes[i], WorldPosition, Quaternion.identity, chunkMaterial, 0, null, 0, propertyBlock, true, true, true);
             }
             if(grassPositions != null){
                 Graphics.DrawMeshInstanced(grassMesh, 0, grassMaterial, grassPositions, meshData.grassPositions.Length, null, ShadowCastingMode.On, false, 0, null, LightProbeUsage.Off, null);

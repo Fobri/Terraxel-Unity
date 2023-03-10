@@ -66,7 +66,7 @@ Shader "Custom/Triplanar"
             }
             v.vertex = vertPos;
             data.localCoord = vertPos.xyz;
-            data.localNormal = v.normal.xyz;
+            data.localNormal = mul(unity_ObjectToWorld, v.normal.xyz);
         }
 
         void surf (Input IN, inout SurfaceOutputStandard o)
@@ -76,7 +76,7 @@ Shader "Custom/Triplanar"
             // Blending factor of triplanar mapping
             float3 bf = abs(IN.localNormal);
             bf /= dot(bf, (float3)1);
-
+        
             // Triplanar mapping
             float2 tx = IN.localCoord.yz * _MapScale;
             float2 ty = IN.localCoord.zx * _MapScale;

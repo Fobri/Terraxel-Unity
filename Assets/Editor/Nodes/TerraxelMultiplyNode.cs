@@ -35,6 +35,7 @@ public class TerraxelMultiplyNode : TerraxelPreviewNode
 			}
 		}else return;
 		values.generatorString = "("+(dataA != null ? dataA.generatorString : A)+" * "+(dataB != null ? dataB.generatorString : B)+")";
+		values.generator2DString = "("+(dataA != null ? dataA.generator2DString : A)+" * "+(dataB != null ? dataB.generator2DString : B)+")";
 	}
 	[CustomPortInput(nameof(A), typeof(NoiseGraphInput))]
 	void PullA(List< SerializableEdge > inputEdges)
@@ -47,6 +48,7 @@ public class TerraxelMultiplyNode : TerraxelPreviewNode
 		var buffer = ((NoiseGraphInput)inputEdges.First().passThroughBuffer);
 		dataA.previewValues = buffer.previewValues;
 		dataA.generatorString = buffer.generatorString;
+		dataA.generator2DString = buffer.generator2DString;
 	}
 	[CustomPortInput(nameof(B), typeof(NoiseGraphInput))]
 	void PullB(List< SerializableEdge > inputEdges)
@@ -59,6 +61,7 @@ public class TerraxelMultiplyNode : TerraxelPreviewNode
 		var buffer = ((NoiseGraphInput)inputEdges.First().passThroughBuffer);
 		dataB.previewValues = buffer.previewValues;
 		dataB.generatorString = buffer.generatorString;
+		dataB.generator2DString = buffer.generator2DString;
 	}
 	[CustomPortOutput(nameof(output), typeof(NoiseGraphInput))]
 	void PushOutputs(List< SerializableEdge > connectedEdges)

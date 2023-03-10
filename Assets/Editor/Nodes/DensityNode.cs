@@ -64,9 +64,15 @@ public class DensityNode : TerraxelPreviewNode
 			}
 		}
 		var seed = new Unity.Mathematics.Random((uint)TerraxelWorld.seed);
-		values.generatorString = "DensityGenerator.FinalNoise(pos + new float3("+(inputValues[0] != null ? inputValues[0].generatorString : Utils.floatToString(x))+",0,"+(inputValues[1] != null ? inputValues[1].generatorString : Utils.floatToString(y))+
-									"), "+(inputValues[3] != null ? inputValues[3].generatorString : Utils.floatToString(amplitude))+", "+(inputValues[2] != null ? inputValues[2].generatorString : Utils.floatToString(frequency * 0.0001f))+", "+seed.NextInt(-1_000_000, 1_000_000)+", "+(inputValues[4] != null ? inputValues[4].generatorString : octaves)+",11)";
-	    //outputs = DensityGenerator.SurfaceNoise2D(input, noiseProperties);
+		var _x = inputValues[0] != null ? inputValues[0].generatorString : Utils.floatToString(x);
+		var _y = inputValues[1] != null ? inputValues[1].generatorString : Utils.floatToString(y);
+		var _x2d = inputValues[0] != null ? inputValues[0].generator2DString : Utils.floatToString(x);
+		var _y2d = inputValues[1] != null ? inputValues[1].generator2DString : Utils.floatToString(y);
+		values.generatorString = 	"DensityGenerator.FinalNoise(pos"+ ((_x2d != "0.0000f" || _y2d != "0.0000f") ? " + new float3("+_x2d+",0,"+_y2d+")" : "") +
+									", "+(inputValues[3] != null ? inputValues[3].generatorString : Utils.floatToString(amplitude * 24))+", "+(inputValues[2] != null ? inputValues[2].generatorString : Utils.floatToString(frequency * 0.0004f))+", "+seed.NextInt(-1_000_000, 1_000_000)+", "+(inputValues[4] != null ? inputValues[4].generatorString : octaves)+",0)";
+	    values.generator2DString = "DensityGenerator.SurfaceNoise2D(pos2D"+ ((_x2d != "0.0000f" || _y2d != "0.0000f") ? " + new float2("+_x2d+","+_y2d+")" : "") +
+									", "+(inputValues[3] != null ? inputValues[3].generator2DString : Utils.floatToString(amplitude * 24))+", "+(inputValues[2] != null ? inputValues[2].generator2DString : Utils.floatToString(frequency * 0.0004f))+", "+seed.NextInt(-1_000_000, 1_000_000)+", "+(inputValues[4] != null ? inputValues[4].generator2DString : octaves)+")";
+		//outputs = DensityGenerator.SurfaceNoise2D(input, noiseProperties);
 	}
 	void UpdateNoiseProperties(){
 		if(noiseProperties.Equals(default)) noiseProperties = new NoiseProperties();
@@ -118,6 +124,7 @@ public class DensityNode : TerraxelPreviewNode
 		var buffer = ((NoiseGraphInput)inputEdges.First().passThroughBuffer);
 		inputValues[0].previewValues = buffer.previewValues;
 		inputValues[0].generatorString = buffer.generatorString;
+		inputValues[0].generator2DString = buffer.generator2DString;
 		//values.AddRange(inputEdges.Select(e => e.passThroughBuffer).ToList());
 	}
 	[CustomPortInput(nameof(y), typeof(NoiseGraphInput))]
@@ -131,6 +138,7 @@ public class DensityNode : TerraxelPreviewNode
 		var buffer = ((NoiseGraphInput)inputEdges.First().passThroughBuffer);
 		inputValues[1].previewValues = buffer.previewValues;
 		inputValues[1].generatorString = buffer.generatorString;
+		inputValues[1].generator2DString = buffer.generator2DString;
 		//values.AddRange(inputEdges.Select(e => e.passThroughBuffer).ToList());
 	}
 	[CustomPortInput(nameof(frequency), typeof(NoiseGraphInput))]
@@ -145,6 +153,7 @@ public class DensityNode : TerraxelPreviewNode
 		var buffer = ((NoiseGraphInput)inputEdges.First().passThroughBuffer);
 		inputValues[2].previewValues = buffer.previewValues;
 		inputValues[2].generatorString = buffer.generatorString;
+		inputValues[2].generator2DString = buffer.generator2DString;
 		//values.AddRange(inputEdges.Select(e => e.passThroughBuffer).ToList());
 	}
 	[CustomPortInput(nameof(amplitude), typeof(NoiseGraphInput))]
@@ -159,6 +168,7 @@ public class DensityNode : TerraxelPreviewNode
 		var buffer = ((NoiseGraphInput)inputEdges.First().passThroughBuffer);
 		inputValues[3].previewValues = buffer.previewValues;
 		inputValues[3].generatorString = buffer.generatorString;
+		inputValues[3].generator2DString = buffer.generator2DString;
 		//values.AddRange(inputEdges.Select(e => e.passThroughBuffer).ToList());
 	}
 	[CustomPortInput(nameof(octaves), typeof(NoiseGraphInput))]
@@ -173,6 +183,7 @@ public class DensityNode : TerraxelPreviewNode
 		var buffer = ((NoiseGraphInput)inputEdges.First().passThroughBuffer);
 		inputValues[4].previewValues = buffer.previewValues;
 		inputValues[4].generatorString = buffer.generatorString;
+		inputValues[4].generator2DString = buffer.generator2DString;
 		//values.AddRange(inputEdges.Select(e => e.passThroughBuffer).ToList());
 	}
 	[CustomPortOutput(nameof(output), typeof(NoiseGraphInput))]

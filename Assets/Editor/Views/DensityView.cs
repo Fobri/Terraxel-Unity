@@ -21,11 +21,11 @@ public class DensityView : BaseNodeView
 		node.onProcessed += RegenImage;
 		RegenImage();
 	}
-	public override void Disable(){
+	/*public override void Disable(){
 		base.Disable();
 		var node = nodeTarget as TerraxelPreviewNode;
 		node.onProcessed -= RegenImage;
-	}
+	}*/
 	void RegenImage(){
 		controlsContainer.Clear();
 		debugContainer.Clear();

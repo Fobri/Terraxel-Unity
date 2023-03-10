@@ -17,29 +17,20 @@ MonoBehaviour:
   - rid: 1204564679586480153
   - rid: 1204564679586480154
   - rid: 1204564679586480155
-  - rid: 1204564679586480156
   edges:
-  - GUID: 70df43f4-77e5-4434-8c50-0a7a80d0b306
-    owner: {fileID: 11400000}
-    inputNodeGUID: 8e01958b-d02c-43c4-a946-8a45e5e38b3d
-    outputNodeGUID: 9c1cd39d-d821-40c4-bc6a-c933be417954
-    inputFieldName: A
-    outputFieldName: output
-    inputPortIdentifier: 
-    outputPortIdentifier: 
-  - GUID: 69ac9363-064f-4d52-a36e-35a8f3a2e938
-    owner: {fileID: 11400000}
-    inputNodeGUID: 2fdcf2a4-239f-4891-8959-b61c3eace41c
-    outputNodeGUID: 8e01958b-d02c-43c4-a946-8a45e5e38b3d
-    inputFieldName: x
-    outputFieldName: output
-    inputPortIdentifier: 
-    outputPortIdentifier: 
-  - GUID: e1d1b5ec-fb50-4b8c-b61a-f3f857130ef1
+  - GUID: 7f95450b-ad76-43e7-a715-60fa6ed8fd7a
     owner: {fileID: 11400000}
     inputNodeGUID: 11d7e164-7d19-44a4-8c99-4bca0c8165cd
-    outputNodeGUID: 2fdcf2a4-239f-4891-8959-b61c3eace41c
+    outputNodeGUID: 9c1cd39d-d821-40c4-bc6a-c933be417954
     inputFieldName: input
+    outputFieldName: output
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  - GUID: 53a512eb-66cc-4416-8036-8d0d981d4f74
+    owner: {fileID: 11400000}
+    inputNodeGUID: 9c1cd39d-d821-40c4-bc6a-c933be417954
+    outputNodeGUID: 2fdcf2a4-239f-4891-8959-b61c3eace41c
+    inputFieldName: x
     outputFieldName: output
     inputPortIdentifier: 
     outputPortIdentifier: 
@@ -80,7 +71,7 @@ MonoBehaviour:
   serializedParameterList: []
   stickyNotes: []
   nodeInspectorReference: {fileID: 0}
-  position: {x: -254, y: 181, z: 0}
+  position: {x: -242, y: 400, z: 0}
   scale: {x: 1, y: 1, z: 1}
   references:
     version: 2
@@ -90,13 +81,13 @@ MonoBehaviour:
       data:
         nodeCustomName: 
         GUID: 9c1cd39d-d821-40c4-bc6a-c933be417954
-        computeOrder: 0
+        computeOrder: 1
         position:
           serializedVersion: 2
-          x: 425
-          y: 3
+          x: 807
+          y: -200
           width: 148
-          height: 171
+          height: 299
         expanded: 0
         debug: 0
         nodeLock: 0
@@ -111,13 +102,13 @@ MonoBehaviour:
       data:
         nodeCustomName: 
         GUID: 2fdcf2a4-239f-4891-8959-b61c3eace41c
-        computeOrder: 2
+        computeOrder: 0
         position:
           serializedVersion: 2
-          x: 900
-          y: 3
+          x: 402
+          y: -200
           width: 148
-          height: 171
+          height: 299
         expanded: 1
         debug: 0
         nodeLock: 0
@@ -125,14 +116,14 @@ MonoBehaviour:
         x: 0
         y: 0
         frequency: 60
-        amplitude: 24
+        amplitude: 1
         octaves: 2
     - rid: 1204564679586480155
       type: {class: NoiseOutput, ns: , asm: Assembly-CSharp-Editor}
       data:
         nodeCustomName: 
         GUID: 11d7e164-7d19-44a4-8c99-4bca0c8165cd
-        computeOrder: 3
+        computeOrder: 2
         position:
           serializedVersion: 2
           x: 1195
@@ -143,21 +134,3 @@ MonoBehaviour:
         debug: 0
         nodeLock: 0
         input: 0
-    - rid: 1204564679586480156
-      type: {class: TerraxelMultiplyNode, ns: , asm: Assembly-CSharp-Editor}
-      data:
-        nodeCustomName: 
-        GUID: 8e01958b-d02c-43c4-a946-8a45e5e38b3d
-        computeOrder: 1
-        position:
-          serializedVersion: 2
-          x: 649
-          y: -20
-          width: 164
-          height: 227
-        expanded: 1
-        debug: 0
-        nodeLock: 0
-        output: 0
-        A: 0
-        B: 3

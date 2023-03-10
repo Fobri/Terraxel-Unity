@@ -160,9 +160,9 @@ namespace WorldGeneration
             int u = 0x0100 - t;
             float3 vertPos;
             float3 vertNormal;
-            float3 N0 = GetVertexNormal(lowerEndPointPos, depthMultiplier);
+            float3 N0 = GetVertexNormal(lowerEndPointPos, 1);
             if(!lowerEndPointPos.Equals(higherEndPointPos)){
-                float3 N1 = GetVertexNormal(higherEndPointPos, depthMultiplier);
+                float3 N1 = GetVertexNormal(higherEndPointPos, 1);
                 vertPos = (t * lowerEndPointPos + u * higherEndPointPos);
                 vertNormal = (t * N0 + u * N1);
             }else{
@@ -258,7 +258,7 @@ namespace WorldGeneration
                 }else if(densities.IsEmpty(chunkPos)) {return 127;}
                 else if(densities.IsFull(chunkPos)) {return -127;}
                 else{
-                    return GeneratedDensityJob.GenerateDensity(worldPos);
+                    return TerraxelGenerated.GenerateDensity(worldPos);
                 }
             }
             unsafe{
@@ -415,11 +415,11 @@ namespace WorldGeneration
             }
             float3 vertPos;
             float3 vertNormal;
-            float3 N0 = GetVertexNormal(lowerEndPointPos);
+            float3 N0 = GetVertexNormal(lowerEndPointPos, 1);
             if(!lowerEndPointPos.Equals(higherEndPointPos)){
                 int t = (higherEndPointDensity << 8) / (higherEndPointDensity - lowerEndPointDensity);
                 int u = 0x0100 - t;
-                float3 N1 = GetVertexNormal(higherEndPointPos);
+                float3 N1 = GetVertexNormal(higherEndPointPos, 1);
                 vertPos = (t * lowerEndPointPos + u * higherEndPointPos);
                 vertPos = vertPos * 0.00390625f;
                 vertNormal = (t * N0 + u * N1);
@@ -494,11 +494,11 @@ namespace WorldGeneration
             return densities;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public float3 GetVertexNormal(int3 voxelLocalPosition){
+        public float3 GetVertexNormal(int3 voxelLocalPosition, int step){
             //if(voxelLocalPosition.x >= chunkSize || voxelLocalPosition.y >= chunkSize || voxelLocalPosition.z >= chunkSize) return new float3(0);
-            float nx = (SampleDensityRaw(voxelLocalPosition + new int3(depthMultiplier, 0, 0)) - SampleDensityRaw(voxelLocalPosition - new int3(depthMultiplier, 0, 0)));
-            float ny = (SampleDensityRaw(voxelLocalPosition + new int3(0, depthMultiplier, 0)) - SampleDensityRaw(voxelLocalPosition - new int3(0, depthMultiplier, 0)));
-            float nz = (SampleDensityRaw(voxelLocalPosition + new int3(0, 0, depthMultiplier)) - SampleDensityRaw(voxelLocalPosition - new int3(0, 0, depthMultiplier)));
+            float nx = (SampleDensityRaw(voxelLocalPosition + new int3(step, 0, 0)) - SampleDensityRaw(voxelLocalPosition - new int3(step, 0, 0)));
+            float ny = (SampleDensityRaw(voxelLocalPosition + new int3(0, step, 0)) - SampleDensityRaw(voxelLocalPosition - new int3(0, step, 0)));
+            float nz = (SampleDensityRaw(voxelLocalPosition + new int3(0, 0, step)) - SampleDensityRaw(voxelLocalPosition - new int3(0, 0, step)));
             return (new float3(nx,ny,nz));
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -520,7 +520,7 @@ namespace WorldGeneration
                 }else if(densities.IsEmpty(chunkPos)) {return 127;}
                 else if(densities.IsFull(chunkPos)) {return -127;}
                 else{
-                    return GeneratedDensityJob.GenerateDensity(worldPos);
+                    return TerraxelGenerated.GenerateDensity(worldPos);
                 }
             }
             unsafe{
@@ -577,7 +577,7 @@ namespace WorldGeneration
 
         public void Execute(int index)
         {
-            var value = DensityGenerator.FinalNoise(Utils.IndexToXyz(index, size) * depthMultiplier + offset, noiseProperties);
+            var value = TerraxelGenerated.GenerateDensity(Utils.IndexToXyz(index, size) * depthMultiplier + offset);
             data.densityMap[index] = value;
             if(!allowEmptyOrFull) return;
             if(value != 127){
@@ -614,7 +614,7 @@ namespace WorldGeneration
         [WriteOnly] public NativeList<Matrix4x4> positions;
         public void Execute(int index){
             var pos = Utils.IndexToXz(index, size) * depthMultiplier + offset;
-            var value = DensityGenerator.SurfaceNoise2D(pos, noiseProperties);
+            var value = TerraxelGenerated.GenerateDensity(pos);
             var chance = rng.NextFloat(0f, 100f);
             if(value > chance){
                 positions.Add(Matrix4x4.TRS(new float3(pos.x, value, pos.y), math.quaternion(0,0,0,1), (float3)1f));
