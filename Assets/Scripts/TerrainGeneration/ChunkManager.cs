@@ -23,53 +23,38 @@ public class ChunkManager
     public bool shouldUpdateTree = false;
     public const int chunkResolution = 32;
     public const int lodLevels = 5;
+    public const int simpleChunkTreshold = 1;
     Transform poolParent;
     Transform activeParent;
 #if ODIN_INSPECTOR
     [ShowInInspector]
 #endif
-    List<ChunkData> chunkDatas;
-    Queue<ChunkData> disposeQueue;
-    PriorityQueue<ChunkData> meshQueue;
-    Queue<ChunkData> chunkPool;
+    List<BaseChunk> activeChunks;
+    Queue<BaseChunk> disposeQueue;
+    PriorityQueue<BaseChunk> meshQueue;
+    Queue<BaseChunk> chunkPool3D;
+    Queue<BaseChunk> chunkPool2D;
     Queue<GameObject> objectPool;
-    Queue<SimpleMeshData> simpleChunkPool;
-    public ChunkData chunkTree {get; private set;}
+    public BaseChunk chunkTree {get; private set;}
     int currentMeshQueueIndex = -1;
-    public List<ChunkData> GetDebugArray(){
-        return chunkDatas;
+    public List<BaseChunk> GetDebugArray(){
+        return activeChunks;
     }
     public void Init(Transform poolParent, Transform activeParent, GameObject simpleChunkPrefab, GameObject chunkPrefab){
         this.simpleChunkPrefab = simpleChunkPrefab;
         this.chunkPrefab = chunkPrefab;
-        meshQueue = new PriorityQueue<ChunkData>(lodLevels);
-        chunkPool = new Queue<ChunkData>();
-        disposeQueue = new Queue<ChunkData>();
+        meshQueue = new PriorityQueue<BaseChunk>(lodLevels);
+        chunkPool3D = new Queue<BaseChunk>();
+        chunkPool2D = new Queue<BaseChunk>();
+        disposeQueue = new Queue<BaseChunk>();
         objectPool = new Queue<GameObject>();
-        simpleChunkPool = new Queue<SimpleMeshData>();
         this.poolParent = poolParent;
         this.activeParent = activeParent;
-        var meshBuffers = MemoryManager.Get2DMeshData(simpleChunkPrefab.GetComponent<MeshFilter>().sharedMesh);
-        VertexAttributeDescriptor[] layout = new[]
-                {
-                    new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float32, 3),
-                    new VertexAttributeDescriptor(VertexAttribute.Normal, VertexAttributeFormat.Float32, 3)
-                };
-        while(meshBuffers.Count > 0){
-            var meshData = meshBuffers.Dequeue();
-            meshData.worldObject = UnityEngine.Object.Instantiate(simpleChunkPrefab);
-            meshData.worldObject.GetComponent<MeshFilter>().sharedMesh = new Mesh();
-            meshData.worldObject.SetActive(false);
-            var mesh = meshData.worldObject.GetComponent<MeshFilter>().sharedMesh;
-            mesh.SetVertexBufferParams(1089, layout);
-            mesh.SetIndexBufferParams(6144, IndexFormat.UInt16);
-            meshData.worldObject.transform.SetParent(poolParent);
-            simpleChunkPool.Enqueue(meshData);
-        }
+        MemoryManager.AllocateSimpleMeshData(simpleChunkPrefab.GetComponent<MeshFilter>().sharedMesh);
 
-        chunkDatas = new List<ChunkData>();
-        chunkTree = new ChunkData();
-        chunkTree.chunkState = ChunkData.ChunkState.ROOT;
+        activeChunks = new List<BaseChunk>();
+        chunkTree = new Chunk3D();
+        chunkTree.chunkState = ChunkState.ROOT;
     }
     public bool IsReady{
         get{
@@ -86,7 +71,7 @@ public class ChunkManager
             DisposeChunk(chunk);
         }
         for(int i = 0; i < lodLevels; i++){
-            meshQueue[i] = new Queue<ChunkData>(meshQueue[i].Where(x => x.disposeStatus == ChunkData.DisposeState.NOTHING));
+            meshQueue[i] = new Queue<BaseChunk>(meshQueue[i].Where(x => x.disposeStatus == DisposeState.NOTHING));
         }
         if(meshQueue.Count > 0){
             while(meshQueue.Count > 0 && MemoryManager.GetFreeVertexIndexBufferCount() > 0){
@@ -101,7 +86,7 @@ public class ChunkManager
                     currentMeshQueueIndex = nextMeshQueueIndex;
                 }
                 if(meshQueue.TryDequeue(currentMeshQueueIndex, out var toBeProcessed)){
-                    if(!toBeProcessed.meshData.IsCreated && MemoryManager.GetFreeMeshDataCount() == 0) {
+                    if(!toBeProcessed.CanBeCreated) {
                         meshQueue.Enqueue(toBeProcessed, toBeProcessed.depth);
                         break;
                     }
@@ -113,45 +98,36 @@ public class ChunkManager
         }
         return false;
     }
-    public void DisposeChunk(ChunkData chunk){
-        if(chunk.chunkState == ChunkData.ChunkState.DIRTY){
+    public void DisposeChunk(BaseChunk chunk){
+        if(chunk.chunkState == ChunkState.DIRTY){
             disposeQueue.Enqueue(chunk);
             return;
         }
-        if(chunk.disposeStatus != ChunkData.DisposeState.NOTHING){
-            if(chunk.disposeStatus == ChunkData.DisposeState.POOL)
+        if(chunk.disposeStatus != DisposeState.NOTHING){
+            if(chunk.disposeStatus == DisposeState.POOL)
                 PoolChunk(chunk);
-            else if(chunk.disposeStatus == ChunkData.DisposeState.FREE_MESH)
+            else if(chunk.disposeStatus == DisposeState.FREE_MESH)
                 FreeChunkBuffers(chunk);
         }
     }
-    public void PoolChunk(ChunkData chunk){
+    public void PoolChunk(BaseChunk chunk){
         FreeChunkBuffers(chunk);
-        chunkPool.Enqueue(chunk);
+        if(chunk is Chunk3D)  chunkPool3D.Enqueue(chunk); else chunkPool2D.Enqueue(chunk);
     }
-    public void FreeChunkBuffers(ChunkData chunk){
-        chunkDatas.Remove(chunk);
-        if(chunk.simpleMesh != null){
-            chunk.simpleMesh.worldObject.SetActive(false);
-            chunk.simpleMesh.worldObject.transform.SetParent(poolParent);
-            simpleChunkPool.Enqueue(chunk.simpleMesh);
-            chunk.simpleMesh = null;
+    public void FreeChunkBuffers(BaseChunk chunk){
+        activeChunks.Remove(chunk);
+        if(chunk is Chunk3D){
+            var _chunk = chunk as Chunk3D;
+            if(_chunk.worldObject != null){
+            _chunk.worldObject.name = "Pooled chunk";
+            _chunk.worldObject.transform.SetParent(poolParent);
+            _chunk.worldObject.SetActive(true);
+            _chunk.worldObject.GetComponent<MeshCollider>().sharedMesh = null;
+            objectPool.Enqueue(_chunk.worldObject);
+            _chunk.worldObject = null;
+            }
         }
-        else if(chunk.worldObject != null){
-            chunk.worldObject.name = "Pooled chunk";
-            chunk.worldObject.transform.SetParent(poolParent);
-            chunk.worldObject.SetActive(true);
-            chunk.worldObject.GetComponent<MeshCollider>().sharedMesh = null;
-            objectPool.Enqueue(chunk.worldObject);
-        }
-        chunk.ClearMesh();
-        chunk.hasMesh = false;
-        chunk.grassPositions = null;
-        chunk.worldObject = null;
-        if(chunk.meshData.IsCreated){
-            MemoryManager.ReturnMeshData(chunk.meshData);
-            chunk.meshData = default;
-        }
+        chunk.FreeBuffers();
     }
     public GameObject GetChunkObject(){
         if(objectPool.Count > 0){
@@ -176,121 +152,119 @@ public class ChunkManager
         if(chunk != null) toUpdate.Add(chunk);
         chunkTree.QueryColliding(new BoundingBox((float3)worldPos, new float3(radius)), toUpdate);
         for(int i = 0; i < toUpdate.Count; i++){
-            if(!toUpdate[i].IsReady || meshQueue.Contains(toUpdate[i] as ChunkData)) continue;
-            UpdateChunk(toUpdate[i] as ChunkData);
+            if(!toUpdate[i].IsReady || meshQueue.Contains(toUpdate[i] as BaseChunk)) continue;
+            UpdateChunk(toUpdate[i] as BaseChunk);
             shouldUpdateTree = true;
         }
         if(chunk == null) chunk = chunkTree;
     }
-    public void RegenerateChunk(ChunkData chunk){
-        if(chunkDatas.Count >= MemoryManager.maxBufferCount){ 
+    public void RegenerateChunk(BaseChunk chunk){
+        if(activeChunks.Count >= MemoryManager.maxBufferCount){ 
             shouldUpdateTree = true;
             return;
         }
-        chunk.chunkState = ChunkData.ChunkState.INVALID;
-        chunk.disposeStatus = ChunkData.DisposeState.NOTHING;
+        chunk.chunkState = ChunkState.INVALID;
+        chunk.disposeStatus = DisposeState.NOTHING;
         chunk.hasMesh = true;
         //chunk.worldObject = newChunk;
-        chunkDatas.Add(chunk);
+        activeChunks.Add(chunk);
         UpdateChunk(chunk);
     }
-    public ChunkData GenerateChunk(float3 pos, int depth, BoundingBox bounds){
-        if(chunkDatas.Count >= MemoryManager.maxBufferCount){ 
+    public BaseChunk GenerateChunk(float3 pos, int depth, BoundingBox bounds){
+        if(activeChunks.Count >= MemoryManager.maxBufferCount){ 
             shouldUpdateTree = true;
             return null;
         }
-        ChunkData newChunkData = null;
-        if(chunkPool.Count > 0){
-            newChunkData = chunkPool.Dequeue();
-            //newChunkData.worldObject = newChunk;
-            newChunkData.region = bounds;
-            newChunkData.depth = depth;
-            newChunkData.chunkState = ChunkData.ChunkState.INVALID;
-            newChunkData.disposeStatus = ChunkData.DisposeState.NOTHING;
+        BaseChunk newChunk = null;
+        if(depth > simpleChunkTreshold){
+            if(chunkPool2D.Count > 0){
+                newChunk = chunkPool2D.Dequeue();
+            }else{
+                newChunk = new Chunk2D(bounds, depth);
+            }
         }else{
-         newChunkData = new ChunkData(null, bounds, depth);
+        if(chunkPool3D.Count > 0){
+                newChunk = chunkPool3D.Dequeue();
+            }else{
+                newChunk = new Chunk3D(bounds, depth);
+            }
         }
-        newChunkData.hasMesh = true;
-        chunkDatas.Add(newChunkData);
-        UpdateChunk(newChunkData);
-        return newChunkData;
+        
+        //newBaseChunk.worldObject = newChunk;
+        newChunk.region = bounds;
+        newChunk.depth = depth;
+        newChunk.chunkState = ChunkState.INVALID;
+        newChunk.disposeStatus = DisposeState.NOTHING;
+        newChunk.hasMesh = true;
+        activeChunks.Add(newChunk);
+        UpdateChunk(newChunk);
+        return newChunk;
     }
-    void UpdateChunk(ChunkData chunkData){
+    void UpdateChunk(BaseChunk chunk){
         if(TerraxelWorld.worldState != TerraxelWorld.WorldState.MESH_UPDATE){
-            chunkData.chunkState = ChunkData.ChunkState.QUEUED;
-            meshQueue.Enqueue(chunkData, chunkData.depth);
+            chunk.chunkState = ChunkState.QUEUED;
+            meshQueue.Enqueue(chunk, chunk.depth);
             return;
         }
-        /*if(chunkData.depth == 0){
-            if(TerraxelWorld.DensityManager.ChunkIsFullOrEmpty((int3)chunkData.WorldPosition)){
-                chunkData.OnMeshReady();
-                chunkData.FreeChunkMesh();
+        /*if(BaseChunk.depth == 0){
+            if(TerraxelWorld.DensityManager.ChunkIsFullOrEmpty((int3)BaseChunk.WorldPosition)){
+                BaseChunk.OnMeshReady();
+                BaseChunk.FreeChunkMesh();
                 return;
             }
         }*/
-        /*if(chunkData.depth > 1){
-            if(chunkData.WorldPosition.y != 0){
-                float dst = math.distance(new float2(TerraxelWorld.playerBounds.center.x, TerraxelWorld.playerBounds.center.z), new float2(chunkData.region.center.x, chunkData.region.center.z));
+        /*if(BaseChunk.depth > 1){
+            if(BaseChunk.WorldPosition.y != 0){
+                float dst = math.distance(new float2(TerraxelWorld.playerBounds.center.x, TerraxelWorld.playerBounds.center.z), new float2(BaseChunk.region.center.x, BaseChunk.region.center.z));
                 if(dst < 150){
                     
                     if(MemoryManager.GetFreeVertexIndexBufferCount() == 0){
-                        chunkData.chunkState = ChunkData.ChunkState.QUEUED;
-                        meshQueue.Enqueue(chunkData, chunkData.depth);
+                        BaseChunk.chunkState = BaseChunk.ChunkState.QUEUED;
+                        meshQueue.Enqueue(BaseChunk, BaseChunk.depth);
                         return;
                     }
-                    chunkData.vertexIndexBuffer = MemoryManager.GetVertexIndexBuffer();
-                    chunkData.meshData = MemoryManager.GetMeshData();
-                    chunkData.vertCount = 0;
-                    chunkData.idxCount = 0;
-                    chunkData.chunkState = ChunkData.ChunkState.DIRTY;
-                    chunkData.UpdateMesh();
+                    BaseChunk.vertexIndexBuffer = MemoryManager.GetVertexIndexBuffer();
+                    BaseChunk.meshData = MemoryManager.GetMeshData();
+                    BaseChunk.vertCount = 0;
+                    BaseChunk.idxCount = 0;
+                    BaseChunk.chunkState = BaseChunk.ChunkState.DIRTY;
+                    BaseChunk.UpdateMesh();
                     return;
                 }
-                chunkData.OnMeshReady();
-                chunkData.FreeChunkMesh();
+                BaseChunk.OnMeshReady();
+                BaseChunk.FreeChunkMesh();
                 return;
             }
             
-            chunkData.simpleMesh = simpleChunkPool.Dequeue();
-            chunkData.simpleMesh.worldObject.transform.SetParent(activeParent);
-            chunkData.vertCount = 1089;
-            chunkData.idxCount = 6144;
-            chunkData.chunkState = ChunkData.ChunkState.DIRTY;
-            chunkData.UpdateMesh();
+            BaseChunk.simpleMesh = simpleChunkPool.Dequeue();
+            BaseChunk.simpleMesh.worldObject.transform.SetParent(activeParent);
+            BaseChunk.vertCount = 1089;
+            BaseChunk.idxCount = 6144;
+            BaseChunk.chunkState = BaseChunk.ChunkState.DIRTY;
+            BaseChunk.UpdateMesh();
             return;
         }*/
-        /*float dst = math.distance(new float2(TerraxelWorld.playerBounds.center.x, TerraxelWorld.playerBounds.center.z), new float2(chunkData.region.center.x, chunkData.region.center.z));
-        if(dst > 32f * Octree.depthMultipliers[2] && chunkData.depth > 1){
-            if(chunkData.WorldPosition.y != 0){
-                chunkData.OnMeshReady();
-                chunkData.FreeChunkMesh();
+        /*float dst = math.distance(new float2(TerraxelWorld.playerBounds.center.x, TerraxelWorld.playerBounds.center.z), new float2(BaseChunk.region.center.x, BaseChunk.region.center.z));
+        if(dst > 32f * Octree.depthMultipliers[2] && BaseChunk.depth > 1){
+            if(BaseChunk.WorldPosition.y != 0){
+                BaseChunk.OnMeshReady();
+                BaseChunk.FreeChunkMesh();
                 return;
             }
             
-            chunkData.simpleMesh = simpleChunkPool.Dequeue();
-            chunkData.simpleMesh.worldObject.transform.SetParent(activeParent);
-            chunkData.vertCount = 1089;
-            chunkData.indexCount = 6144;
-            chunkData.chunkState = ChunkData.ChunkState.DIRTY;
-            chunkData.UpdateMesh();
+            BaseChunk.simpleMesh = simpleChunkPool.Dequeue();
+            BaseChunk.simpleMesh.worldObject.transform.SetParent(activeParent);
+            BaseChunk.vertCount = 1089;
+            BaseChunk.indexCount = 6144;
+            BaseChunk.chunkState = BaseChunk.ChunkState.DIRTY;
+            BaseChunk.UpdateMesh();
             return;
         }*/
-        if(MemoryManager.GetFreeVertexIndexBufferCount() == 0){
-            chunkData.chunkState = ChunkData.ChunkState.QUEUED;
-            meshQueue.Enqueue(chunkData, chunkData.depth);
+        if(!chunk.CanBeCreated){
+            chunk.chunkState = ChunkState.QUEUED;
+            meshQueue.Enqueue(chunk, chunk.depth);
             return;
         }
-        if(chunkData.vertexIndexBuffer.vertexIndices == default)
-            chunkData.vertexIndexBuffer = MemoryManager.GetVertexIndexBuffer();
-        else
-            chunkData.vertexIndexBuffer.ClearBuffers();
-        if(!chunkData.meshData.IsCreated)
-            chunkData.meshData = MemoryManager.GetMeshData();
-        else
-            chunkData.meshData.ClearBuffers();
-        chunkData.vertCount = 0;
-        chunkData.idxCount = 0;
-        chunkData.chunkState = ChunkData.ChunkState.DIRTY;
-        chunkData.UpdateMesh();
+        chunk.ScheduleMeshUpdate();
     }
 }

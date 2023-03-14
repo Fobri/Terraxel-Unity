@@ -65,8 +65,8 @@ Shader "Custom/Triplanar"
                 vertPos = v.vertex;
             }
             v.vertex = vertPos;
-            data.localCoord = vertPos.xyz;
-            data.localNormal = mul(unity_ObjectToWorld, v.normal.xyz);
+            data.localCoord = mul(unity_ObjectToWorld, vertPos.xyz);
+            data.localNormal = v.normal.xyz;
         }
 
         void surf (Input IN, inout SurfaceOutputStandard o)

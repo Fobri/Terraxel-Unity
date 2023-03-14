@@ -321,7 +321,7 @@ namespace WorldGeneration
                 int3 cellDirection = DecodeCellIndices((byte)(edge >> 12));
                 int t = (density[v1] << 8) / (density[v1] - density[v0]);
                 int vertexEdgeIndex = (edge >> 8) & 0xF;
-                if ((t & 0x00FF) != 0){
+                //if ((t & 0x00FF) != 0){
                     if((edge >> 12) == 8){
                         // Vertex lies in the interior of the edge.
                         var newVertexIndex = CreateNewVertex((voxelLocalPosition + Tables.CubeCorners[v0]) * depthMultiplier,(voxelLocalPosition + Tables.CubeCorners[v1]) * depthMultiplier, density[v0], density[v1]);
@@ -337,8 +337,8 @@ namespace WorldGeneration
                             cellIndices[i] = GetCell(voxelLocalPosition + cellDirection)[vertexEdgeIndex];
                         }
                     }
-                }
-                else if (t == 0 && v1 == 7){
+                //}
+                /*else if (t == 0 && v1 == 7){
                     // Vertex lies at the higher-numbered endpoint.
                     // This cell owns the vertex.
                     if(currentCell[1] == 0){
@@ -349,7 +349,7 @@ namespace WorldGeneration
                 }
                 else{
                     byte edg = t == 0 ? v1 : v0;
-                    cellDirection = DecodeCellIndices((byte)(edg ^ 7));
+                    cellDirection = Tables.CornerDirection[(byte)(edg)];
                     if((cellDirection.x == -1 && voxelLocalPosition.x == 0) || (cellDirection.y == -1 && voxelLocalPosition.y == 0) || (cellDirection.z == -1 && voxelLocalPosition.z == 0)){
                         cellIndices[i] = CreateNewVertex((voxelLocalPosition + Tables.CubeCorners[edg]) * depthMultiplier,(voxelLocalPosition + Tables.CubeCorners[edg]) * depthMultiplier, density[edg], density[edg], false);
                     }
@@ -362,7 +362,7 @@ namespace WorldGeneration
                             cellIndices[i] = GetCell(voxelLocalPosition + cellDirection)[1];
                         }
                     }
-                }
+                }*/
             }
             vertexIndices.vertexIndices[index] = currentCell;
             for(int i = 0; i < triangleCount; i++){
@@ -598,7 +598,7 @@ namespace WorldGeneration
         [ReadOnly] public NoiseProperties noiseProperties;
         public void Execute(int index)
         {
-            var value = DensityGenerator.SurfaceNoise2D(Utils.IndexToXz(index, size) * depthMultiplier + offset, noiseProperties);
+            var value = TerraxelGenerated.GenerateDensity(Utils.IndexToXz(index, size) * depthMultiplier + offset);
             heightMap[index] = value;
         }
         

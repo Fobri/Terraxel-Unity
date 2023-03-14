@@ -39,11 +39,11 @@ MonoBehaviour:
   pinnedElements:
   - position:
       serializedVersion: 2
-      x: 11
-      y: 445
+      x: 8
+      y: 422
       width: 150
       height: 200
-    opened: 0
+    opened: 1
     editorType:
       serializedType: GraphProcessor.ProcessorView, com.alelievr.NodeGraphProcessor.Editor,
         Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
@@ -71,8 +71,8 @@ MonoBehaviour:
   serializedParameterList: []
   stickyNotes: []
   nodeInspectorReference: {fileID: 0}
-  position: {x: -242, y: 400, z: 0}
-  scale: {x: 1, y: 1, z: 1}
+  position: {x: -117, y: 391, z: 0}
+  scale: {x: 0.8695652, y: 0.8695652, z: 1}
   references:
     version: 2
     RefIds:
@@ -94,8 +94,8 @@ MonoBehaviour:
         output: 0
         x: 0
         y: 0
-        frequency: 6
-        amplitude: 1
+        frequency: 15
+        amplitude: 2
         octaves: 2
     - rid: 1204564679586480154
       type: {class: DensityNode, ns: , asm: Assembly-CSharp-Editor}
@@ -105,8 +105,8 @@ MonoBehaviour:
         computeOrder: 0
         position:
           serializedVersion: 2
-          x: 402
-          y: -200
+          x: 495
+          y: -303
           width: 148
           height: 299
         expanded: 1
@@ -115,8 +115,8 @@ MonoBehaviour:
         output: 0
         x: 0
         y: 0
-        frequency: 60
-        amplitude: 1
+        frequency: 6
+        amplitude: 4
         octaves: 2
     - rid: 1204564679586480155
       type: {class: NoiseOutput, ns: , asm: Assembly-CSharp-Editor}
@@ -126,8 +126,8 @@ MonoBehaviour:
         computeOrder: 2
         position:
           serializedVersion: 2
-          x: 1195
-          y: 3
+          x: 1013
+          y: -200
           width: 82
           height: 75
         expanded: 0

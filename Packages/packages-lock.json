@@ -1,7 +1,7 @@
 {
   "dependencies": {
     "com.alelievr.node-graph-processor": {
-      "version": "file:C:/Users/juuso/Downloads/NodeGraphProcessor-master/NodeGraphProcessor-master/Assets/com.alelievr.NodeGraphProcessor",
+      "version": "file:C:/Users/Veeti/Desktop/com.alelievr.NodeGraphProcessor",
       "depth": 0,
       "source": "local",
       "dependencies": {}
@@ -133,6 +133,15 @@
       "depth": 0,
       "source": "registry",
       "dependencies": {},
+      "url": "https://packages.unity.com"
+    },
+    "com.unity.memoryprofiler": {
+      "version": "1.0.0",
+      "depth": 0,
+      "source": "registry",
+      "dependencies": {
+        "com.unity.editorcoroutines": "1.0.0"
+      },
       "url": "https://packages.unity.com"
     },
     "com.unity.nuget.newtonsoft-json": {

@@ -63,15 +63,15 @@ public class DensityNode : TerraxelPreviewNode
 				values[y * 128 + x] = value;
 			}
 		}
-		var seed = new Unity.Mathematics.Random((uint)TerraxelWorld.seed);
+		var seed = new Unity.Mathematics.Random((uint)TerraxelWorld.seed).NextInt(-1_000_000, 1_000_000);
 		var _x = inputValues[0] != null ? inputValues[0].generatorString : Utils.floatToString(x);
 		var _y = inputValues[1] != null ? inputValues[1].generatorString : Utils.floatToString(y);
 		var _x2d = inputValues[0] != null ? inputValues[0].generator2DString : Utils.floatToString(x);
 		var _y2d = inputValues[1] != null ? inputValues[1].generator2DString : Utils.floatToString(y);
 		values.generatorString = 	"DensityGenerator.FinalNoise(pos"+ ((_x2d != "0.0000f" || _y2d != "0.0000f") ? " + new float3("+_x2d+",0,"+_y2d+")" : "") +
-									", "+(inputValues[3] != null ? inputValues[3].generatorString : Utils.floatToString(amplitude * 24))+", "+(inputValues[2] != null ? inputValues[2].generatorString : Utils.floatToString(frequency * 0.0004f))+", "+seed.NextInt(-1_000_000, 1_000_000)+", "+(inputValues[4] != null ? inputValues[4].generatorString : octaves)+",0)";
+									", "+(inputValues[3] != null ? inputValues[3].generatorString : Utils.floatToString(amplitude * 24))+", "+(inputValues[2] != null ? inputValues[2].generatorString : Utils.floatToString(frequency * 0.0004f))+", "+seed+", "+(inputValues[4] != null ? inputValues[4].generatorString : octaves)+",0)";
 	    values.generator2DString = "DensityGenerator.SurfaceNoise2D(pos2D"+ ((_x2d != "0.0000f" || _y2d != "0.0000f") ? " + new float2("+_x2d+","+_y2d+")" : "") +
-									", "+(inputValues[3] != null ? inputValues[3].generator2DString : Utils.floatToString(amplitude * 24))+", "+(inputValues[2] != null ? inputValues[2].generator2DString : Utils.floatToString(frequency * 0.0004f))+", "+seed.NextInt(-1_000_000, 1_000_000)+", "+(inputValues[4] != null ? inputValues[4].generator2DString : octaves)+")";
+									", "+(inputValues[3] != null ? inputValues[3].generator2DString : Utils.floatToString(amplitude * 24))+", "+(inputValues[2] != null ? inputValues[2].generator2DString : Utils.floatToString(frequency * 0.0004f))+", "+seed+", "+(inputValues[4] != null ? inputValues[4].generator2DString : octaves)+")";
 		//outputs = DensityGenerator.SurfaceNoise2D(input, noiseProperties);
 	}
 	void UpdateNoiseProperties(){

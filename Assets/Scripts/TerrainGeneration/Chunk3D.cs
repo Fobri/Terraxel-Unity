@@ -8,36 +8,20 @@ using System;
 using WorldGeneration.DataStructures;
 using System.Collections.Generic;
 
-public class ChunkData : Octree{
-    private const MeshUpdateFlags MESH_UPDATE_FLAGS = MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds | MeshUpdateFlags.DontResetBoneBounds;
-        public enum ChunkState { DIRTY, READY, INVALID, ROOT, QUEUED }
-        public enum OnMeshReadyAction { ALERT_PARENT, DISPOSE_CHILDREN }
-        public enum DisposeState { NOTHING, POOL, FREE_MESH }
-        bool colliderBaking = false;
-        public TempBuffer vertexIndexBuffer;
-        public MeshData meshData;
+public class Chunk3D : BaseChunk{
+        private bool colliderBaking = false;
+        private TempBuffer vertexIndexBuffer;
+        private MeshData meshData;
+        static Material chunkMaterial;
         private NativeArray<int2> meshStarts;
         public GameObject worldObject;
-        Mesh[] transitionMeshes = new Mesh[6];
-        MaterialPropertyBlock propertyBlock;
-        Mesh chunkMesh;
-        bool active = true;
-        static Material chunkMaterial;
-        static Mesh grassMesh;
-        static Material grassMaterial;
-        public Matrix4x4[] grassPositions;
-        public SimpleMeshData simpleMesh;
-        //public Counter vertexCounter;
-        //public Counter indexCounter;
-        public ChunkState chunkState = ChunkState.INVALID;
-        public OnMeshReadyAction onMeshReady = OnMeshReadyAction.ALERT_PARENT;
-        public DisposeState disposeStatus = DisposeState.NOTHING;
-        public float genTime;
-        public int vertCount;
-        public int idxCount;
-        public bool hasMesh;
-        public byte dirMask;
-        SubMeshDescriptor desc = new SubMeshDescriptor();
+        private Mesh chunkMesh;
+        private Mesh[] transitionMeshes = new Mesh[6];
+        public override bool CanBeCreated{
+            get{
+                return meshData.IsCreated || (!meshData.IsCreated && MemoryManager.GetFreeMeshDataCount() > 0);
+            }
+        }
         static VertexAttributeDescriptor[] layout = new[]
                 {
                     new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float32, 3),
@@ -45,45 +29,33 @@ public class ChunkData : Octree{
                     new VertexAttributeDescriptor(VertexAttribute.Tangent, VertexAttributeFormat.Float32, 3),
                     new VertexAttributeDescriptor(VertexAttribute.Color, VertexAttributeFormat.SInt32, 1)
                 };
-        public ChunkData(GameObject worldObject, BoundingBox bounds, int depth) 
+        public Chunk3D(BoundingBox bounds, int depth) 
         : base(bounds, depth){
-            this.worldObject = worldObject;
-            desc.topology = MeshTopology.Triangles;
-            chunkState = ChunkState.INVALID;
-            disposeStatus = DisposeState.NOTHING;
             meshStarts = MemoryManager.GetMeshCounterArray();
             chunkMesh = new Mesh();
             for(int i = 0; i < transitionMeshes.Length; i++){
                 transitionMeshes[i] = new Mesh();
             }
-            propertyBlock = new MaterialPropertyBlock();
         }
-        static ChunkData(){
+        static Chunk3D(){
             chunkMaterial = Resources.Load("TerrainMaterial", typeof(Material)) as Material;
-            grassMesh = Resources.Load("GrassMesh", typeof(Mesh)) as Mesh;
-            grassMaterial = Resources.Load("GrassMaterial", typeof(Material)) as Material;
         }
         //ROOT chunk
-        public ChunkData() : base() {
-        }
-        public void SetActive(bool active){
-            this.active = active;
+        public Chunk3D() : base() {
         }
         void InitWorldObject(){
             worldObject = TerraxelWorld.ChunkManager.GetChunkObject();
             worldObject.name = $"Chunk {WorldPosition.x}, {WorldPosition.y}, {WorldPosition.z}";
             worldObject.transform.position = WorldPosition;
         }
-        public void RenderChunk(){
+        public override void RenderChunk(){
             if(!active) return;
             Graphics.DrawMesh(chunkMesh, WorldPosition, Quaternion.identity, chunkMaterial, 0, null, 0, propertyBlock, true, true, true);
             for(int i = 0; i < transitionMeshes.Length; i++){
                 if(transitionMeshes[i] == null || (dirMask & transitionMeshIndexMap[i]) == 0) continue;
                 Graphics.DrawMesh(transitionMeshes[i], WorldPosition, Quaternion.identity, chunkMaterial, 0, null, 0, propertyBlock, true, true, true);
             }
-            if(grassPositions != null){
-                Graphics.DrawMeshInstanced(grassMesh, 0, grassMaterial, grassPositions, meshData.grassPositions.Length, null, ShadowCastingMode.On, false, 0, null, LightProbeUsage.Off, null);
-            }
+            base.RenderGrass();
         }
         static readonly int[] transitionMeshIndexMap = new int[] {
             0b_0000_0001, 0b_0000_0010, 0b_0001_0000, 0b_0010_0000, 0b_0000_0100, 0b_0000_1000
@@ -127,45 +99,21 @@ public class ChunkData : Octree{
             }
             if(depth == 0) dirMask = 0;
         }
-        public void RefreshRenderState(bool refreshNeighbours = false){
+        public override void RefreshRenderState(bool refreshNeighbours = false){
             UpdateDirectionMask(refreshNeighbours);
-            //if(worldObject == null) return;
-            /*worldObject.GetComponent<MeshRenderer>().material.SetInt("_DirectionMask", dirMask);
-            for(int i = 0; i < 6; i++){
-                worldObject.transform.GetChild(i).GetComponent<MeshRenderer>().material.SetInt("_DirectionMask", dirMask);
-            }*/
             propertyBlock?.SetInt("_DirectionMask", dirMask);
-            /*worldObject.transform.GetChild(0).gameObject.SetActive((dirMask & 0b_0000_0001) != 0);
-            worldObject.transform.GetChild(1).gameObject.SetActive((dirMask & 0b_0000_0010) != 0);
-            worldObject.transform.GetChild(4).gameObject.SetActive((dirMask & 0b_0000_0100) != 0);
-            worldObject.transform.GetChild(5).gameObject.SetActive((dirMask & 0b_0000_1000) != 0);
-            worldObject.transform.GetChild(2).gameObject.SetActive((dirMask & 0b_0001_0000) != 0);
-            worldObject.transform.GetChild(3).gameObject.SetActive((dirMask & 0b_0010_0000) != 0);*/
         }
-        public void UpdateMesh(){
+        protected override void OnScheduleMeshUpdate(){
+            if(vertexIndexBuffer.vertexIndices == default)
+                vertexIndexBuffer = MemoryManager.GetVertexIndexBuffer();
+            else
+                vertexIndexBuffer.ClearBuffers();
+            if(!meshData.IsCreated)
+                meshData = MemoryManager.GetMeshData();
+            else
+                meshData.ClearBuffers();
             colliderBaking = false;
             MemoryManager.ClearArray(meshStarts, 7);
-            genTime = Time.realtimeSinceStartup;
-            if(simpleMesh != null){
-                var pos = (int3)WorldPosition;
-                var noiseJob = new NoiseJob2D{
-                    offset = new float2(pos.x, pos.z),
-                    depthMultiplier = depthMultiplier,
-                    size = ChunkManager.chunkResolution + 1,
-                    heightMap = simpleMesh.heightMap,
-                    noiseProperties = TerraxelWorld.DensityManager.GetNoiseProperties()
-                };
-                base.ScheduleParallelForJob(noiseJob, 1089);
-                var meshJob = new Mesh2DJob(){
-                    heightMap = simpleMesh.heightMap,
-                    chunkSize = ChunkManager.chunkResolution + 1,
-                    vertices = simpleMesh.buffer,
-                    chunkPos = new int2(pos.x, pos.z),
-                    surfaceLevel = TerraxelWorld.DensityManager.GetNoiseProperties().surfaceLevel
-                };
-                base.ScheduleParallelForJob(meshJob, 1089, true);
-                return;
-            }
             var densityData = TerraxelWorld.DensityManager.GetJobDensityData();
             var cache = new DensityCacheInstance(new int3(int.MaxValue));
             var marchingJob = new MeshJob()
@@ -197,15 +145,15 @@ public class ChunkData : Octree{
             };
             base.ScheduleJobFor(transitionJob, 6 * (ChunkManager.chunkResolution) * (ChunkManager.chunkResolution), true);
             var _pos = (int3)WorldPosition;
-            var grassJob = new GrassJob{
+            /*var grassJob = new GrassJob{
                 offset = new float2(_pos.x, _pos.z),
                 depthMultiplier = depthMultiplier,
                 size = ChunkManager.chunkResolution + 1,
                 noiseProperties = TerraxelWorld.DensityManager.GetNoiseProperties(),
-                positions = meshData.grassPositions,
+                positions = grassPositions,
                 rng = new Unity.Mathematics.Random(1)
             };
-            base.ScheduleJobFor(grassJob, 1023, false);
+            base.ScheduleJobFor(grassJob, 1023, false);*/
         }
         bool CheckNeighbour(int3 relativeOffset, bool refreshNeighbours = false){
             float3 pos = ChunkManager.chunkResolution * depthMultiplier * relativeOffset;
@@ -213,10 +161,10 @@ public class ChunkData : Octree{
             var queryResult = tree.Query(new BoundingBox(this.region.center + pos, this.region.bounds - 4));
             if(queryResult != null){
                 if(refreshNeighbours)
-                    (queryResult as ChunkData).RefreshRenderState();
+                    (queryResult as Chunk3D)?.RefreshRenderState();
                 if(queryResult.HasSubChunks){
                     for(int i = 0; i < 8; i++){
-                        if((queryResult.children[i] as ChunkData).chunkState != ChunkState.READY) return false;
+                        if((queryResult.children[i] as Chunk3D).chunkState != ChunkState.READY) return false;
                     }
                     return true;
                 }else if(queryResult.depth == this.depth){
@@ -226,24 +174,8 @@ public class ChunkData : Octree{
             }
             return false;
         }
-        public void ApplyMesh(){
-            grassPositions = meshData.grassPositions.ToArray();
-            if(simpleMesh != null){
-                simpleMesh.worldObject.SetActive(true);
-                simpleMesh.worldObject.transform.localScale = new float3(depthMultiplier, 1, depthMultiplier);
-                var mesh = simpleMesh.worldObject.GetComponent<MeshFilter>().sharedMesh;
-                mesh.SetVertexBufferData(simpleMesh.buffer, 0, 0, 1089,0, MESH_UPDATE_FLAGS);
-                mesh.SetIndexBufferData(SimpleMeshData.indices, 0, 0, 6144);
-                desc.indexCount = 6144;
-                mesh.SetSubMesh(0, desc, MESH_UPDATE_FLAGS);
-                var bounds = new Bounds(new float3(ChunkManager.chunkResolution * depthMultiplier / 2), region.bounds);
-                mesh.bounds = bounds;
-                mesh.RecalculateNormals();
-                simpleMesh.worldObject.transform.position = WorldPosition;
-                genTime = Time.realtimeSinceStartup - genTime;
-                OnMeshReady();
-                return;
-            }
+        public override void ApplyMesh(){
+            //_grassPositions = grassPositions.ToArray();
             int2 totalCount = new int2(meshData.vertexBuffer.Length, meshData.indexBuffer.Length);
             meshStarts[6] = totalCount;
             
@@ -288,15 +220,13 @@ public class ChunkData : Octree{
                     this.vertCount += vertexEnd - vertexStart;
                     this.idxCount += indexEnd - indexStart;
                 }
-                if(depth < 3){
-                    if(worldObject == null)
-                        InitWorldObject();
-                    var colliderJob = new ChunkColliderBakeJob(){
-                        meshId = chunkMesh.GetInstanceID()
-                    };
-                    colliderBaking = true;
-                    ScheduleJob(colliderJob, false);
-                }
+                if(worldObject == null)
+                    InitWorldObject();
+                var colliderJob = new ChunkColliderBakeJob(){
+                    meshId = chunkMesh.GetInstanceID()
+                };
+                colliderBaking = true;
+                ScheduleJob(colliderJob, false);
             }else if(depth > 1){
                 FreeChunkMesh();
             }
@@ -307,7 +237,7 @@ public class ChunkData : Octree{
             vertexIndexBuffer = default;
             OnMeshReady();
         }
-        public void OnMeshReady(){
+        public override void OnMeshReady(){
             chunkState = ChunkState.READY;
             if(onMeshReady == OnMeshReadyAction.ALERT_PARENT){
                 RefreshRenderState(false);
@@ -318,20 +248,14 @@ public class ChunkData : Octree{
                 RefreshRenderState(true);
             }
         }
-        public void FreeChunkMesh(){
-            disposeStatus = DisposeState.FREE_MESH;
-            TerraxelWorld.ChunkManager.DisposeChunk(this);
-        }
-        public void PoolChunk(){
-            disposeStatus = DisposeState.POOL;
-            TerraxelWorld.ChunkManager.DisposeChunk(this);
-        }
-        /*public bool HasMesh(){
-            return worldObject != null;
-        }*/
-        public float3 WorldPosition{
-            get{
-                return (float3)region.center - new float3(ChunkManager.chunkResolution * depthMultiplier / 2);
+        public override void FreeBuffers(){
+            ClearMesh();
+            hasMesh = false;
+            _grassPositions = null;
+            worldObject = null;
+            if(meshData.IsCreated){
+                MemoryManager.ReturnMeshData(meshData);
+                meshData = default;
             }
         }
     }

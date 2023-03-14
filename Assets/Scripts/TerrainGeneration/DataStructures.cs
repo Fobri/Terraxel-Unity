@@ -10,6 +10,9 @@ using System.Globalization;
 namespace WorldGeneration.DataStructures
 {
 
+    public enum ChunkState { DIRTY, READY, INVALID, ROOT, QUEUED }
+    public enum OnMeshReadyAction { ALERT_PARENT, DISPOSE_CHILDREN }
+    public enum DisposeState { NOTHING, POOL, FREE_MESH }
     
     public struct DensityResultData{
         
@@ -59,14 +62,18 @@ namespace WorldGeneration.DataStructures
         public float seed;
     }
     public class SimpleMeshData{
-        public GameObject worldObject;
         public NativeArray<VertexData> buffer;
         public NativeArray<float> heightMap;
         public static NativeArray<ushort> indices;
+
+        public bool IsCreated{
+            get{
+                return buffer.IsCreated;
+            }
+        }
     }
     public struct DensityGenerator{
         
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static sbyte FinalNoise(float3 worldPos, NoiseProperties noiseProperties)
         {
             //pos -= depthMultiplier;
@@ -75,16 +82,6 @@ namespace WorldGeneration.DataStructures
             float density = (value + noiseProperties.surfaceLevel - yPos) * 0.1f;
             return Convert.ToSByte(math.clamp(-density * 127f, -127f, 127f));
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sbyte FinalNoise(float3 worldPos, float ampl, float freq, int seed, int oct, int surfaceLevel)
-        {   
-            //pos -= depthMultiplier;
-            float value = SurfaceNoise2D(new float2(worldPos.x, worldPos.z), ampl, freq, seed, oct);
-            float yPos = surfaceLevel + worldPos.y;
-            float density = (value + surfaceLevel - yPos) * 0.1f;
-            return Convert.ToSByte(math.clamp(-density * 127f, -127f, 127f));
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float SurfaceNoise2D(float2 worldPos, NoiseProperties noiseProperties)
         {
             float total = 0;
@@ -100,7 +97,14 @@ namespace WorldGeneration.DataStructures
             //total = total % 5f;
             return total / noiseProperties.oct;
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static sbyte FinalNoise(float3 worldPos, float ampl, float freq, int seed, int oct, int surfaceLevel)
+        {   
+            //pos -= depthMultiplier;
+            float value = SurfaceNoise2D(new float2(worldPos.x, worldPos.z), ampl, freq, seed, oct);
+            float yPos = surfaceLevel + worldPos.y;
+            float density = (value + surfaceLevel - yPos) * 0.1f;
+            return Convert.ToSByte(math.clamp(-density * 127f, -127f, 127f));
+        }
         public static float SurfaceNoise2D(float2 worldPos, float ampl, float freq, int seed, int oct)
         {
             float total = 0;
@@ -134,13 +138,10 @@ namespace WorldGeneration.DataStructures
         
         public NativeList<TransitionVertexData> vertexBuffer;
         public NativeList<ushort> indexBuffer;
-        [WriteOnly]
-        public NativeList<Matrix4x4> grassPositions;
 
-        public MeshData(NativeList<TransitionVertexData> vertexBuffer, NativeList<ushort> indexBuffer, NativeList<Matrix4x4> grassPositions){
+        public MeshData(NativeList<TransitionVertexData> vertexBuffer, NativeList<ushort> indexBuffer){
             this.vertexBuffer = vertexBuffer;
             this.indexBuffer = indexBuffer;
-            this.grassPositions = grassPositions;
         }
         public void ClearBuffers(){
             MemoryManager.ClearArray(vertexBuffer.AsArray(), vertexBuffer.Length);
@@ -149,9 +150,6 @@ namespace WorldGeneration.DataStructures
             MemoryManager.ClearArray(indexBuffer.AsArray(), indexBuffer.Length);
             indexBuffer.Length = 0;
             indexBuffer.Capacity = MemoryManager.maxVertexCount;
-            MemoryManager.ClearArray(grassPositions.AsArray(), grassPositions.Length);
-            grassPositions.Length = 0;
-            grassPositions.Capacity = MemoryManager.grassAmount;
         }
         public bool IsCreated{
             get{
@@ -161,7 +159,6 @@ namespace WorldGeneration.DataStructures
         public void Dispose(){
             indexBuffer.Dispose();
             vertexBuffer.Dispose();
-            grassPositions.Dispose();
         }
     }
     public struct ReuseCell{
