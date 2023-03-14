@@ -11,6 +11,7 @@ Shader "Custom/TriplanarSimple"
         _BumpScale("Normal Strength", Float) = 1
         _BumpMap("Normal texture", 2D) = "bump" {}
         [PerRendererData]_DepthMultiplier("Depth multiplier", Int) = 1
+        [PerRendererData]_WorldPos("WorldPos", Vector) = (0,0,0)
     }
     SubShader
     {
@@ -45,6 +46,7 @@ Shader "Custom/TriplanarSimple"
         sampler2D _BumpMap;
         
         int _DepthMultiplier;
+        float4 _WorldPos;
 
         // Add instancing support for this shader. You need to check 'Enable Instancing' on materials that use the shader.
         // See https://docs.unity3d.com/Manual/GPUInstancing.html for more information about instancing.
@@ -57,9 +59,8 @@ Shader "Custom/TriplanarSimple"
         void vert(inout output v, out Input data)
         {
             UNITY_INITIALIZE_OUTPUT(Input, data);
-            data.localCoord = v.vertex.xyz;
+            data.localCoord = (_WorldPos.xyz + v.vertex.xyz);
             data.localNormal = v.normal.xyz;
-            v.vertex *= float4(_DepthMultiplier, 1, _DepthMultiplier, 1);
         }
 
         void surf (Input IN, inout SurfaceOutputStandard o)
@@ -82,7 +83,6 @@ Shader "Custom/TriplanarSimple"
             half4 color = (cx + cy + cz) * _Color;
             o.Albedo = color.rgb;
             o.Alpha = color.a;
-            o.Albedo = color.rgb;
             // Metallic and smoothness come from slider variables
             o.Metallic = _Metallic;
             o.Smoothness = _Glossiness;

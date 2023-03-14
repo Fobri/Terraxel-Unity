@@ -15,6 +15,7 @@ public class Chunk2D : BaseChunk
     static Material chunkMaterial;
     const int vertexCount = 1098;
     const int indexCount = 6144;
+    Matrix4x4 localMatrix;
     VertexAttributeDescriptor[] layout = new[]
             {
                 new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float32, 3),
@@ -42,9 +43,6 @@ public class Chunk2D : BaseChunk
             OnMeshReady();
             return;
         }
-        vertCount = 0;
-        idxCount = 0;
-        chunkState = ChunkState.DIRTY;
         meshData = MemoryManager.GetSimpleMeshData();
         var pos = (int3)WorldPosition;
         var noiseJob = new NoiseJob2D{
@@ -66,7 +64,8 @@ public class Chunk2D : BaseChunk
     }
     public override void ApplyMesh()
     {
-        propertyBlock.SetInt("_DepthMultiplier", depthMultiplier);
+        localMatrix = Matrix4x4.TRS(WorldPosition, Quaternion.identity, new float3(depthMultiplier, 1, depthMultiplier));
+        //propertyBlock.SetInt("_DepthMultiplier", depthMultiplier);
         chunkMesh.SetVertexBufferParams(vertexCount, layout);
         chunkMesh.SetIndexBufferParams(indexCount, IndexFormat.UInt16);
         chunkMesh.SetVertexBufferData(meshData.buffer, 0, 0, 1089,0, MESH_UPDATE_FLAGS);
@@ -76,13 +75,12 @@ public class Chunk2D : BaseChunk
         var bounds = new Bounds(new float3(ChunkManager.chunkResolution * depthMultiplier / 2), region.bounds);
         chunkMesh.bounds = bounds;
         chunkMesh.RecalculateNormals();
-        genTime = Time.realtimeSinceStartup - genTime;
         OnMeshReady();
     }
     public override void RenderChunk()
     {
         if(!active) return;
-        Graphics.DrawMesh(chunkMesh, WorldPosition, Quaternion.identity, chunkMaterial, 0, null, 0, propertyBlock, true, true, true);
+        Graphics.DrawMesh(chunkMesh, localMatrix, chunkMaterial, 0, null, 0, propertyBlock, true, true, true);
         base.RenderGrass();
     }
     public override void FreeBuffers()
@@ -90,5 +88,6 @@ public class Chunk2D : BaseChunk
         chunkMesh.Clear();
         if(meshData != null && meshData.IsCreated)
             MemoryManager.ReturnSimpleMeshData(meshData);
+        meshData = null;
     }
 }

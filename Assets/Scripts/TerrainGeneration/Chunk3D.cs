@@ -232,12 +232,12 @@ public class Chunk3D : BaseChunk{
             }
             //indexCounter.Dispose();
             //vertexCounter.Dispose();
-            genTime = Time.realtimeSinceStartup - genTime;
             MemoryManager.ReturnVertexIndexBuffer(vertexIndexBuffer);
             vertexIndexBuffer = default;
             OnMeshReady();
         }
         public override void OnMeshReady(){
+            genTime = Time.realtimeSinceStartup - genTime;
             chunkState = ChunkState.READY;
             if(onMeshReady == OnMeshReadyAction.ALERT_PARENT){
                 RefreshRenderState(false);

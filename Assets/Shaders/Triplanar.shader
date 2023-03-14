@@ -11,6 +11,7 @@ Shader "Custom/Triplanar"
         _BumpScale("Normal Strength", Float) = 1
         _BumpMap("Normal texture", 2D) = "bump" {}
         [PerRendererData]_DirectionMask("Direction mask", Int) = 0
+        [PerRendererData]_WorldPos("WorldPos", Vector) = (0,0,0)
     }
     SubShader
     {
@@ -46,6 +47,7 @@ Shader "Custom/Triplanar"
         sampler2D _BumpMap;
         
         int _DirectionMask;
+        float4 _WorldPos;
 
         // Add instancing support for this shader. You need to check 'Enable Instancing' on materials that use the shader.
         // See https://docs.unity3d.com/Manual/GPUInstancing.html for more information about instancing.
@@ -65,7 +67,7 @@ Shader "Custom/Triplanar"
                 vertPos = v.vertex;
             }
             v.vertex = vertPos;
-            data.localCoord = mul(unity_ObjectToWorld, vertPos.xyz);
+            data.localCoord = (_WorldPos.xyz + vertPos.xyz);
             data.localNormal = v.normal.xyz;
         }
 
@@ -89,7 +91,6 @@ Shader "Custom/Triplanar"
             half4 color = (cx + cy + cz) * _Color;
             o.Albedo = color.rgb;
             o.Alpha = color.a;
-            o.Albedo = color.rgb;
             // Metallic and smoothness come from slider variables
             o.Metallic = _Metallic;
             o.Smoothness = _Glossiness;

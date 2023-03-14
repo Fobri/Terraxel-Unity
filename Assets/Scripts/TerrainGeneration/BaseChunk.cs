@@ -64,7 +64,7 @@ public abstract class BaseChunk : Octree
         ApplyMesh();
     }
     public void ScheduleMeshUpdate(){
-        
+        propertyBlock.SetVector("_WorldPos", new float4(WorldPosition, 1));
         vertCount = 0;
         idxCount = 0;
         chunkState = ChunkState.DIRTY;
@@ -76,6 +76,7 @@ public abstract class BaseChunk : Octree
     public abstract void ApplyMesh();
     public abstract void FreeBuffers();
     public virtual void OnMeshReady(){
+        genTime = Time.realtimeSinceStartup - genTime;
         chunkState = ChunkState.READY;
         if(onMeshReady == OnMeshReadyAction.ALERT_PARENT){
             base.NotifyParentMeshReady();
