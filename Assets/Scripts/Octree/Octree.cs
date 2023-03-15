@@ -12,7 +12,7 @@ public abstract class Octree : JobRunner
 
     public Octree[] children; //Child octrees.
 
-    public Octree parent { get; private set; }
+    public Octree parent { get; set; }
 
     public int depth = ChunkManager.lodLevels;
     
@@ -211,6 +211,16 @@ public abstract class Octree : JobRunner
         if(dst > maxDistances[depth] && depth < ChunkManager.lodLevels - 1){
             if(HasSubChunks){
                 if(!thisChunk.hasMesh){
+                    /*float dst2D = math.distance(TerraxelWorld.playerBounds.center * new float3(1,0,1), region.center * new float3(1,0,1));
+                    if(depth > ChunkManager.simpleChunkTreshold && dst2D > maxDistances[ChunkManager.simpleChunkTreshold+1]){
+                        if(this is Chunk3D){
+                            Regenerate3DTo2D();
+                            return;
+                        }
+                    }else if(this is Chunk2D){
+                        Regenerate2DTo3D();
+                        return;
+                    }*/
                     thisChunk.onMeshReady = OnMeshReadyAction.DISPOSE_CHILDREN;
                     TerraxelWorld.ChunkManager.RegenerateChunk(thisChunk);
                 }else if(thisChunk.onMeshReady != OnMeshReadyAction.DISPOSE_CHILDREN){
@@ -237,12 +247,32 @@ public abstract class Octree : JobRunner
             children[i].UpdateTreeRecursive();
         }
     }
-    public void RenderChunksRecursive(Plane[] frustumPlanes){
+    void Regenerate3DTo2D(){
+        Debug.Log("Converted 3d to 2d");
+        for(int i = 0; i < 8; i++){
+            if(parent.children[i] == this){
+                parent.children[i] = Chunk2D.CreateCopy(thisChunk);
+            }
+            thisChunk.children[i] = null;
+        }
+        TerraxelWorld.ChunkManager.PoolChunk(thisChunk);
+    }
+    void Regenerate2DTo3D(){
+        Debug.Log("Converted 2d to 3d");
+        for(int i = 0; i < 8; i++){
+            if(parent.children[i] == this){
+                parent.children[i] = Chunk3D.CreateCopy(thisChunk);
+            }
+            thisChunk.children[i] = null;
+        }
+        TerraxelWorld.ChunkManager.PoolChunk(thisChunk);
+    }
+    public void RenderChunksRecursive(Plane[] frustumPlanes, bool cull){
         thisChunk.RenderChunk();
         if(!HasSubChunks) return;
         for(int s = 0; s < 8; s++){
-            if(GeometryUtility.TestPlanesAABB(frustumPlanes, new Bounds(children[s].region.center,children[s].region.bounds))){
-                children[s].RenderChunksRecursive(frustumPlanes);
+            if(!cull || GeometryUtility.TestPlanesAABB(frustumPlanes, new Bounds(children[s].region.center,children[s].region.bounds))){
+                children[s].RenderChunksRecursive(frustumPlanes, cull);
                 //break;
             }
             /*for(int i = 0; i < 6; i++){

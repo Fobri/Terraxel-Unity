@@ -61,8 +61,8 @@ public class ChunkManager
             return meshQueue.Count == 0 && MemoryManager.GetFreeVertexIndexBufferCount() == MemoryManager.maxConcurrentOperations;
         }
     }
-    public void RenderChunks(Plane[] frustumPlanes){
-        chunkTree.RenderChunksRecursive(frustumPlanes);
+    public void RenderChunks(Plane[] frustumPlanes, bool cull){
+        chunkTree.RenderChunksRecursive(frustumPlanes, cull);
     }
     public bool Update(){
         var disposeCount = disposeQueue.Count;
@@ -170,24 +170,37 @@ public class ChunkManager
         activeChunks.Add(chunk);
         UpdateChunk(chunk);
     }
+    public Chunk2D GetNewChunk2D(BoundingBox bounds, int depth){
+        BaseChunk newChunk = null;
+        if(chunkPool2D.Count > 0){
+            newChunk = chunkPool2D.Dequeue();
+        }else{
+            newChunk = new Chunk2D(bounds, depth);
+        }
+        activeChunks.Add(newChunk);
+        return newChunk as Chunk2D;
+    }
+    public Chunk3D GetNewChunk3D(BoundingBox bounds, int depth){
+        BaseChunk newChunk = null;
+        if(chunkPool3D.Count > 0){
+            newChunk = chunkPool3D.Dequeue();
+        }else{
+            newChunk = new Chunk3D(bounds, depth);
+        }
+        activeChunks.Add(newChunk);
+        return newChunk as Chunk3D;
+    }
     public BaseChunk GenerateChunk(float3 pos, int depth, BoundingBox bounds){
         if(activeChunks.Count >= MemoryManager.maxBufferCount){ 
             shouldUpdateTree = true;
             return null;
         }
         BaseChunk newChunk = null;
-        if(depth > simpleChunkTreshold){
-            if(chunkPool2D.Count > 0){
-                newChunk = chunkPool2D.Dequeue();
-            }else{
-                newChunk = new Chunk2D(bounds, depth);
-            }
+        float dst2D = math.distance(TerraxelWorld.playerBounds.center * new float3(1,0,1), bounds.center * new float3(1,0,1));
+        if(depth > simpleChunkTreshold && dst2D > Octree.maxDistances[simpleChunkTreshold+1]){
+            newChunk = GetNewChunk2D(bounds, depth);
         }else{
-        if(chunkPool3D.Count > 0){
-                newChunk = chunkPool3D.Dequeue();
-            }else{
-                newChunk = new Chunk3D(bounds, depth);
-            }
+            newChunk = GetNewChunk3D(bounds, depth);
         }
         
         //newBaseChunk.worldObject = newChunk;
@@ -196,7 +209,6 @@ public class ChunkManager
         newChunk.chunkState = ChunkState.INVALID;
         newChunk.disposeStatus = DisposeState.NOTHING;
         newChunk.hasMesh = true;
-        activeChunks.Add(newChunk);
         UpdateChunk(newChunk);
         return newChunk;
     }
