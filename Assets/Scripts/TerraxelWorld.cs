@@ -39,6 +39,7 @@ public class TerraxelWorld : MonoBehaviour
     public static DensityManager DensityManager {get; private set;}
     public static ChunkManager ChunkManager {get; private set;}
     public static bool worldUpdatePending {get; private set;}
+    public bool frustumCulling = true;
 
     //DEBUG
     [DisableInPlayMode]
@@ -149,7 +150,7 @@ public TextMeshProUGUI[] debugLabels;
             ChunkManager.GetDebugArray()[i].RenderChunk();
         }*/
         var planes = GeometryUtility.CalculateFrustumPlanes(renderCamera);
-        ChunkManager.RenderChunks(planes);
+        ChunkManager.RenderChunks(planes, frustumCulling);
         if(worldState == WorldState.DENSITY_UPDATE){
             if(DensityManager.Update()){
                 worldState = WorldState.IDLE;
