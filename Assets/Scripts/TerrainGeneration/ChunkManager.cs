@@ -58,7 +58,6 @@ public class ChunkManager
     }
     void AddToMeshQueue(BaseChunk chunk){
         int depth = chunk.depth;
-        if(depth <= simpleChunkTreshold && chunk.WorldPosition.y < 0) depth++;
         meshQueue.Enqueue(chunk, depth);
     }
     public bool IsReady{

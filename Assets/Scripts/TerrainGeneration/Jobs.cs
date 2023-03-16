@@ -13,21 +13,36 @@ using WorldGeneration.DataStructures;
 namespace WorldGeneration
 {
     [BurstCompile]
-    public struct Mesh2DJob : IJobParallelFor
+    public struct Mesh2DJob : IJobFor
     {
         [ReadOnly] public NativeArray<float> heightMap;
-        [ReadOnly] public int2 chunkPos;
+        [ReadOnly] public int3 chunkPos;
         
         [ReadOnly] public int chunkSize;
-        
-        [ReadOnly] public float surfaceLevel;
-        public NativeArray<VertexData> vertices;
+        [ReadOnly] public int depthMultiplier;
+        [WriteOnly] public NativeReference<bool> isEmpty;
+        [WriteOnly] public NativeArray<VertexData> vertices;
+        [WriteOnly, NativeDisableParallelForRestriction] public NativeArray<ushort> indices;
+        int triIndex;
 
         public void Execute(int index)
         {
-            var localPos = math.abs(vertices[index].vertex);
-            VertexData vert = new VertexData(new float3(localPos.x, heightMap[Utils.XzToIndex(new int2((int)localPos.x, (int)localPos.z), chunkSize)], localPos.z), 0);
-            vertices[index] = vert;
+            int2 vertPos = Utils.IndexToXz(index, chunkSize);
+            var height = heightMap[index];
+            vertices[index] = new VertexData(new float3(vertPos.x, height - chunkPos.y, vertPos.y), 0);
+            if(height > chunkPos.y && height < chunkPos.y + chunkSize * depthMultiplier){
+                if(vertPos.x > 0 && vertPos.y > 0){
+                    isEmpty.Value = false;
+                    indices[triIndex * 6 + 0] = (ushort)Utils.XzToIndex(vertPos + new int2(-1, -1), chunkSize);
+                    indices[triIndex * 6 + 1] = indices[triIndex * 6 + 4] = (ushort)Utils.XzToIndex(vertPos + new int2(-1, 0), chunkSize);
+                    indices[triIndex * 6 + 2] = indices[triIndex * 6 + 3] = (ushort)Utils.XzToIndex(vertPos + new int2(0, -1), chunkSize);
+                    indices[triIndex * 6 + 5] = (ushort)Utils.XzToIndex(vertPos + new int2(0, 0), chunkSize);
+                    triIndex++;
+                }
+            }
+            //var localPos = math.abs(vertices[index].vertex);
+            //VertexData vert = new VertexData(new float3(localPos.x, heightMap[Utils.XzToIndex(new int2((int)localPos.x, (int)localPos.z), chunkSize)], localPos.z), 0);
+            //vertices[index] = vert;
         }
         public float3 GetVertexNormal(int2 voxelLocalPosition){
             return 0;

@@ -13,9 +13,10 @@ public class Chunk2D : BaseChunk
     private Mesh chunkMesh;
     public SimpleMeshData meshData;
     static Material chunkMaterial;
-    const int vertexCount = 1098;
-    const int indexCount = 6144;
+    public const int vertexCount = 1098;
+    public const int indexCount = 6534;
     Matrix4x4 localMatrix;
+    NativeReference<bool> isEmpty;
     VertexAttributeDescriptor[] layout = new[]
             {
                 new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float32, 3),
@@ -36,11 +37,12 @@ public class Chunk2D : BaseChunk
 
     protected override void OnScheduleMeshUpdate()
     {
-        if(WorldPosition.y != 0){
+        /*if(WorldPosition.y != 0){
             OnMeshReady();
             FreeChunkMesh();
             return;
-        }
+        }*/
+        isEmpty = new NativeReference<bool>(true, Allocator.TempJob);
         meshData = MemoryManager.GetSimpleMeshData();
         var pos = (int3)WorldPosition;
         var noiseJob = new NoiseJob2D{
@@ -54,23 +56,32 @@ public class Chunk2D : BaseChunk
         var meshJob = new Mesh2DJob(){
             heightMap = meshData.heightMap,
             chunkSize = ChunkManager.chunkResolution + 1,
-            vertices = meshData.buffer,
-            chunkPos = new int2(pos.x, pos.z),
-            surfaceLevel = 0
+            vertices = meshData.vertexBuffer,
+            indices = meshData.indexBuffer,
+            chunkPos = (int3)WorldPosition,
+            depthMultiplier = depthMultiplier,
+            isEmpty = isEmpty
         };
-        base.ScheduleParallelForJob(meshJob, 1089, true);
+        base.ScheduleJobFor(meshJob, 1089, true);
     }
     public override void ApplyMesh()
     {
+        if(isEmpty.Value){
+            isEmpty.Dispose();
+            OnMeshReady();
+            FreeChunkMesh();
+            return;
+        }
+        isEmpty.Dispose();
         if(onMeshReady == OnMeshReadyAction.ALERT_PARENT)
             SetActive(false);
         localMatrix = Matrix4x4.TRS(WorldPosition, Quaternion.identity, new float3(depthMultiplier, 1, depthMultiplier));
         //propertyBlock.SetInt("_DepthMultiplier", depthMultiplier);
         chunkMesh.SetVertexBufferParams(vertexCount, layout);
         chunkMesh.SetIndexBufferParams(indexCount, IndexFormat.UInt16);
-        chunkMesh.SetVertexBufferData(meshData.buffer, 0, 0, 1089,0, MESH_UPDATE_FLAGS);
-        chunkMesh.SetIndexBufferData(SimpleMeshData.indices, 0, 0, 6144);
-        desc.indexCount = 6144;
+        chunkMesh.SetVertexBufferData(meshData.vertexBuffer, 0, 0, vertexCount,0, MESH_UPDATE_FLAGS);
+        chunkMesh.SetIndexBufferData(meshData.indexBuffer, 0, 0, indexCount);
+        desc.indexCount = indexCount;
         chunkMesh.SetSubMesh(0, desc, MESH_UPDATE_FLAGS);
         var bounds = new Bounds(new float3(ChunkManager.chunkResolution * depthMultiplier / 2), region.bounds);
         chunkMesh.bounds = bounds;

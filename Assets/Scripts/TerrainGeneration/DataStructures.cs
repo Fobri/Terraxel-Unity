@@ -61,15 +61,21 @@ namespace WorldGeneration.DataStructures
         public int oct;
         public float seed;
     }
-    public class SimpleMeshData{
-        public NativeArray<VertexData> buffer;
+    public class SimpleMeshData : IDisposable{
+        public NativeArray<VertexData> vertexBuffer;
+        public NativeArray<ushort> indexBuffer;
         public NativeArray<float> heightMap;
-        public static NativeArray<ushort> indices;
+        //public static NativeArray<ushort> indices;
 
         public bool IsCreated{
             get{
-                return buffer.IsCreated;
+                return indexBuffer.IsCreated;
             }
+        }
+        public void Dispose(){
+            vertexBuffer.Dispose();
+            indexBuffer.Dispose();
+            heightMap.Dispose();
         }
     }
     public struct DensityGenerator{
