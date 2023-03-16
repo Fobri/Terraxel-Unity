@@ -176,13 +176,13 @@ public class ChunkManager
             return null;
         }
         BaseChunk newChunk = null;
-        if(depth > simpleChunkTreshold){
+        /*if(depth > simpleChunkTreshold){
             if(chunkPool2D.Count > 0){
                 newChunk = chunkPool2D.Dequeue();
             }else{
                 newChunk = new Chunk2D(bounds, depth);
             }
-        }else{
+        }else*/{
         if(chunkPool3D.Count > 0){
                 newChunk = chunkPool3D.Dequeue();
             }else{
@@ -201,7 +201,7 @@ public class ChunkManager
         return newChunk;
     }
     void UpdateChunk(BaseChunk chunk){
-        if(TerraxelWorld.worldState != TerraxelWorld.WorldState.MESH_UPDATE){
+        if(TerraxelWorld.worldState != TerraxelWorld.WorldState.MESH_UPDATE || MemoryManager.GetFreeVertexIndexBufferCount() == 0){
             chunk.chunkState = ChunkState.QUEUED;
             meshQueue.Enqueue(chunk, chunk.depth);
             return;
@@ -212,53 +212,6 @@ public class ChunkManager
                 BaseChunk.FreeChunkMesh();
                 return;
             }
-        }*/
-        /*if(BaseChunk.depth > 1){
-            if(BaseChunk.WorldPosition.y != 0){
-                float dst = math.distance(new float2(TerraxelWorld.playerBounds.center.x, TerraxelWorld.playerBounds.center.z), new float2(BaseChunk.region.center.x, BaseChunk.region.center.z));
-                if(dst < 150){
-                    
-                    if(MemoryManager.GetFreeVertexIndexBufferCount() == 0){
-                        BaseChunk.chunkState = BaseChunk.ChunkState.QUEUED;
-                        meshQueue.Enqueue(BaseChunk, BaseChunk.depth);
-                        return;
-                    }
-                    BaseChunk.vertexIndexBuffer = MemoryManager.GetVertexIndexBuffer();
-                    BaseChunk.meshData = MemoryManager.GetMeshData();
-                    BaseChunk.vertCount = 0;
-                    BaseChunk.idxCount = 0;
-                    BaseChunk.chunkState = BaseChunk.ChunkState.DIRTY;
-                    BaseChunk.UpdateMesh();
-                    return;
-                }
-                BaseChunk.OnMeshReady();
-                BaseChunk.FreeChunkMesh();
-                return;
-            }
-            
-            BaseChunk.simpleMesh = simpleChunkPool.Dequeue();
-            BaseChunk.simpleMesh.worldObject.transform.SetParent(activeParent);
-            BaseChunk.vertCount = 1089;
-            BaseChunk.idxCount = 6144;
-            BaseChunk.chunkState = BaseChunk.ChunkState.DIRTY;
-            BaseChunk.UpdateMesh();
-            return;
-        }*/
-        /*float dst = math.distance(new float2(TerraxelWorld.playerBounds.center.x, TerraxelWorld.playerBounds.center.z), new float2(BaseChunk.region.center.x, BaseChunk.region.center.z));
-        if(dst > 32f * Octree.depthMultipliers[2] && BaseChunk.depth > 1){
-            if(BaseChunk.WorldPosition.y != 0){
-                BaseChunk.OnMeshReady();
-                BaseChunk.FreeChunkMesh();
-                return;
-            }
-            
-            BaseChunk.simpleMesh = simpleChunkPool.Dequeue();
-            BaseChunk.simpleMesh.worldObject.transform.SetParent(activeParent);
-            BaseChunk.vertCount = 1089;
-            BaseChunk.indexCount = 6144;
-            BaseChunk.chunkState = BaseChunk.ChunkState.DIRTY;
-            BaseChunk.UpdateMesh();
-            return;
         }*/
         if(!chunk.CanBeCreated){
             chunk.chunkState = ChunkState.QUEUED;
