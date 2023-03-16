@@ -56,6 +56,11 @@ public class ChunkManager
         chunkTree = new Chunk3D();
         chunkTree.chunkState = ChunkState.ROOT;
     }
+    void AddToMeshQueue(BaseChunk chunk){
+        int depth = chunk.depth;
+        if(depth <= simpleChunkTreshold && chunk.WorldPosition.y < 0) depth++;
+        meshQueue.Enqueue(chunk, depth);
+    }
     public bool IsReady{
         get{
             return meshQueue.Count == 0 && MemoryManager.GetFreeVertexIndexBufferCount() == MemoryManager.maxConcurrentOperations;
@@ -87,7 +92,7 @@ public class ChunkManager
                 }
                 if(meshQueue.TryDequeue(currentMeshQueueIndex, out var toBeProcessed)){
                     if(!toBeProcessed.CanBeCreated) {
-                        meshQueue.Enqueue(toBeProcessed, toBeProcessed.depth);
+                        AddToMeshQueue(toBeProcessed);
                         break;
                     }
                     UpdateChunk(toBeProcessed);
@@ -196,8 +201,8 @@ public class ChunkManager
             return null;
         }
         BaseChunk newChunk = null;
-        float dst2D = math.distance(TerraxelWorld.playerBounds.center * new float3(1,0,1), bounds.center * new float3(1,0,1));
-        if(depth > simpleChunkTreshold && dst2D > Octree.maxDistances[simpleChunkTreshold+1]){
+        //float dst2D = math.distance(new float2(TerraxelWorld.playerBounds.center.x, TerraxelWorld.playerBounds.center.z), new float2(bounds.center.x, bounds.center.z));
+        if(depth > simpleChunkTreshold){
             newChunk = GetNewChunk2D(bounds, depth);
         }else{
             newChunk = GetNewChunk3D(bounds, depth);
@@ -215,7 +220,7 @@ public class ChunkManager
     void UpdateChunk(BaseChunk chunk){
         if(TerraxelWorld.worldState != TerraxelWorld.WorldState.MESH_UPDATE){
             chunk.chunkState = ChunkState.QUEUED;
-            meshQueue.Enqueue(chunk, chunk.depth);
+            AddToMeshQueue(chunk);
             return;
         }
         /*if(BaseChunk.depth == 0){
@@ -274,7 +279,7 @@ public class ChunkManager
         }*/
         if(!chunk.CanBeCreated){
             chunk.chunkState = ChunkState.QUEUED;
-            meshQueue.Enqueue(chunk, chunk.depth);
+            AddToMeshQueue(chunk);
             return;
         }
         chunk.ScheduleMeshUpdate();

@@ -29,9 +29,6 @@ public class Chunk2D : BaseChunk
     public Chunk2D(BoundingBox bounds, int depth)
     : base(bounds, depth){
         chunkMesh = new Mesh();
-        desc.topology = MeshTopology.Triangles;
-        chunkState = ChunkState.INVALID;
-        disposeStatus = DisposeState.NOTHING;
     }
     static Chunk2D(){
             chunkMaterial = Resources.Load("TerrainSimple", typeof(Material)) as Material;
@@ -41,6 +38,7 @@ public class Chunk2D : BaseChunk
     {
         if(WorldPosition.y != 0){
             OnMeshReady();
+            FreeChunkMesh();
             return;
         }
         meshData = MemoryManager.GetSimpleMeshData();
@@ -64,6 +62,8 @@ public class Chunk2D : BaseChunk
     }
     public override void ApplyMesh()
     {
+        if(onMeshReady == OnMeshReadyAction.ALERT_PARENT)
+            SetActive(false);
         localMatrix = Matrix4x4.TRS(WorldPosition, Quaternion.identity, new float3(depthMultiplier, 1, depthMultiplier));
         //propertyBlock.SetInt("_DepthMultiplier", depthMultiplier);
         chunkMesh.SetVertexBufferParams(vertexCount, layout);
@@ -86,6 +86,7 @@ public class Chunk2D : BaseChunk
     public override void FreeBuffers()
     {
         chunkMesh.Clear();
+        hasMesh = false;
         if(meshData != null && meshData.IsCreated)
             MemoryManager.ReturnSimpleMeshData(meshData);
         meshData = null;

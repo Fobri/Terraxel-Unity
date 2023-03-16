@@ -208,11 +208,11 @@ public abstract class Octree : JobRunner
         /*var maxCoord = TerraxelWorld.playerBounds.center + ChunkManager.chunkResolution * depthMultiplier * 0.8f;
         var minCoord = TerraxelWorld.playerBounds.center - ChunkManager.chunkResolution * depthMultiplier * 0.8f;(math.any(region.center < minCoord) || math.any(region.center > maxCoord))*/
         float dst = math.distance(TerraxelWorld.playerBounds.center, region.center);
+        float dst2D = math.distance(new float2(TerraxelWorld.playerBounds.center.x, TerraxelWorld.playerBounds.center.z), new float2(region.center.x, region.center.z));
         if(dst > maxDistances[depth] && depth < ChunkManager.lodLevels - 1){
             if(HasSubChunks){
                 if(!thisChunk.hasMesh){
-                    /*float dst2D = math.distance(TerraxelWorld.playerBounds.center * new float3(1,0,1), region.center * new float3(1,0,1));
-                    if(depth > ChunkManager.simpleChunkTreshold && dst2D > maxDistances[ChunkManager.simpleChunkTreshold+1]){
+                    /*if(depth > ChunkManager.simpleChunkTreshold && dst2D > maxDistances[ChunkManager.simpleChunkTreshold+1]){
                         if(this is Chunk3D){
                             Regenerate3DTo2D();
                             return;
@@ -235,6 +235,10 @@ public abstract class Octree : JobRunner
             //if(!chunkData.meshData.IsCreated) TerraxelWorld.ChunkManager.RegenerateChunk(chunkData);
             return;
         }
+        /*if(thisChunk.chunkState != ChunkState.ROOT && this is Chunk3D && depth > ChunkManager.simpleChunkTreshold && dst2D > maxDistances[ChunkManager.simpleChunkTreshold+1]){
+            Regenerate3DTo2D();
+            return;
+        }*/
         
         octants = CreateOctants(region);
         for (int i = 0; i < 8; i++)
@@ -255,6 +259,7 @@ public abstract class Octree : JobRunner
             }
             thisChunk.children[i] = null;
         }
+        thisChunk.parent.UpdateTreeRecursive();
         TerraxelWorld.ChunkManager.PoolChunk(thisChunk);
     }
     void Regenerate2DTo3D(){
@@ -265,6 +270,7 @@ public abstract class Octree : JobRunner
             }
             thisChunk.children[i] = null;
         }
+        thisChunk.parent.UpdateTreeRecursive();
         TerraxelWorld.ChunkManager.PoolChunk(thisChunk);
     }
     public void RenderChunksRecursive(Plane[] frustumPlanes, bool cull){
