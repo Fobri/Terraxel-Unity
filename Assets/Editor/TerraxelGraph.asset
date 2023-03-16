@@ -39,8 +39,8 @@ MonoBehaviour:
   pinnedElements:
   - position:
       serializedVersion: 2
-      x: 8
-      y: 422
+      x: 10
+      y: 375
       width: 150
       height: 200
     opened: 1
@@ -71,8 +71,8 @@ MonoBehaviour:
   serializedParameterList: []
   stickyNotes: []
   nodeInspectorReference: {fileID: 0}
-  position: {x: -117, y: 391, z: 0}
-  scale: {x: 0.8695652, y: 0.8695652, z: 1}
+  position: {x: -216, y: 392, z: 0}
+  scale: {x: 1, y: 1, z: 1}
   references:
     version: 2
     RefIds:
@@ -94,9 +94,9 @@ MonoBehaviour:
         output: 0
         x: 0
         y: 0
-        frequency: 15
-        amplitude: 2
-        octaves: 2
+        frequency: 8
+        amplitude: 4
+        octaves: 3
     - rid: 1204564679586480154
       type: {class: DensityNode, ns: , asm: Assembly-CSharp-Editor}
       data:
@@ -115,7 +115,7 @@ MonoBehaviour:
         output: 0
         x: 0
         y: 0
-        frequency: 6
+        frequency: 3
         amplitude: 4
         octaves: 2
     - rid: 1204564679586480155

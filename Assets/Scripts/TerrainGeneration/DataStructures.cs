@@ -120,7 +120,7 @@ namespace WorldGeneration.DataStructures
             {
                 total += noise.snoise(math.float2((worldPos.x + seed) * _freq, (worldPos.y + seed) * _freq)) * _ampl;
 
-                //_ampl *= 2;
+                _ampl *= 2;
                 _freq *= 0.5f;
             }
             //total = total % 5f;
