@@ -99,9 +99,10 @@ public class TerraxelWorld : MonoBehaviour
         public bool indexCount;
         public bool maxVertexCount;
         public bool dirMask;
+        public bool type;
         public bool draw{
             get{
-                return position || chunkState || depth || genTime || vertexCount || indexCount || maxVertexCount || dirMask;
+                return position || chunkState || depth || genTime || vertexCount || indexCount || maxVertexCount || dirMask || type;
             }
         }
     }
@@ -263,6 +264,10 @@ public TextMeshProUGUI[] debugLabels;
                 }
                 if(drawChunkBounds){
                     chunkDatas[i].region.DebugDraw();
+                }
+                if(drawChunkVariables.type){
+                    offset.y += 4f;
+                    Handles.Label(offset, chunkDatas[i].GetType().Name);
                 }
             }
         }

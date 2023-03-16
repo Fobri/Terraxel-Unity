@@ -1628,6 +1628,7 @@ MonoBehaviour:
     x: 32767
     y: 32767
     z: 32767
+  frustumCulling: 0
   debugMode: 1
   chunkCount: 0
   freeBufferCount: 0
@@ -1648,6 +1649,7 @@ MonoBehaviour:
     indexCount: 0
     maxVertexCount: 0
     dirMask: 0
+    type: 0
   debugLabels:
   - {fileID: 1476131994}
   - {fileID: 1338921974}

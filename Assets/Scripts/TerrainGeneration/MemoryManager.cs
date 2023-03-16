@@ -11,7 +11,7 @@ using WorldGeneration;
 public class MemoryManager{
     
     public const int maxBufferCount = 128*4;
-    public const int simpleMeshAmount = 64;
+    public const int simpleMeshAmount = 128*2;
     public const int densityCount = 128*6;
     public const int maxConcurrentOperations = 4;
     public const int maxVertexCount = 10000;
@@ -35,7 +35,7 @@ public class MemoryManager{
         AllocateTempBuffers();
     }
     public static void AllocateSimpleMeshData(Mesh source){
-        var verts = source.vertices;
+        /*var verts = source.vertices;
         NativeArray<VertexData> vertices = new NativeArray<VertexData>(verts.Length, Allocator.Temp);
         var tris = source.triangles;
         NativeArray<ushort> indices = new NativeArray<ushort>(tris.Length, Allocator.Persistent);
@@ -45,19 +45,21 @@ public class MemoryManager{
         SimpleMeshData.indices = indices;
         for(int i = 0; i < verts.Length; i++){
             vertices[i] = new VertexData(math.round((float3)(verts[i] * 100)), 0f);
-        }
+        }*/
         freeSimpleMeshDatas = new Queue<SimpleMeshData>();
         for(int i = 0; i < simpleMeshAmount; i++){
-            var buffer = new NativeArray<VertexData>(verts.Length, Allocator.Persistent);
+            var vertBuffer = new NativeArray<VertexData>(Chunk2D.vertexCount, Allocator.Persistent);
+            var indexBuffer = new NativeArray<ushort>(Chunk2D.indexCount, Allocator.Persistent);
             var heightMap = new NativeArray<float>((ChunkManager.chunkResolution + 3) * (ChunkManager.chunkResolution + 3), Allocator.Persistent);
-            buffer.CopyFrom(vertices);
+            //buffer.CopyFrom(vertices);
             SimpleMeshData data = new SimpleMeshData();
-            data.buffer = buffer;
+            data.vertexBuffer = vertBuffer;
+            data.indexBuffer = indexBuffer;
             data.heightMap = heightMap;
             freeSimpleMeshDatas.Enqueue(data);
         }
         simpleMeshes = freeSimpleMeshDatas.ToArray();
-        vertices.Dispose();
+        //vertices.Dispose();
     }
     static void AllocateTempBuffers(){
 
@@ -123,6 +125,7 @@ public class MemoryManager{
         freeMeshDatas.Enqueue(data);
     }
     public static void ReturnSimpleMeshData(SimpleMeshData data){
+        ClearArray(data.indexBuffer, data.indexBuffer.Length);
         freeSimpleMeshDatas.Enqueue(data);
     }
     public static void ReturnDensityMap(NativeArray<sbyte> map, bool assignSafetyHandle = false){
@@ -163,10 +166,9 @@ public class MemoryManager{
             buffer.Dispose();
         }
         foreach(var buffer in simpleMeshes){
-            buffer.buffer.Dispose();
-            buffer.heightMap.Dispose();
+            buffer.Dispose();
         }
-        SimpleMeshData.indices.Dispose();
+        //SimpleMeshData.indices.Dispose();
         densityMap.Dispose();
     }
     public static unsafe void ClearArray<T>(NativeArray<T> to_clear, int length) where T : struct

@@ -56,6 +56,10 @@ public class ChunkManager
         chunkTree = new Chunk3D();
         chunkTree.chunkState = ChunkState.ROOT;
     }
+    void AddToMeshQueue(BaseChunk chunk){
+        int depth = chunk.depth;
+        meshQueue.Enqueue(chunk, depth);
+    }
     public bool IsReady{
         get{
             return meshQueue.Count == 0 && MemoryManager.GetFreeVertexIndexBufferCount() == MemoryManager.maxConcurrentOperations;
@@ -87,7 +91,7 @@ public class ChunkManager
                 }
                 if(meshQueue.TryDequeue(currentMeshQueueIndex, out var toBeProcessed)){
                     if(!toBeProcessed.CanBeCreated) {
-                        meshQueue.Enqueue(toBeProcessed, toBeProcessed.depth);
+                        AddToMeshQueue(toBeProcessed);
                         break;
                     }
                     UpdateChunk(toBeProcessed);
@@ -170,24 +174,37 @@ public class ChunkManager
         activeChunks.Add(chunk);
         UpdateChunk(chunk);
     }
+    public Chunk2D GetNewChunk2D(BoundingBox bounds, int depth){
+        BaseChunk newChunk = null;
+        if(chunkPool2D.Count > 0){
+            newChunk = chunkPool2D.Dequeue();
+        }else{
+            newChunk = new Chunk2D(bounds, depth);
+        }
+        activeChunks.Add(newChunk);
+        return newChunk as Chunk2D;
+    }
+    public Chunk3D GetNewChunk3D(BoundingBox bounds, int depth){
+        BaseChunk newChunk = null;
+        if(chunkPool3D.Count > 0){
+            newChunk = chunkPool3D.Dequeue();
+        }else{
+            newChunk = new Chunk3D(bounds, depth);
+        }
+        activeChunks.Add(newChunk);
+        return newChunk as Chunk3D;
+    }
     public BaseChunk GenerateChunk(float3 pos, int depth, BoundingBox bounds){
         if(activeChunks.Count >= MemoryManager.maxBufferCount){ 
             shouldUpdateTree = true;
             return null;
         }
         BaseChunk newChunk = null;
-        /*if(depth > simpleChunkTreshold){
-            if(chunkPool2D.Count > 0){
-                newChunk = chunkPool2D.Dequeue();
-            }else{
-                newChunk = new Chunk2D(bounds, depth);
-            }
-        }else*/{
-        if(chunkPool3D.Count > 0){
-                newChunk = chunkPool3D.Dequeue();
-            }else{
-                newChunk = new Chunk3D(bounds, depth);
-            }
+        //float dst2D = math.distance(new float2(TerraxelWorld.playerBounds.center.x, TerraxelWorld.playerBounds.center.z), new float2(bounds.center.x, bounds.center.z));
+        if(depth > simpleChunkTreshold){
+            newChunk = GetNewChunk2D(bounds, depth);
+        }else{
+            newChunk = GetNewChunk3D(bounds, depth);
         }
         
         //newBaseChunk.worldObject = newChunk;
@@ -196,14 +213,13 @@ public class ChunkManager
         newChunk.chunkState = ChunkState.INVALID;
         newChunk.disposeStatus = DisposeState.NOTHING;
         newChunk.hasMesh = true;
-        activeChunks.Add(newChunk);
         UpdateChunk(newChunk);
         return newChunk;
     }
     void UpdateChunk(BaseChunk chunk){
         if(TerraxelWorld.worldState != TerraxelWorld.WorldState.MESH_UPDATE || MemoryManager.GetFreeVertexIndexBufferCount() == 0){
             chunk.chunkState = ChunkState.QUEUED;
-            meshQueue.Enqueue(chunk, chunk.depth);
+            AddToMeshQueue(chunk);
             return;
         }
         /*if(BaseChunk.depth == 0){
@@ -215,7 +231,7 @@ public class ChunkManager
         }*/
         if(!chunk.CanBeCreated){
             chunk.chunkState = ChunkState.QUEUED;
-            meshQueue.Enqueue(chunk, chunk.depth);
+            AddToMeshQueue(chunk);
             return;
         }
         chunk.ScheduleMeshUpdate();

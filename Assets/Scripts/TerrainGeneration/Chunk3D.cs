@@ -164,7 +164,7 @@ public class Chunk3D : BaseChunk{
                     (queryResult as Chunk3D)?.RefreshRenderState();
                 if(queryResult.HasSubChunks){
                     for(int i = 0; i < 8; i++){
-                        if((queryResult.children[i] as Chunk3D).chunkState != ChunkState.READY) return false;
+                        if((queryResult.children[i] as BaseChunk).chunkState != ChunkState.READY) return false;
                     }
                     return true;
                 }else if(queryResult.depth == this.depth){
@@ -257,5 +257,14 @@ public class Chunk3D : BaseChunk{
                 MemoryManager.ReturnMeshData(meshData);
                 meshData = default;
             }
+        }
+
+        public static Chunk3D CreateCopy(BaseChunk source){
+            Chunk3D result = TerraxelWorld.ChunkManager.GetNewChunk3D(source.region, source.depth);
+            result.children = source.children;
+            result.onMeshReady = source.onMeshReady;
+            result.hasMesh = source.hasMesh;
+            result.parent = source.parent;
+            return result;
         }
     }

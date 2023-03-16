@@ -12,7 +12,7 @@ public abstract class Octree : JobRunner
 
     public Octree[] children; //Child octrees.
 
-    public Octree parent { get; private set; }
+    public Octree parent { get; set; }
 
     public int depth = ChunkManager.lodLevels;
     
@@ -208,9 +208,19 @@ public abstract class Octree : JobRunner
         /*var maxCoord = TerraxelWorld.playerBounds.center + ChunkManager.chunkResolution * depthMultiplier * 0.8f;
         var minCoord = TerraxelWorld.playerBounds.center - ChunkManager.chunkResolution * depthMultiplier * 0.8f;(math.any(region.center < minCoord) || math.any(region.center > maxCoord))*/
         float dst = math.distance(TerraxelWorld.playerBounds.center, region.center);
+        float dst2D = math.distance(new float2(TerraxelWorld.playerBounds.center.x, TerraxelWorld.playerBounds.center.z), new float2(region.center.x, region.center.z));
         if(dst > maxDistances[depth] && depth < ChunkManager.lodLevels - 1){
             if(HasSubChunks){
                 if(!thisChunk.hasMesh){
+                    /*if(depth > ChunkManager.simpleChunkTreshold && dst2D > maxDistances[ChunkManager.simpleChunkTreshold+1]){
+                        if(this is Chunk3D){
+                            Regenerate3DTo2D();
+                            return;
+                        }
+                    }else if(this is Chunk2D){
+                        Regenerate2DTo3D();
+                        return;
+                    }*/
                     thisChunk.onMeshReady = OnMeshReadyAction.DISPOSE_CHILDREN;
                     TerraxelWorld.ChunkManager.RegenerateChunk(thisChunk);
                 }else if(thisChunk.onMeshReady != OnMeshReadyAction.DISPOSE_CHILDREN){
@@ -225,6 +235,10 @@ public abstract class Octree : JobRunner
             //if(!chunkData.meshData.IsCreated) TerraxelWorld.ChunkManager.RegenerateChunk(chunkData);
             return;
         }
+        /*if(thisChunk.chunkState != ChunkState.ROOT && this is Chunk3D && depth > ChunkManager.simpleChunkTreshold && dst2D > maxDistances[ChunkManager.simpleChunkTreshold+1]){
+            Regenerate3DTo2D();
+            return;
+        }*/
         
         octants = CreateOctants(region);
         for (int i = 0; i < 8; i++)
