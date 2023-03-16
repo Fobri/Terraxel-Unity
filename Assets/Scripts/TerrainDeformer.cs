@@ -16,7 +16,7 @@ public class TerrainDeformer : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetKey(KeyCode.E))
+        if (Input.GetKeyDown(KeyCode.C))
         {
             var ray = new Ray(_camera.transform.position, _camera.transform.forward);
             if(Physics.Raycast(ray, out RaycastHit hit, 100f, LayerMask.GetMask("Terrain")))
@@ -24,7 +24,7 @@ public class TerrainDeformer : MonoBehaviour
                 TerraxelWorld.QueueModification((int3)(float3)hit.point, 10, deformRadius);
             }
         }
-        else if (Input.GetKey(KeyCode.Q))
+        else if (Input.GetKeyDown(KeyCode.F))
         {
             var ray = new Ray(_camera.transform.position, _camera.transform.forward);
             if (Physics.Raycast(ray, out RaycastHit hit, 100f, LayerMask.GetMask("Terrain")))
