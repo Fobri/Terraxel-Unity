@@ -29,7 +29,7 @@ namespace WorldGeneration
         {
             int2 vertPos = Utils.IndexToXz(index, chunkSize);
             var height = heightMap[index];
-            vertices[index] = new VertexData(new float3(vertPos.x, height - chunkPos.y, vertPos.y), 0);
+            vertices[index] = new VertexData(new float3(vertPos.x * 0.5f, height - chunkPos.y, vertPos.y * 0.5f), 0);
             if(height > chunkPos.y && height < chunkPos.y + chunkSize * depthMultiplier){
                 if(vertPos.x > 0 && vertPos.y > 0){
                     isEmpty.Value = false;
@@ -153,7 +153,8 @@ namespace WorldGeneration
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ushort CreateNewVertex(int3 lowerEndPointPos, int3 higherEndPointPos, sbyte lowerEndPointDensity, sbyte higherEndPointDensity, bool surfaceShift = true, bool transitionOffset = false){
             //Surface shift
-            if(surfaceShift && depthMultiplier != 1){
+            int near = GetVertexNearEdgeMask((float3)(lowerEndPointPos + higherEndPointPos) * 0.5f);
+            if(surfaceShift && near == 0 && depthMultiplier != 1){
                 int3 posInDensityMap = new int3(0);
                 int3 oldPos = new int3(-1);
                 while(!oldPos.Equals(posInDensityMap)){
@@ -186,10 +187,9 @@ namespace WorldGeneration
             }
             vertPos = vertPos * 0.00390625f;
             vertNormal = math.normalize(vertNormal);
-            int near = 0;
             var secondaryPos = vertPos;
             if(transitionOffset){
-                var offsetVector = GetTransitionDirection(vertPos, out near);
+                var offsetVector = GetTransitionDirection(vertPos);
                 secondaryPos.x += ((1 - math.pow(vertNormal.x, 2)) * offsetVector.x + (-vertNormal.x*vertNormal.y) * offsetVector.y + (-vertNormal.x*vertNormal.z) * offsetVector.z);
                 secondaryPos.y += ((-vertNormal.x*vertNormal.y) * offsetVector.x + (1-math.pow(vertNormal.y, 2)) * offsetVector.y + (-vertNormal.y*vertNormal.z) * offsetVector.z);
                 secondaryPos.z += ((-vertNormal.x*vertNormal.z) * offsetVector.x + (-vertNormal.y*vertNormal.z) * offsetVector.y + (1-math.pow(vertNormal.z, 2)) * offsetVector.z);
@@ -201,16 +201,18 @@ namespace WorldGeneration
             return (ushort)vertexIndex;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private float3 GetTransitionDirection(float3 vertPos, out int near){
-            near = 0;
-            var offsetVector = new float3(0);
-            var highFence = depthMultiplier*(chunkSize-1);
-            near = ((vertPos.x == depthMultiplier * chunkSize ? 0b_0000_0001 : 0) 
+        private int GetVertexNearEdgeMask(float3 vertPos){
+            return ((vertPos.x == depthMultiplier * chunkSize ? 0b_0000_0001 : 0) 
                 | (vertPos.x == 0 ? 0b_0000_0010 : 0) 
                 | (vertPos.y == depthMultiplier * chunkSize ? 0b_0000_0100 : 0) 
                 | (vertPos.y == 0 ? 0b_0000_1000 : 0) 
-                | (vertPos.z == depthMultiplier * chunkSize ? 0b_0001_0000 : 0)
+                | (vertPos.z == depthMultiplier * chunkSize ? 0b_0001_0000 : 0) 
                 | (vertPos.z == 0 ? 0b_0010_0000 : 0));
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private float3 GetTransitionDirection(float3 vertPos){
+            var offsetVector = new float3(0);
+            var highFence = depthMultiplier*(chunkSize-1);
             bool3x2 skirtDirections = new bool3x2();
             skirtDirections.c0.x = vertPos.x > highFence;
             skirtDirections.c0.y = vertPos.y > highFence;
@@ -412,7 +414,8 @@ namespace WorldGeneration
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ushort CreateNewVertex(int3 lowerEndPointPos, int3 higherEndPointPos, sbyte lowerEndPointDensity, sbyte higherEndPointDensity, bool surfaceShift = true, bool transitionOffset = true){
             //Surface shift
-            if(surfaceShift && depthMultiplier != 1){
+            int near = GetVertexNearEdgeMask((float3)(lowerEndPointPos + higherEndPointPos) * 0.5f);
+            if(surfaceShift && near == 0 && depthMultiplier != 1){
                 int3 posInDensityMap = new int3(0);
                 int3 oldPos = new int3(-1);
                 while(!oldPos.Equals(posInDensityMap)){
@@ -444,7 +447,6 @@ namespace WorldGeneration
             }
             vertNormal = math.normalize(vertNormal);
             float3 secondaryPos = vertPos;
-            int near = GetVertexNearEdgeMask(vertPos);
             if(transitionOffset){
                 var offsetVector = GetTransitionDirection(vertPos);
                 secondaryPos.x += ((1 - math.pow(vertNormal.x, 2)) * offsetVector.x + (-vertNormal.x*vertNormal.y) * offsetVector.y + (-vertNormal.x*vertNormal.z) * offsetVector.z);
@@ -457,6 +459,7 @@ namespace WorldGeneration
             int vertexIndex = vertices.Length - 1;
             return (ushort)vertexIndex;
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int GetVertexNearEdgeMask(float3 vertPos){
             return ((vertPos.x == depthMultiplier * chunkSize ? 0b_0000_0001 : 0) 
                 | (vertPos.x == 0 ? 0b_0000_0010 : 0) 

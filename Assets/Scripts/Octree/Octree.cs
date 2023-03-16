@@ -202,7 +202,7 @@ public abstract class Octree : JobRunner
         parent?.CheckSubMeshesReady();
     }
     const float dstModifier = 45.2548f;//55.42562f;
-    public static readonly float[] maxDistances = { 0, 60,170f, 380, 700, 1000 };
+    public static readonly float[] maxDistances = { 0, 60,160f, 360, 700, 1000 };
     public void UpdateTreeRecursive()
     {
         /*var maxCoord = TerraxelWorld.playerBounds.center + ChunkManager.chunkResolution * depthMultiplier * 0.8f;

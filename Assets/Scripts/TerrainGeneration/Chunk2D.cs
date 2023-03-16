@@ -13,8 +13,8 @@ public class Chunk2D : BaseChunk
     private Mesh chunkMesh;
     public SimpleMeshData meshData;
     static Material chunkMaterial;
-    public const int vertexCount = 1098;
-    public const int indexCount = 6534;
+    public const int vertexCount = 4225;
+    public const int indexCount = 6534 * 4;
     Matrix4x4 localMatrix;
     NativeReference<bool> isEmpty;
     VertexAttributeDescriptor[] layout = new[]
@@ -47,22 +47,22 @@ public class Chunk2D : BaseChunk
         var pos = (int3)WorldPosition;
         var noiseJob = new NoiseJob2D{
             offset = new float2(pos.x, pos.z),
-            depthMultiplier = depthMultiplier,
-            size = ChunkManager.chunkResolution + 1,
+            depthMultiplier = depthMultiplier / 2,
+            size = (ChunkManager.chunkResolution * 2) + 1,
             heightMap = meshData.heightMap,
             noiseProperties = TerraxelWorld.DensityManager.GetNoiseProperties()
         };
-        base.ScheduleParallelForJob(noiseJob, 1089);
+        base.ScheduleParallelForJob(noiseJob, vertexCount);
         var meshJob = new Mesh2DJob(){
             heightMap = meshData.heightMap,
-            chunkSize = ChunkManager.chunkResolution + 1,
+            chunkSize = (ChunkManager.chunkResolution * 2) + 1,
             vertices = meshData.vertexBuffer,
             indices = meshData.indexBuffer,
             chunkPos = (int3)WorldPosition,
-            depthMultiplier = depthMultiplier,
+            depthMultiplier = depthMultiplier / 2,
             isEmpty = isEmpty
         };
-        base.ScheduleJobFor(meshJob, 1089, true);
+        base.ScheduleJobFor(meshJob, vertexCount, true);
     }
     public override void ApplyMesh()
     {
