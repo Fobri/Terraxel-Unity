@@ -11,7 +11,7 @@ using WorldGeneration;
 public class MemoryManager{
     
     public const int maxBufferCount = 128*4;
-    public const int simpleMeshAmount = 128*2;
+    public const int simpleMeshAmount = 128*4;
     public const int densityCount = 128*6;
     public const int maxConcurrentOperations = 4;
     public const int maxVertexCount = 10000;

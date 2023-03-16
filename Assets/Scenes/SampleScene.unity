@@ -1992,9 +1992,17 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 2641301921128030059, guid: bf95609cac0482e428bf8defd590f403, type: 3}
     - target: {fileID: 3186469250366012284, guid: 176f2781749996940bc0d40d81054d3f, type: 3}
+      propertyPath: detectionRadius
+      value: 0.3
+      objectReference: {fileID: 0}
+    - target: {fileID: 3186469250366012284, guid: 176f2781749996940bc0d40d81054d3f, type: 3}
       propertyPath: targetTransform
       value: 
       objectReference: {fileID: 4817792346050605797}
+    - target: {fileID: 3186469250366012284, guid: 176f2781749996940bc0d40d81054d3f, type: 3}
+      propertyPath: layerMask.m_Bits
+      value: 65
+      objectReference: {fileID: 0}
     - target: {fileID: 3186469250366012284, guid: 176f2781749996940bc0d40d81054d3f, type: 3}
       propertyPath: graphicsRootObject
       value: 
@@ -2067,7 +2075,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3276619212830280659, guid: c822f91997f3a8649ae1b0ddaac74b61, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 1390
+      value: 55
       objectReference: {fileID: 0}
     - target: {fileID: 3276619212830280659, guid: c822f91997f3a8649ae1b0ddaac74b61, type: 3}
       propertyPath: m_LocalPosition.z

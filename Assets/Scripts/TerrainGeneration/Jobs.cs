@@ -617,9 +617,10 @@ namespace WorldGeneration
         public void Execute(int index)
         {
             var value = TerraxelGenerated.GenerateDensity(Utils.IndexToXz(index, size) * depthMultiplier + offset);
-            float remainder = value - (int)value;
+            //TODO: Fix 2d 3d transition gaps
+            /*float remainder = value - (int)value;
             remainder = math.round(remainder * 127) / 127;
-            value = (int)value + remainder;
+            value = (int)value + remainder;*/
             heightMap[index] = value;
         }
         

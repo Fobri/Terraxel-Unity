@@ -108,7 +108,7 @@ namespace WorldGeneration.DataStructures
             //pos -= depthMultiplier;
             float value = SurfaceNoise2D(new float2(worldPos.x, worldPos.z), ampl, freq, seed, oct);
             float yPos = surfaceLevel + worldPos.y;
-            float density = (value + surfaceLevel - yPos) * 0.1f;
+            float density = (value + surfaceLevel - yPos) * 0.5f;
             return Convert.ToSByte(math.clamp(-density * 127f, -127f, 127f));
         }
         public static float SurfaceNoise2D(float2 worldPos, float ampl, float freq, int seed, int oct)
@@ -124,7 +124,8 @@ namespace WorldGeneration.DataStructures
                 _freq *= 0.5f;
             }
             //total = total % 5f;
-            return total / oct;
+            total /= oct;
+            return math.floor(total * 127f) / 127;
         }
     }
     public class NoiseGraphInput{
