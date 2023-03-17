@@ -28,8 +28,8 @@ namespace WorldGeneration
         public void Execute(int index)
         {
             int2 vertPos = Utils.IndexToXz(index, chunkSize);
-            var height = heightMap[index];
-            vertices[index] = new VertexData(new float3(vertPos.x * 0.5f, height - chunkPos.y, vertPos.y * 0.5f), 0);
+            var height = SampleHeight(vertPos);
+            vertices[index] = new VertexData(new float3(vertPos.x * 0.5f, height - chunkPos.y, vertPos.y * 0.5f), GetVertexNormal(vertPos));
             if(height > chunkPos.y && height < chunkPos.y + chunkSize * depthMultiplier){
                 if(vertPos.x > 0 && vertPos.y > 0){
                     isEmpty.Value = false;
@@ -44,8 +44,14 @@ namespace WorldGeneration
             //VertexData vert = new VertexData(new float3(localPos.x, heightMap[Utils.XzToIndex(new int2((int)localPos.x, (int)localPos.z), chunkSize)], localPos.z), 0);
             //vertices[index] = vert;
         }
-        public float3 GetVertexNormal(int2 voxelLocalPosition){
-            return 0;
+        public float3 GetVertexNormal(int2 localPos){
+            float3 xVec = new float3(localPos.x + 1, SampleHeight(new int2(localPos.x + 1, localPos.y)), localPos.y) - new float3(localPos.x - 1, SampleHeight(new int2(localPos.x - 1, localPos.y)), localPos.y);
+            //Debug.Log(xVec);
+            float3 yVec = new float3(localPos.x, SampleHeight(new int2(localPos.x, localPos.y + 1)), localPos.y + 1) - new float3(localPos.x, SampleHeight(new int2(localPos.x, localPos.y - 1)), localPos.y - 1);
+            return math.normalize(math.cross(yVec, xVec));
+        }
+        float SampleHeight(int2 localPos){
+            return heightMap[Utils.XzToIndex(localPos + 1, chunkSize + 2)];
         }
     }
     [BurstCompile]
@@ -149,8 +155,6 @@ namespace WorldGeneration
             }
             return value;
         }
-        
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ushort CreateNewVertex(int3 lowerEndPointPos, int3 higherEndPointPos, sbyte lowerEndPointDensity, sbyte higherEndPointDensity, bool surfaceShift = true, bool transitionOffset = false){
             //Surface shift
             int near = GetVertexNearEdgeMask((float3)(lowerEndPointPos + higherEndPointPos) * 0.5f);
@@ -239,7 +243,6 @@ namespace WorldGeneration
                                     | ((samples[8] >> 3) & 0x10);
             return caseCode;
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public TransitionCorners<short> GetTransitionFace(int3 voxelLocalPosition, int transitionDirectionIndex){
             TransitionCorners<short> result = new TransitionCorners<short>();
             for(int i = 0; i < 9; i++){
@@ -248,7 +251,6 @@ namespace WorldGeneration
             return result;
         }
         
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public float3 GetVertexNormal(int3 voxelLocalPosition, int step){
             //if(voxelLocalPosition.x >= chunkSize || voxelLocalPosition.y >= chunkSize || voxelLocalPosition.z >= chunkSize) return new float3(0);
             float nx = (SampleDensityRaw(voxelLocalPosition + new int3(step, 0, 0)) - SampleDensityRaw(voxelLocalPosition - new int3(step, 0, 0)));
@@ -256,15 +258,12 @@ namespace WorldGeneration
             float nz = (SampleDensityRaw(voxelLocalPosition + new int3(0, 0, step)) - SampleDensityRaw(voxelLocalPosition - new int3(0, 0, step)));
             return (new float3(nx,ny,nz));
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public sbyte SampleDensity(int3 pos){
             return GetDensityWithCache(pos * depthMultiplier + chunkPos);
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public sbyte SampleDensityRaw(int3 pos){
             return GetDensityWithCache(pos + chunkPos);
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private sbyte GetDensityWithCache(int3 worldPos){
             var chunkPos = Utils.WorldPosToChunkPos(worldPos);
             var localPosInChunk = math.abs(worldPos - chunkPos);
@@ -411,7 +410,6 @@ namespace WorldGeneration
         private ReuseCell GetCell(int3 voxelLocalPosition){
             return vertexIndices.vertexIndices[Utils.XyzToIndex(voxelLocalPosition, chunkSize)];
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ushort CreateNewVertex(int3 lowerEndPointPos, int3 higherEndPointPos, sbyte lowerEndPointDensity, sbyte higherEndPointDensity, bool surfaceShift = true, bool transitionOffset = true){
             //Surface shift
             int near = GetVertexNearEdgeMask((float3)(lowerEndPointPos + higherEndPointPos) * 0.5f);
@@ -498,7 +496,6 @@ namespace WorldGeneration
             //}
             //return 0;
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private VoxelCorners<sbyte> GetDensities(int3 localPosition)
         {
             VoxelCorners<sbyte> densities = new VoxelCorners<sbyte>();
@@ -511,7 +508,6 @@ namespace WorldGeneration
 
             return densities;
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public float3 GetVertexNormal(int3 voxelLocalPosition, int step){
             //if(voxelLocalPosition.x >= chunkSize || voxelLocalPosition.y >= chunkSize || voxelLocalPosition.z >= chunkSize) return new float3(0);
             float nx = (SampleDensityRaw(voxelLocalPosition + new int3(step, 0, 0)) - SampleDensityRaw(voxelLocalPosition - new int3(step, 0, 0)));
@@ -519,15 +515,12 @@ namespace WorldGeneration
             float nz = (SampleDensityRaw(voxelLocalPosition + new int3(0, 0, step)) - SampleDensityRaw(voxelLocalPosition - new int3(0, 0, step)));
             return (new float3(nx,ny,nz));
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public sbyte SampleDensity(int3 pos){
             return GetDensityWithCache(pos * depthMultiplier + chunkPos);
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public sbyte SampleDensityRaw(int3 pos){
             return GetDensityWithCache(pos + chunkPos);
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private sbyte GetDensityWithCache(int3 worldPos){
             var chunkPos = Utils.WorldPosToChunkPos(worldPos);
             var localPosInChunk = math.abs(worldPos - chunkPos);

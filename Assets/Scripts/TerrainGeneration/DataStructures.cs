@@ -60,6 +60,8 @@ namespace WorldGeneration.DataStructures
         public float ampl;
         public int oct;
         public float seed;
+        public float lacunarity;
+        public float gain;
     }
     public class SimpleMeshData : IDisposable{
         public NativeArray<VertexData> vertexBuffer;
@@ -80,52 +82,60 @@ namespace WorldGeneration.DataStructures
     }
     public struct DensityGenerator{
         
-        public static sbyte FinalNoise(float3 worldPos, NoiseProperties noiseProperties)
+        /*public static sbyte FinalNoise(float3 worldPos, NoiseProperties noiseProperties)
         {
             //pos -= depthMultiplier;
             float value = SurfaceNoise2D(new float2(worldPos.x, worldPos.z), noiseProperties);
             float yPos = noiseProperties.surfaceLevel + worldPos.y;
             float density = (value + noiseProperties.surfaceLevel - yPos) * 0.1f;
             return Convert.ToSByte(math.clamp(-density * 127f, -127f, 127f));
-        }
+        }*/
         public static float SurfaceNoise2D(float2 worldPos, NoiseProperties noiseProperties)
         {
-            float total = 0;
-            var _ampl = noiseProperties.ampl;
-            var _freq = noiseProperties.freq;
-            for (int i = 0; i < noiseProperties.oct; i++)
-            {
-                total += noise.snoise(math.float2((worldPos.x + noiseProperties.seed) * _freq, (worldPos.y + noiseProperties.seed) * _freq)) * _ampl;
-
-                //_ampl *= 2;
-                _freq *= 0.5f;
-            }
-            //total = total % 5f;
-            return total / noiseProperties.oct;
+            return SurfaceNoise2D(worldPos, noiseProperties.ampl, noiseProperties.freq, (int)noiseProperties.seed, noiseProperties.oct, noiseProperties.lacunarity, noiseProperties.gain);
         }
-        public static sbyte FinalNoise(float3 worldPos, float ampl, float freq, int seed, int oct, int surfaceLevel)
+        public static sbyte FinalNoise(float3 worldPos, float ampl, float freq, int seed, int oct, float lacunarity, float gain)
         {   
             //pos -= depthMultiplier;
-            float value = SurfaceNoise2D(new float2(worldPos.x, worldPos.z), ampl, freq, seed, oct);
-            float yPos = surfaceLevel + worldPos.y;
-            float density = (value + surfaceLevel - yPos) * 0.5f;
+            float value = SurfaceNoise2D(new float2(worldPos.x, worldPos.z), ampl, freq, seed, oct, lacunarity, gain);
+            float yPos = worldPos.y;
+            float density = (value - yPos) * 0.5f;
             return Convert.ToSByte(math.clamp(-density * 127f, -127f, 127f));
         }
-        public static float SurfaceNoise2D(float2 worldPos, float ampl, float freq, int seed, int oct)
+        public static sbyte HeightMapToIsosurface(float3 worldPos, float height){
+            float yPos = worldPos.y;
+            float density = (height - yPos) * 0.5f;
+            return Convert.ToSByte(math.clamp(-density * 127f, -127f, 127f));
+        }
+        public static float SurfaceNoise2D(float2 worldPos, float ampl, float freq, int seed, int oct, float lacunarity, float gain)
+        {
+            float total = 0;
+            for (int i = 0; i < oct; i++)
+            {
+                total += (noise.snoise(math.float2(worldPos * freq)) + 1) * 0.5f * ampl;
+
+                ampl *= gain;
+                freq *= lacunarity;
+            }
+            //total = total % 5f;
+            //total /= oct;
+            return total;
+        }
+        public static float SurfaceNoise3D(float3 worldPos, float ampl, float freq, int seed, int oct)
         {
             float total = 0;
             var _ampl = ampl;
             var _freq = freq;
             for (int i = 0; i < oct; i++)
             {
-                total += noise.snoise(math.float2((worldPos.x + seed) * _freq, (worldPos.y + seed) * _freq)) * _ampl;
+                total += (noise.snoise((worldPos + seed) * freq) + 1) * 0.5f * _ampl;
 
                 _ampl *= 2;
-                _freq *= 0.5f;
+                _freq *= 2f;
             }
             //total = total % 5f;
-            total /= oct;
-            return math.floor(total * 127f) / 127;
+            //total /= oct;
+            return total;
         }
     }
     public class NoiseGraphInput{

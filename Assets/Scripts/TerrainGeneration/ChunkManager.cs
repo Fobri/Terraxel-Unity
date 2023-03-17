@@ -22,7 +22,7 @@ public class ChunkManager
     GameObject chunkPrefab;
     public bool shouldUpdateTree = false;
     public const int chunkResolution = 32;
-    public const int lodLevels = 7;
+    public const int lodLevels = 5;
     public const int simpleChunkTreshold = 1;
     Transform poolParent;
     Transform activeParent;

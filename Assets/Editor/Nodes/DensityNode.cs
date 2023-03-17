@@ -23,6 +23,11 @@ public class DensityNode : TerraxelPreviewNode
 	public float amplitude = 1;
 	[Input(name = "Octaves"), ShowAsDrawer]
 	public int octaves = 2;
+	[Input(name = "Lacunarity"), ShowAsDrawer]
+	public float lacunarity = 2;
+	
+	[Input(name = "Gain"), ShowAsDrawer]
+	public float gain = 2;
 	NoiseGraphInput[] inputValues;
 
 	public override string		name => "Noise";
@@ -33,7 +38,12 @@ public class DensityNode : TerraxelPreviewNode
 		base.Enable();
 		UpdateNoiseProperties();
 		inputValues = new NoiseGraphInput[5];
+		base.onAfterEdgeDisconnected += EdgeUpdate;
 		Process();
+	}
+	void EdgeUpdate(SerializableEdge edg){
+		
+		inputValues = new NoiseGraphInput[5];
 	}
 	protected override void Process()
 	{
@@ -45,10 +55,10 @@ public class DensityNode : TerraxelPreviewNode
 			for(int y = 0; y < 128; y++){
 				float2 multiplier = new float2(this.x,this.y);
 				if(inputValues[0] != null){
-					multiplier.x = inputValues[0][y * 128 + x];
+					multiplier.x = inputValues[0][y * 128 + x] * 24;
 				}
 				if(inputValues[1] != null){
-					multiplier.y = inputValues[1][y * 128 + x];
+					multiplier.y = inputValues[1][y * 128 + x] * 24;
 				}
 				if(inputValues[2] != null){
 					noiseProperties.freq = inputValues[2][y * 128 + x];
@@ -59,19 +69,21 @@ public class DensityNode : TerraxelPreviewNode
 				if(inputValues[4] != null){
 					noiseProperties.oct = (int)inputValues[4][y * 128 + x];
 				}
-				var value = (DensityGenerator.SurfaceNoise2D(new float2(x,y) + multiplier, noiseProperties) + 1) / 2;
+				noiseProperties.gain = gain;
+				noiseProperties.lacunarity = lacunarity;
+				var value = (DensityGenerator.SurfaceNoise2D(new float2(x,y) + multiplier, noiseProperties)) / math.pow(2, noiseProperties.oct);
 				values[y * 128 + x] = value;
 			}
 		}
-		var seed = new Unity.Mathematics.Random((uint)TerraxelWorld.seed).NextInt(-1_000_000, 1_000_000);
+		var seed = new Unity.Mathematics.Random((uint)TerraxelWorld.seed).NextInt(0, 1_000_000);
 		var _x = inputValues[0] != null ? inputValues[0].generatorString : Utils.floatToString(x);
 		var _y = inputValues[1] != null ? inputValues[1].generatorString : Utils.floatToString(y);
 		var _x2d = inputValues[0] != null ? inputValues[0].generator2DString : Utils.floatToString(x);
 		var _y2d = inputValues[1] != null ? inputValues[1].generator2DString : Utils.floatToString(y);
 		values.generatorString = 	"DensityGenerator.FinalNoise(pos"+ ((_x2d != "0.0000f" || _y2d != "0.0000f") ? " + new float3("+_x2d+",0,"+_y2d+")" : "") +
-									", "+(inputValues[3] != null ? inputValues[3].generatorString : Utils.floatToString(amplitude * 24))+", "+(inputValues[2] != null ? inputValues[2].generatorString : Utils.floatToString(frequency * 0.0004f))+", "+seed+", "+(inputValues[4] != null ? inputValues[4].generatorString : octaves)+",0)";
+									", "+(inputValues[3] != null ? inputValues[3].generator2DString : Utils.floatToString(amplitude * 24))+", "+(inputValues[2] != null ? inputValues[2].generator2DString : Utils.floatToString(frequency * 0.0002f))+", "+seed+", "+(inputValues[4] != null ? inputValues[4].generator2DString : octaves)+",0)";
 	    values.generator2DString = "DensityGenerator.SurfaceNoise2D(pos2D"+ ((_x2d != "0.0000f" || _y2d != "0.0000f") ? " + new float2("+_x2d+","+_y2d+")" : "") +
-									", "+(inputValues[3] != null ? inputValues[3].generator2DString : Utils.floatToString(amplitude * 24))+", "+(inputValues[2] != null ? inputValues[2].generator2DString : Utils.floatToString(frequency * 0.0004f))+", "+seed+", "+(inputValues[4] != null ? inputValues[4].generator2DString : octaves)+")";
+									", "+(inputValues[3] != null ? inputValues[3].generator2DString : Utils.floatToString(amplitude * 24))+", "+(inputValues[2] != null ? inputValues[2].generator2DString : Utils.floatToString(frequency * 0.0002f))+", "+seed+", "+(inputValues[4] != null ? inputValues[4].generator2DString : octaves)+", "+Utils.floatToString(lacunarity)+", "+Utils.floatToString(gain)+")";
 		//outputs = DensityGenerator.SurfaceNoise2D(input, noiseProperties);
 	}
 	void UpdateNoiseProperties(){

@@ -25,6 +25,7 @@ public class NoiseOutput : BaseNode
 		if(templateTextFile == null){
 			throw new System.Exception("Template text file for density job code generation missing");
 		}
+		data.generatorString = "DensityGenerator.HeightMapToIsosurface(pos, TerraxelGenerated.GenerateDensity(pos2D))";
 		data.generatorString += ";";
 		data.generator2DString += ";";
 		string fullGeneratorString = templateTextFile.text;

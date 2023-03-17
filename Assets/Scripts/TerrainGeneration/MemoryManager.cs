@@ -50,7 +50,7 @@ public class MemoryManager{
         for(int i = 0; i < simpleMeshAmount; i++){
             var vertBuffer = new NativeArray<VertexData>(Chunk2D.vertexCount, Allocator.Persistent);
             var indexBuffer = new NativeArray<ushort>(Chunk2D.indexCount, Allocator.Persistent);
-            var heightMap = new NativeArray<float>((ChunkManager.chunkResolution * 2 + 3) * (ChunkManager.chunkResolution * 2 + 3), Allocator.Persistent);
+            var heightMap = new NativeArray<float>(4489, Allocator.Persistent);
             //buffer.CopyFrom(vertices);
             SimpleMeshData data = new SimpleMeshData();
             data.vertexBuffer = vertBuffer;

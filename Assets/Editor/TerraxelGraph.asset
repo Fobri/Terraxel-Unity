@@ -17,20 +17,47 @@ MonoBehaviour:
   - rid: 1204564679586480153
   - rid: 1204564679586480154
   - rid: 1204564679586480155
+  - rid: 7132471855725150209
+  - rid: 7132471855725150210
+  - rid: 7132471859221364736
   edges:
-  - GUID: 7f95450b-ad76-43e7-a715-60fa6ed8fd7a
+  - GUID: ee764e8d-37cf-46b3-8c10-e595073c2509
     owner: {fileID: 11400000}
     inputNodeGUID: 11d7e164-7d19-44a4-8c99-4bca0c8165cd
-    outputNodeGUID: 9c1cd39d-d821-40c4-bc6a-c933be417954
+    outputNodeGUID: 1508bc46-13d8-4bcb-90d7-ba671762b83e
     inputFieldName: input
     outputFieldName: output
     inputPortIdentifier: 
     outputPortIdentifier: 
-  - GUID: 53a512eb-66cc-4416-8036-8d0d981d4f74
+  - GUID: 75f2206e-2ac6-43ea-a0d9-db8ca6b2bdff
+    owner: {fileID: 11400000}
+    inputNodeGUID: 3bbe4281-4b20-451f-b262-82e12529752e
+    outputNodeGUID: 385899dd-5c28-436e-8f0f-b29ab1ec9f8e
+    inputFieldName: x
+    outputFieldName: output
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  - GUID: 59a14350-33f2-4cb7-9ad8-1f480a77cef7
+    owner: {fileID: 11400000}
+    inputNodeGUID: 1508bc46-13d8-4bcb-90d7-ba671762b83e
+    outputNodeGUID: 3bbe4281-4b20-451f-b262-82e12529752e
+    inputFieldName: B
+    outputFieldName: output
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  - GUID: 8d919dbb-0a49-496f-ad6e-3ef1d2860c2c
     owner: {fileID: 11400000}
     inputNodeGUID: 9c1cd39d-d821-40c4-bc6a-c933be417954
     outputNodeGUID: 2fdcf2a4-239f-4891-8959-b61c3eace41c
-    inputFieldName: x
+    inputFieldName: y
+    outputFieldName: output
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  - GUID: dafbd3cc-aaf3-4f6e-80ca-46fe65573e34
+    owner: {fileID: 11400000}
+    inputNodeGUID: 1508bc46-13d8-4bcb-90d7-ba671762b83e
+    outputNodeGUID: 9c1cd39d-d821-40c4-bc6a-c933be417954
+    inputFieldName: A
     outputFieldName: output
     inputPortIdentifier: 
     outputPortIdentifier: 
@@ -39,8 +66,8 @@ MonoBehaviour:
   pinnedElements:
   - position:
       serializedVersion: 2
-      x: 10
-      y: 375
+      x: 13
+      y: 383
       width: 150
       height: 200
     opened: 1
@@ -71,8 +98,8 @@ MonoBehaviour:
   serializedParameterList: []
   stickyNotes: []
   nodeInspectorReference: {fileID: 0}
-  position: {x: -216, y: 392, z: 0}
-  scale: {x: 1, y: 1, z: 1}
+  position: {x: -7, y: 391, z: 0}
+  scale: {x: 0.65751624, y: 0.65751624, z: 1}
   references:
     version: 2
     RefIds:
@@ -84,8 +111,8 @@ MonoBehaviour:
         computeOrder: 1
         position:
           serializedVersion: 2
-          x: 807
-          y: -200
+          x: 711
+          y: -358
           width: 148
           height: 299
         expanded: 0
@@ -94,9 +121,11 @@ MonoBehaviour:
         output: 0
         x: 0
         y: 0
-        frequency: 8
-        amplitude: 4
+        frequency: 2
+        amplitude: 0.8
         octaves: 3
+        lacunarity: 2
+        gain: 2
     - rid: 1204564679586480154
       type: {class: DensityNode, ns: , asm: Assembly-CSharp-Editor}
       data:
@@ -105,8 +134,8 @@ MonoBehaviour:
         computeOrder: 0
         position:
           serializedVersion: 2
-          x: 495
-          y: -303
+          x: 481
+          y: -358
           width: 148
           height: 299
         expanded: 1
@@ -115,22 +144,88 @@ MonoBehaviour:
         output: 0
         x: 0
         y: 0
-        frequency: 3
-        amplitude: 4
+        frequency: 20
+        amplitude: 1
         octaves: 2
+        lacunarity: 2
+        gain: 2
     - rid: 1204564679586480155
       type: {class: NoiseOutput, ns: , asm: Assembly-CSharp-Editor}
       data:
         nodeCustomName: 
         GUID: 11d7e164-7d19-44a4-8c99-4bca0c8165cd
-        computeOrder: 2
+        computeOrder: 5
         position:
           serializedVersion: 2
-          x: 1013
-          y: -200
+          x: 1230
+          y: -237
           width: 82
           height: 75
         expanded: 0
         debug: 0
         nodeLock: 0
         input: 0
+    - rid: 7132471855725150209
+      type: {class: TerraxelAdd, ns: , asm: Assembly-CSharp-Editor}
+      data:
+        nodeCustomName: 
+        GUID: 1508bc46-13d8-4bcb-90d7-ba671762b83e
+        computeOrder: 4
+        position:
+          serializedVersion: 2
+          x: 1005
+          y: -219
+          width: 143
+          height: 227
+        expanded: 0
+        debug: 0
+        nodeLock: 0
+        output: 0
+        A: 0
+        B: 0
+    - rid: 7132471855725150210
+      type: {class: DensityNode, ns: , asm: Assembly-CSharp-Editor}
+      data:
+        nodeCustomName: 
+        GUID: 3bbe4281-4b20-451f-b262-82e12529752e
+        computeOrder: 3
+        position:
+          serializedVersion: 2
+          x: 711.0001
+          y: 17.99999
+          width: 148
+          height: 347
+        expanded: 0
+        debug: 0
+        nodeLock: 0
+        output: 0
+        x: 0
+        y: 0
+        frequency: 10
+        amplitude: 1
+        octaves: 2
+        lacunarity: 2
+        gain: 2
+    - rid: 7132471859221364736
+      type: {class: DensityNode, ns: , asm: Assembly-CSharp-Editor}
+      data:
+        nodeCustomName: 
+        GUID: 385899dd-5c28-436e-8f0f-b29ab1ec9f8e
+        computeOrder: 2
+        position:
+          serializedVersion: 2
+          x: 481.00006
+          y: 18.050003
+          width: 148
+          height: 347
+        expanded: 0
+        debug: 0
+        nodeLock: 0
+        output: 0
+        x: 457
+        y: 700
+        frequency: 25
+        amplitude: 0.8
+        octaves: 2
+        lacunarity: 3
+        gain: 2

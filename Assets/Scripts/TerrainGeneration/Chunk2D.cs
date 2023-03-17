@@ -46,13 +46,13 @@ public class Chunk2D : BaseChunk
         meshData = MemoryManager.GetSimpleMeshData();
         var pos = (int3)WorldPosition;
         var noiseJob = new NoiseJob2D{
-            offset = new float2(pos.x, pos.z),
+            offset = new float2(pos.x, pos.z) - depthMultiplier / 2,
             depthMultiplier = depthMultiplier / 2,
-            size = (ChunkManager.chunkResolution * 2) + 1,
+            size = (ChunkManager.chunkResolution * 2) + 3,
             heightMap = meshData.heightMap,
             noiseProperties = TerraxelWorld.DensityManager.GetNoiseProperties()
         };
-        base.ScheduleParallelForJob(noiseJob, vertexCount);
+        base.ScheduleParallelForJob(noiseJob, 4489);
         var meshJob = new Mesh2DJob(){
             heightMap = meshData.heightMap,
             chunkSize = (ChunkManager.chunkResolution * 2) + 1,

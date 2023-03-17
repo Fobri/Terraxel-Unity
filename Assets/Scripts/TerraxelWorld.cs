@@ -109,6 +109,9 @@ public class TerraxelWorld : MonoBehaviour
 #endif
 public TextMeshProUGUI[] debugLabels;
     public void Start(){
+#if !UNITY_EDITOR
+        frustumCulling = true;
+#endif
         renderCamera = Camera.main;
         MemoryManager.Init();
         playerBounds = new BoundingBox(player.transform.position, new float3(ChunkManager.chunkResolution));
