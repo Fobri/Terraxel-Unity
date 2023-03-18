@@ -121,7 +121,7 @@ public TextMeshProUGUI[] debugLabels;
         ChunkManager.Init(poolParent, activeParent, simpleChunkPrefab, chunkPrefab);
         
         player.SetActive(false);
-        var startHeight = TerraxelGenerated.GenerateDensity(new float2(player.transform.position.x, player.transform.position.z));
+        var startHeight = TerraxelGenerated.GenerateDensity(new float2(player.transform.position.x, player.transform.position.z)) + 0.1f;
         player.transform.position = player.transform.position * new float3(1,0,1) + new float3(0,startHeight, 0);
     }
     void Update(){
