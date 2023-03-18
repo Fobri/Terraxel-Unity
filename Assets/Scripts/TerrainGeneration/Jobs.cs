@@ -22,15 +22,20 @@ namespace WorldGeneration
         [ReadOnly] public int depthMultiplier;
         [WriteOnly] public NativeReference<bool> isEmpty;
         [WriteOnly] public NativeArray<VertexData> vertices;
+        [WriteOnly] public NativeList<GrassInstanceData> grassData;
         [WriteOnly, NativeDisableParallelForRestriction] public NativeArray<ushort> indices;
+        public Unity.Mathematics.Random rng;
         int triIndex;
 
         public void Execute(int index)
         {
             int2 vertPos = Utils.IndexToXz(index, chunkSize);
             var height = SampleHeight(vertPos);
-            vertices[index] = new VertexData(new float3(vertPos.x * 0.5f, height - chunkPos.y, vertPos.y * 0.5f), GetVertexNormal(vertPos));
+            var _vertPos = new float3(vertPos.x * depthMultiplier, height - chunkPos.y, vertPos.y * depthMultiplier);
+            var normal = GetVertexNormal(vertPos);
+            vertices[index] = new VertexData(_vertPos, normal);
             if(height > chunkPos.y && height < chunkPos.y + chunkSize * depthMultiplier){
+                grassData.Add(new GrassInstanceData(float4x4.TRS(_vertPos + chunkPos, quaternion.LookRotation(normal,new float3(0,1,0)), new float3(1,rng.NextFloat(0.9f, 1.1f),1))));
                 if(vertPos.x > 0 && vertPos.y > 0){
                     isEmpty.Value = false;
                     indices[triIndex * 6 + 0] = (ushort)Utils.XzToIndex(vertPos + new int2(-1, -1), chunkSize);
@@ -296,8 +301,10 @@ namespace WorldGeneration
          public NativeList<ushort> triangles;
         [ReadOnly] public int depthMultiplier;
         [ReadOnly] public float negativeDepthMultiplier;
+        [WriteOnly] public NativeList<GrassInstanceData> grassData;
         public TempBuffer vertexIndices;
         public DensityCacheInstance cache;
+        public Unity.Mathematics.Random rng;
         public void Execute(int index)
         {
             int3 voxelLocalPosition = Utils.IndexToXyz(index, chunkSize);
@@ -451,7 +458,7 @@ namespace WorldGeneration
                 secondaryPos.y += ((-vertNormal.x*vertNormal.y) * offsetVector.x + (1-math.pow(vertNormal.y, 2)) * offsetVector.y + (-vertNormal.y*vertNormal.z) * offsetVector.z);
                 secondaryPos.z += ((-vertNormal.x*vertNormal.z) * offsetVector.x + (-vertNormal.y*vertNormal.z) * offsetVector.y + (1-math.pow(vertNormal.z, 2)) * offsetVector.z);
             }
-            
+            grassData.Add(new GrassInstanceData(float4x4.TRS(vertPos + chunkPos, quaternion.LookRotation(vertNormal, new float3(0,0,1)), new float3(0.2f,rng.NextFloat(0.3f, 0.45f),0.2f))));
             //int vertexIndex = vertexCounter.Increment();
             vertices.Add(new TransitionVertexData(vertPos, secondaryPos, near, vertNormal));
             int vertexIndex = vertices.Length - 1;
@@ -618,7 +625,7 @@ namespace WorldGeneration
         }
         
     }
-    [BurstCompile]
+    /*[BurstCompile]
     public struct GrassJob : IJobFor
     {
         [ReadOnly] public float2 offset;
@@ -626,16 +633,16 @@ namespace WorldGeneration
         [ReadOnly] public int size;
         [ReadOnly] public NoiseProperties noiseProperties;
         public Unity.Mathematics.Random rng;
-        [WriteOnly] public NativeList<Matrix4x4> positions;
+        [WriteOnly] public NativeList<GrassInstanceData> data;
         public void Execute(int index){
             var pos = Utils.IndexToXz(index, size) * depthMultiplier + offset;
             var value = TerraxelGenerated.GenerateDensity(pos);
             var chance = rng.NextFloat(0f, 100f);
             if(value > chance){
-                positions.Add(Matrix4x4.TRS(new float3(pos.x, value, pos.y), math.quaternion(0,0,0,1), (float3)1f));
+                data.Add(Matrix4x4.TRS(new float3(pos.x, value, pos.y), math.quaternion(0,0,0,1), (float3)1f));
             }
         }
-    }
+    }*/
 
     internal class Tables
     {

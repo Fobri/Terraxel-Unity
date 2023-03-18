@@ -49,7 +49,7 @@ public class Chunk3D : BaseChunk{
             worldObject.transform.position = WorldPosition;
         }
         public override void RenderChunk(){
-            if(!active) return;
+            if(!active || chunkState != ChunkState.READY) return;
             Graphics.DrawMesh(chunkMesh, WorldPosition, Quaternion.identity, chunkMaterial, 0, null, 0, propertyBlock, true, true, true);
             for(int i = 0; i < transitionMeshes.Length; i++){
                 if(transitionMeshes[i] == null || (dirMask & transitionMeshIndexMap[i]) == 0) continue;
@@ -74,8 +74,10 @@ public class Chunk3D : BaseChunk{
                 worldObject.GetComponent<MeshCollider>().sharedMesh = chunkMesh;
                 colliderBaking = false;
             }
-            else
+            else{
                 ApplyMesh();
+                base.PushGrassData();
+            }
         }
         public void UpdateDirectionMask(bool refreshNeighbours = false){
             dirMask = 0;
@@ -126,7 +128,9 @@ public class Chunk3D : BaseChunk{
                 negativeDepthMultiplier = negativeDepthMultiplier,
                 vertexIndices = vertexIndexBuffer,
                 triangles = meshData.indexBuffer,
-                cache = cache
+                cache = cache,
+                grassData = base.grassData,
+                rng = base.rng
             };
             base.ScheduleJobFor(marchingJob, (ChunkManager.chunkResolution) * (ChunkManager.chunkResolution) * (ChunkManager.chunkResolution), false);
             var transitionJob = new TransitionMeshJob()
@@ -145,15 +149,6 @@ public class Chunk3D : BaseChunk{
             };
             base.ScheduleJobFor(transitionJob, 6 * (ChunkManager.chunkResolution) * (ChunkManager.chunkResolution), true);
             var _pos = (int3)WorldPosition;
-            /*var grassJob = new GrassJob{
-                offset = new float2(_pos.x, _pos.z),
-                depthMultiplier = depthMultiplier,
-                size = ChunkManager.chunkResolution + 1,
-                noiseProperties = TerraxelWorld.DensityManager.GetNoiseProperties(),
-                positions = grassPositions,
-                rng = new Unity.Mathematics.Random(1)
-            };
-            base.ScheduleJobFor(grassJob, 1023, false);*/
         }
         bool CheckNeighbour(int3 relativeOffset, bool refreshNeighbours = false){
             float3 pos = ChunkManager.chunkResolution * depthMultiplier * relativeOffset;
@@ -248,10 +243,9 @@ public class Chunk3D : BaseChunk{
                 RefreshRenderState(true);
             }
         }
-        public override void FreeBuffers(){
+        protected override void OnFreeBuffers(){
             ClearMesh();
             hasMesh = false;
-            _grassPositions = null;
             worldObject = null;
             if(meshData.IsCreated){
                 MemoryManager.ReturnMeshData(meshData);

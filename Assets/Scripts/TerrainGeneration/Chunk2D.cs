@@ -60,7 +60,9 @@ public class Chunk2D : BaseChunk
             indices = meshData.indexBuffer,
             chunkPos = (int3)WorldPosition,
             depthMultiplier = depthMultiplier / 2,
-            isEmpty = isEmpty
+            isEmpty = isEmpty,
+            grassData = base.grassData,
+            rng = base.rng
         };
         base.ScheduleJobFor(meshJob, vertexCount, true);
     }
@@ -75,7 +77,7 @@ public class Chunk2D : BaseChunk
         isEmpty.Dispose();
         if(onMeshReady == OnMeshReadyAction.ALERT_PARENT)
             SetActive(false);
-        localMatrix = Matrix4x4.TRS(WorldPosition, Quaternion.identity, new float3(depthMultiplier, 1, depthMultiplier));
+        localMatrix = Matrix4x4.TRS(WorldPosition, Quaternion.identity, new float3(1, 1, 1));
         //propertyBlock.SetInt("_DepthMultiplier", depthMultiplier);
         chunkMesh.SetVertexBufferParams(vertexCount, layout);
         chunkMesh.SetIndexBufferParams(indexCount, IndexFormat.UInt16);
@@ -90,11 +92,11 @@ public class Chunk2D : BaseChunk
     }
     public override void RenderChunk()
     {
-        if(!active) return;
+        if(!active || chunkState != ChunkState.READY) return;
         Graphics.DrawMesh(chunkMesh, localMatrix, chunkMaterial, 0, null, 0, propertyBlock, true, true, true);
         base.RenderGrass();
     }
-    public override void FreeBuffers()
+    protected override void OnFreeBuffers()
     {
         chunkMesh.Clear();
         hasMesh = false;

@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System;
 using UnityEngine;
 using System.Globalization;
+using System.Runtime.InteropServices;
 
 namespace WorldGeneration.DataStructures
 {
@@ -22,6 +23,13 @@ namespace WorldGeneration.DataStructures
         public NativeReference<bool> isEmpty;
         [WriteOnly, NativeDisableParallelForRestriction]
         public NativeReference<bool> isFull;
+    }
+    [StructLayout(LayoutKind.Sequential)]
+    public struct GrassInstanceData{
+        public float4x4 matrix;
+        public GrassInstanceData(float4x4 matrix){
+            this.matrix = matrix;
+        }
     }
     public struct DensityCacheInstance{
         [NativeDisableUnsafePtrRestriction]

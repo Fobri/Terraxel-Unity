@@ -41,10 +41,11 @@ public class MemoryManager{
     public const int maxConcurrentOperations = 4;
     public const int maxVertexCount = 10000;
     public const int densityMapLength = (ChunkManager.chunkResolution)*(ChunkManager.chunkResolution)*(ChunkManager.chunkResolution);
-    public const int grassAmount = 10000;
+    public const int grassBufferAmount = 10000;
     static MemoryAllocation<MeshData> meshDatas;
     static MemoryAllocation<SimpleMeshData> simpleMeshDatas;
     static MemoryAllocation<TempBuffer> vertexIndexBuffers;
+    static MemoryAllocation<NativeList<GrassInstanceData>> grassDatas;
     static Queue<NativeArray<sbyte>> freeDensityMaps;
     static NativeArray<sbyte> densityMap;
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
@@ -55,6 +56,14 @@ public class MemoryManager{
     public static void Init(){
         AllocateMeshData();
         AllocateTempBuffers();
+        AllocateGrassData();
+    }
+    static void AllocateGrassData(){
+        grassDatas = new MemoryAllocation<NativeList<GrassInstanceData>>();
+        for(int i = 0; i < grassBufferAmount; i++){
+            grassDatas.Enqueue(new NativeList<GrassInstanceData>(4500, Allocator.Persistent));
+        }
+        grassDatas.InitArray();
     }
     public static void AllocateSimpleMeshData(Mesh source){
         /*var verts = source.vertices;
@@ -118,6 +127,10 @@ public class MemoryManager{
         if(meshDatas.Count == 0) throw new Exception("No free mesh data available", new InvalidOperationException());
         return meshDatas.Dequeue();
     }
+    public static NativeList<GrassInstanceData> GetGrassData(){
+        if(grassDatas.Count == 0) throw new Exception("No free mesh data available", new InvalidOperationException());
+        return grassDatas.Dequeue();
+    }
     public static SimpleMeshData GetSimpleMeshData(){
         if(simpleMeshDatas.Count == 0) throw new Exception("No free mesh data available", new InvalidOperationException());
         return simpleMeshDatas.Dequeue();
@@ -150,6 +163,12 @@ public class MemoryManager{
         ClearArray(data.indexBuffer, data.indexBuffer.Length);
         simpleMeshDatas.Enqueue(data);
     }
+    public static void ReturnGrassData(NativeList<GrassInstanceData> data){
+        ClearArray(data.AsArray(), data.Length);
+        data.Length = 0;
+        data.Capacity = 4500;
+        grassDatas.Enqueue(data);
+    }
     public static void ReturnDensityMap(NativeArray<sbyte> map, bool assignSafetyHandle = false){
         #if ENABLE_UNITY_COLLECTIONS_CHECKS
         if(assignSafetyHandle){
@@ -180,6 +199,7 @@ public class MemoryManager{
     public static void Dispose(){
         meshDatas.Dispose();
         vertexIndexBuffers.Dispose();
+        grassDatas.Dispose();
         foreach(var buffer in meshStarts){
             buffer.Dispose();
         }
