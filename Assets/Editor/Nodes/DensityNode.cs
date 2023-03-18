@@ -28,6 +28,8 @@ public class DensityNode : TerraxelPreviewNode
 	
 	[Input(name = "Gain"), ShowAsDrawer]
 	public float gain = 2;
+	[Input(name = "Analytical derivative"), ShowAsDrawer]
+	public bool ad;
 	NoiseGraphInput[] inputValues;
 
 	public override string		name => "Noise";
@@ -71,7 +73,7 @@ public class DensityNode : TerraxelPreviewNode
 				}
 				noiseProperties.gain = gain;
 				noiseProperties.lacunarity = lacunarity;
-				var value = (DensityGenerator.SurfaceNoise2D(new float2(x,y) + multiplier, noiseProperties)) / math.pow(2, noiseProperties.oct);
+				var value = (DensityGenerator.SurfaceNoise2D(new float2(x,y) + multiplier, noiseProperties, ad)) / math.pow(2, noiseProperties.oct);
 				values[y * 128 + x] = value;
 			}
 		}
@@ -83,7 +85,7 @@ public class DensityNode : TerraxelPreviewNode
 		values.generatorString = 	"DensityGenerator.FinalNoise(pos"+ ((_x2d != "0.0000f" || _y2d != "0.0000f") ? " + new float3("+_x2d+",0,"+_y2d+")" : "") +
 									", "+(inputValues[3] != null ? inputValues[3].generator2DString : Utils.floatToString(amplitude * 24))+", "+(inputValues[2] != null ? inputValues[2].generator2DString : Utils.floatToString(frequency * 0.0002f))+", "+seed+", "+(inputValues[4] != null ? inputValues[4].generator2DString : octaves)+",0)";
 	    values.generator2DString = "DensityGenerator.SurfaceNoise2D(pos2D"+ ((_x2d != "0.0000f" || _y2d != "0.0000f") ? " + new float2("+_x2d+","+_y2d+")" : "") +
-									", "+(inputValues[3] != null ? inputValues[3].generator2DString : Utils.floatToString(amplitude * 24))+", "+(inputValues[2] != null ? inputValues[2].generator2DString : Utils.floatToString(frequency * 0.0002f))+", "+seed+", "+(inputValues[4] != null ? inputValues[4].generator2DString : octaves)+", "+Utils.floatToString(lacunarity)+", "+Utils.floatToString(gain)+")";
+									", "+(inputValues[3] != null ? inputValues[3].generator2DString : Utils.floatToString(amplitude * 24))+", "+(inputValues[2] != null ? inputValues[2].generator2DString : Utils.floatToString(frequency * 0.0002f))+", "+seed+", "+(inputValues[4] != null ? inputValues[4].generator2DString : octaves)+", "+Utils.floatToString(lacunarity)+", "+Utils.floatToString(gain)+", "+ad.ToString().ToLower()+")";
 		//outputs = DensityGenerator.SurfaceNoise2D(input, noiseProperties);
 	}
 	void UpdateNoiseProperties(){

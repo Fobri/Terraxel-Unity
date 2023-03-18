@@ -90,29 +90,36 @@ namespace WorldGeneration.DataStructures
             float density = (value + noiseProperties.surfaceLevel - yPos) * 0.1f;
             return Convert.ToSByte(math.clamp(-density * 127f, -127f, 127f));
         }*/
-        public static float SurfaceNoise2D(float2 worldPos, NoiseProperties noiseProperties)
+        public static float SurfaceNoise2D(float2 worldPos, NoiseProperties noiseProperties, bool ad)
         {
-            return SurfaceNoise2D(worldPos, noiseProperties.ampl, noiseProperties.freq, (int)noiseProperties.seed, noiseProperties.oct, noiseProperties.lacunarity, noiseProperties.gain);
+            return SurfaceNoise2D(worldPos, noiseProperties.ampl, noiseProperties.freq, (int)noiseProperties.seed, noiseProperties.oct, noiseProperties.lacunarity, noiseProperties.gain, ad);
         }
-        public static sbyte FinalNoise(float3 worldPos, float ampl, float freq, int seed, int oct, float lacunarity, float gain)
+        /*public static sbyte FinalNoise(float3 worldPos, float ampl, float freq, int seed, int oct, float lacunarity, float gain)
         {   
             //pos -= depthMultiplier;
             float value = SurfaceNoise2D(new float2(worldPos.x, worldPos.z), ampl, freq, seed, oct, lacunarity, gain);
             float yPos = worldPos.y;
             float density = (value - yPos) * 0.5f;
             return Convert.ToSByte(math.clamp(-density * 127f, -127f, 127f));
-        }
+        }*/
         public static sbyte HeightMapToIsosurface(float3 worldPos, float height){
             float yPos = worldPos.y;
             float density = (height - yPos) * 0.5f;
             return Convert.ToSByte(math.clamp(-density * 127f, -127f, 127f));
         }
-        public static float SurfaceNoise2D(float2 worldPos, float ampl, float freq, int seed, int oct, float lacunarity, float gain)
+        public static float SurfaceNoise2D(float2 worldPos, float ampl, float freq, int seed, int oct, float lacunarity, float gain, bool ad)
         {
             float total = 0;
+            float2 dsum = 0;
             for (int i = 0; i < oct; i++)
             {
-                total += (noise.snoise(math.float2(worldPos * freq)) + 1) * 0.5f * ampl;
+                if(ad){
+                    float3 n = noise.srdnoise(math.float2(worldPos * freq));
+                    dsum += new float2(n.y, n.z);
+                    total += (n.x + 1) * 0.5f * ampl * (1/(1+math.dot(dsum, dsum)));
+                }else{
+                    total += (noise.snoise(math.float2(worldPos * freq)) + 1) * 0.5f * ampl;
+                }
 
                 ampl *= gain;
                 freq *= lacunarity;
