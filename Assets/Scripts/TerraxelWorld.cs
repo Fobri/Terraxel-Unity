@@ -119,6 +119,10 @@ public TextMeshProUGUI[] debugLabels;
         DensityManager.Init(noiseData);
         ChunkManager = new ChunkManager();
         ChunkManager.Init(poolParent, activeParent, simpleChunkPrefab, chunkPrefab);
+        
+        player.SetActive(false);
+        var startHeight = TerraxelGenerated.GenerateDensity(new float2(player.transform.position.x, player.transform.position.z));
+        player.transform.position = player.transform.position * new float3(1,0,1) + new float3(0,startHeight, 0);
     }
     void Update(){
         JobRunner.Update();
@@ -196,6 +200,8 @@ public TextMeshProUGUI[] debugLabels;
             else if(ChunkManager.shouldUpdateTree){
                 ChunkManager.shouldUpdateTree = false;
                 ChunkManager.chunkTree.UpdateTreeRecursive();
+            }else if(!player.activeSelf) {
+                player.SetActive(true);
             }
         }
     }

@@ -1621,6 +1621,8 @@ MonoBehaviour:
     ampl: 24.1
     oct: 2
     seed: 136.5
+    lacunarity: 0
+    gain: 0
   poolParent: {fileID: 519378266}
   activeParent: {fileID: 1759807580}
   simpleChunkPrefab: {fileID: 7716612531577036198, guid: 66a8911691ea28847bec6afb69344e1d, type: 3}
@@ -2064,6 +2066,10 @@ PrefabInstance:
     - target: {fileID: 3276619212830280649, guid: c822f91997f3a8649ae1b0ddaac74b61, type: 3}
       propertyPath: m_Name
       value: Demo Character 3D
+      objectReference: {fileID: 0}
+    - target: {fileID: 3276619212830280649, guid: c822f91997f3a8649ae1b0ddaac74b61, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3276619212830280659, guid: c822f91997f3a8649ae1b0ddaac74b61, type: 3}
       propertyPath: m_RootOrder
