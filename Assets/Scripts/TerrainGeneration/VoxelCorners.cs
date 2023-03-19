@@ -4,58 +4,63 @@ using UnityEngine;
 
 namespace WorldGeneration
 {
-    public struct VoxelCorners<T>
+    public struct VoxelCorners
     {
         /// <summary>
         /// The first corner
         /// </summary>
-        public T Corner1 { get; set; }
+        public sbyte Corner1;
 
         /// <summary>
         /// The second corner
         /// </summary>
-        public T Corner2 { get; set; }
+        public sbyte Corner2;
 
         /// <summary>
         /// The third corner
         /// </summary>
-        public T Corner3 { get; set; }
+        public sbyte Corner3;
 
         /// <summary>
         /// The fourth corner
         /// </summary>
-        public T Corner4 { get; set; }
+        public sbyte Corner4;
 
         /// <summary>
         /// The fifth corner
         /// </summary>
-        public T Corner5 { get; set; }
+        public sbyte Corner5;
 
         /// <summary>
         /// The sixth corner
         /// </summary>
-        public T Corner6 { get; set; }
+        public sbyte Corner6;
 
         /// <summary>
         /// The seventh corner
         /// </summary>
-        public T Corner7 { get; set; }
+        public sbyte Corner7;
 
         /// <summary>
         /// The eighth corner
         /// </summary>
-        public T Corner8 { get; set; }
+        public sbyte Corner8;
 
         /// <summary>
         /// The indexer for the voxel corners
         /// </summary>
         /// <param name="index">The corner's index</param>
         /// <exception cref="System.IndexOutOfRangeException">Thrown when index is more than 7.</exception>
-        public T this[int index]
+        public sbyte this[int index]
         {
             get
             {
-                switch (index)
+                unsafe{
+                    fixed(sbyte* ptr = &Corner1){
+                        return ptr[index];
+                    }
+                }
+                /*switch (index)
                 {
                     case 0: return Corner1;
                     case 1: return Corner2;
@@ -66,11 +71,16 @@ namespace WorldGeneration
                     case 6: return Corner7;
                     case 7: return Corner8;
                     default: throw new System.IndexOutOfRangeException();
-                }
+                }*/
             }
             set
             {
-                switch (index)
+                unsafe{
+                    fixed(sbyte* ptr = &Corner1){
+                        ptr[index] = value;
+                    }
+                }
+                /*switch (index)
                 {
                     case 0:
                         Corner1 = value;
@@ -97,7 +107,7 @@ namespace WorldGeneration
                         Corner8 = value;
                         break;
                     default: throw new System.IndexOutOfRangeException();
-                }
+                }*/
             }
         }
     }

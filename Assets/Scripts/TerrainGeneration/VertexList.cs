@@ -2,9 +2,11 @@
 using System.Collections.Generic;
 using UnityEngine;
 using Unity.Mathematics;
+using System.Runtime.InteropServices;
 
 namespace WorldGeneration
 {
+    [StructLayout(LayoutKind.Sequential)]
     public struct CellIndices
     {
         /// <summary>
@@ -76,7 +78,12 @@ namespace WorldGeneration
         {
             get
             {
-                switch (index)
+                unsafe{
+                    fixed(ushort* ptr = &_c1){
+                        return ptr[index];
+                    }
+                }
+                /*switch (index)
                 {
                     case 0: return _c1;
                     case 1: return _c2;
@@ -91,11 +98,16 @@ namespace WorldGeneration
                     case 10: return _c11;
                     case 11: return _c12;
                     default: throw new System.IndexOutOfRangeException();
-                }
+                }*/
             }
             set
             {
-                switch (index)
+                unsafe{
+                    fixed(ushort* ptr = &_c1){
+                        ptr[index] = value;
+                    }
+                }
+                /*switch (index)
                 {
                     case 0:
                         _c1 = value;
@@ -135,7 +147,7 @@ namespace WorldGeneration
                         break;
                     default:
                         throw new System.IndexOutOfRangeException();
-                }
+                }*/
             }
         }
     }

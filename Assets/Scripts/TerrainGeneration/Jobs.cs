@@ -35,7 +35,9 @@ namespace WorldGeneration
             var normal = GetVertexNormal(vertPos);
             vertices[index] = new VertexData(_vertPos, normal);
             if(height > chunkPos.y && height < chunkPos.y + chunkSize * depthMultiplier){
-                grassData.Add(new GrassInstanceData(float4x4.TRS(_vertPos + chunkPos, quaternion.LookRotation(normal, math.normalize(new float3(rng.NextFloat(-1,1),0,rng.NextFloat(-1,1)))), new float3(0.4f,0.4f, rng.NextFloat(0.5f, 0.8f)))));
+                if(depthMultiplier < 2) {
+                    grassData.Add(new GrassInstanceData(float4x4.TRS(_vertPos + chunkPos, quaternion.LookRotation(normal, math.normalize(new float3(rng.NextFloat(-1,1),0,rng.NextFloat(-1,1)))), new float3(0.4f,0.4f, rng.NextFloat(0.5f, 0.8f)))));
+                }
                 if(vertPos.x > 0 && vertPos.y > 0){
                     isEmpty.Value = false;
                     indices[triIndex * 6 + 0] = (ushort)Utils.XzToIndex(vertPos + new int2(-1, -1), chunkSize);
@@ -62,25 +64,19 @@ namespace WorldGeneration
     [BurstCompile]
     public struct TransitionMeshJob : IJobFor
     {
-        [ReadOnly] public DensityData densities;
-        [ReadOnly] public int3 chunkPos;
-        [ReadOnly] public int chunkSize;
         //[WriteOnly] public Counter vertexCounter;
         
         //[WriteOnly] public Counter indexCounter;
-         public NativeList<TransitionVertexData> vertices;
-        
-         public NativeList<ushort> triangles;
+        public NativeList<TransitionVertexData> vertices;
+        public NativeList<ushort> triangles;
         public NativeArray<int2> meshStarts;
-        [ReadOnly] public int depthMultiplier;
-        [ReadOnly] public float negativeDepthMultiplier;
         public TempBuffer vertexIndices;
-        public DensityCacheInstance cache;
         public int indexTracker;
+        public MeshingHelper helper;
         public void Execute(int index)
         {
             //int index = Utils.XyzToIndex(voxel2DLocalPosition.x, transitionIndex, voxel2DLocalPosition.y, chunkSize);
-            var localPos =  Utils.IndexToXyz(index, chunkSize);
+            var localPos =  Utils.IndexToXyz(index, helper.chunkSize);
             int transitionIndex = localPos.y;
             if(indexTracker != transitionIndex){
                 int2 counts = new int2(vertices.Length, triangles.Length);
@@ -88,14 +84,14 @@ namespace WorldGeneration
                 meshStarts[transitionIndex] = counts;
                 indexTracker = transitionIndex;
             }
-            if(depthMultiplier == 1) return;
+            if(helper.depthMultiplier == 1) return;
             int3 voxelLocalPosition = 0;
             int2 voxel2DLocalPosition = new int2(localPos.x, localPos.z);
-            if(transitionIndex == 0) {voxelLocalPosition = new int3(chunkSize - 1, localPos.x, localPos.z);}
+            if(transitionIndex == 0) {voxelLocalPosition = new int3(helper.chunkSize - 1, localPos.x, localPos.z);}
             else if(transitionIndex == 1) {voxelLocalPosition = new int3(0, localPos.x, localPos.z);}
-            else if(transitionIndex == 2) {voxelLocalPosition = new int3(localPos.x, localPos.z, chunkSize - 1);}
+            else if(transitionIndex == 2) {voxelLocalPosition = new int3(localPos.x, localPos.z, helper.chunkSize - 1);}
             else if(transitionIndex == 3) {voxelLocalPosition = new int3(localPos.x, localPos.z, 0);}
-            else if(transitionIndex == 4) {voxelLocalPosition = new int3(localPos.x, chunkSize - 1, localPos.z);}
+            else if(transitionIndex == 4) {voxelLocalPosition = new int3(localPos.x, helper.chunkSize - 1, localPos.z);}
             else if(transitionIndex == 5) {voxelLocalPosition = new int3(localPos.x, 0, localPos.z);}
             var density = GetTransitionFace(voxelLocalPosition, transitionIndex);
             int transitionCase = GetTransitionCase(density);
@@ -120,16 +116,16 @@ namespace WorldGeneration
                 int vertexEdgeIndex = (edge >> 8) & 0xF;
                 if((edge >> 12) == 8 || (edge >> 12) == 4){
                     // Vertex lies in the interior of the edge.
-                    var newVertexIndex = CreateNewVertex(voxelLocalPosition * depthMultiplier + Tables.TransitionDirectionTable[transitionIndex * 9 + Tables.TransitionEdgeRemap[v0]] * depthMultiplier / 2,voxelLocalPosition * depthMultiplier + Tables.TransitionDirectionTable[transitionIndex * 9 + Tables.TransitionEdgeRemap[v1]] * depthMultiplier / 2, (sbyte)density[v0], (sbyte)density[v1], true, v0 > 8 && v1 > 8);
+                    var newVertexIndex = CreateNewVertex(voxelLocalPosition * helper.depthMultiplier + Tables.TransitionDirectionTable[transitionIndex * 9 + Tables.TransitionEdgeRemap[v0]] * helper.depthMultiplier / 2,voxelLocalPosition * helper.depthMultiplier + Tables.TransitionDirectionTable[transitionIndex * 9 + Tables.TransitionEdgeRemap[v1]] * helper.depthMultiplier / 2, (sbyte)density[v0], (sbyte)density[v1], true, v0 > 8 && v1 > 8);
                     transitionCellIndices[i] = newVertexIndex;
                     if((edge >> 12) == 8)
                         currentCell[vertexEdgeIndex] = newVertexIndex;
                 }else{
                     if((cellDirection.x == -1 && voxel2DLocalPosition.x == 0) || (cellDirection.y == -1 && voxel2DLocalPosition.y == 0)){
-                        transitionCellIndices[i] = CreateNewVertex(voxelLocalPosition * depthMultiplier + Tables.TransitionDirectionTable[transitionIndex * 9 + Tables.TransitionEdgeRemap[v0]] * depthMultiplier / 2,voxelLocalPosition * depthMultiplier + Tables.TransitionDirectionTable[transitionIndex * 9 + Tables.TransitionEdgeRemap[v1]] * depthMultiplier / 2, (sbyte)density[v0], (sbyte)density[v1], true, v0 > 8 && v1 > 8);
+                        transitionCellIndices[i] = CreateNewVertex(voxelLocalPosition * helper.depthMultiplier + Tables.TransitionDirectionTable[transitionIndex * 9 + Tables.TransitionEdgeRemap[v0]] * helper.depthMultiplier / 2,voxelLocalPosition * helper.depthMultiplier + Tables.TransitionDirectionTable[transitionIndex * 9 + Tables.TransitionEdgeRemap[v1]] * helper.depthMultiplier / 2, (sbyte)density[v0], (sbyte)density[v1], true, v0 > 8 && v1 > 8);
                     }
                     else{
-                        transitionCellIndices[i] = CreateNewVertex(voxelLocalPosition * depthMultiplier + Tables.TransitionDirectionTable[transitionIndex * 9 + Tables.TransitionEdgeRemap[v0]] * depthMultiplier / 2,voxelLocalPosition * depthMultiplier + Tables.TransitionDirectionTable[transitionIndex * 9 + Tables.TransitionEdgeRemap[v1]] * depthMultiplier / 2, (sbyte)density[v0], (sbyte)density[v1], true, v0 > 8 && v1 > 8);
+                        transitionCellIndices[i] = CreateNewVertex(voxelLocalPosition * helper.depthMultiplier + Tables.TransitionDirectionTable[transitionIndex * 9 + Tables.TransitionEdgeRemap[v0]] * helper.depthMultiplier / 2,voxelLocalPosition * helper.depthMultiplier + Tables.TransitionDirectionTable[transitionIndex * 9 + Tables.TransitionEdgeRemap[v1]] * helper.depthMultiplier / 2, (sbyte)density[v0], (sbyte)density[v1], true, v0 > 8 && v1 > 8);
                         //if(transitionCellIndices[i] == 0) Debug.Log(index);
                     }
                 }
@@ -148,7 +144,7 @@ namespace WorldGeneration
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private CellIndices GetTransitionCell(int2 voxelLocalPosition, int faceIdx){
             //Debug.Log(Utils.XyzToIndex(voxelLocalPosition.x, faceIdx, voxelLocalPosition.y, chunkSize));
-            return vertexIndices.transitionVertexIndices[Utils.XyzToIndex(voxelLocalPosition.x, faceIdx, voxelLocalPosition.y, chunkSize)];
+            return vertexIndices.transitionVertexIndices[Utils.XyzToIndex(voxelLocalPosition.x, faceIdx, voxelLocalPosition.y, helper.chunkSize)];
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         int2 DecodeTransitionCellIndices(byte idx){
@@ -162,14 +158,14 @@ namespace WorldGeneration
         }
         private ushort CreateNewVertex(int3 lowerEndPointPos, int3 higherEndPointPos, sbyte lowerEndPointDensity, sbyte higherEndPointDensity, bool surfaceShift = true, bool transitionOffset = false){
             //Surface shift
-            int near = GetVertexNearEdgeMask((float3)(lowerEndPointPos + higherEndPointPos) * 0.5f);
-            if(surfaceShift && near == 0 && depthMultiplier != 1){
+            int near = helper.GetVertexNearEdgeMask((float3)(lowerEndPointPos + higherEndPointPos) * 0.5f);
+            if(surfaceShift && near == 0 && helper.depthMultiplier != 1){
                 int3 posInDensityMap = new int3(0);
                 int3 oldPos = new int3(-1);
                 while(!oldPos.Equals(posInDensityMap)){
                     oldPos = posInDensityMap;
                     posInDensityMap = ((lowerEndPointPos) + (higherEndPointPos)) / 2;
-                    sbyte halfWayDensity = SampleDensityRaw(posInDensityMap);
+                    sbyte halfWayDensity = helper.SampleDensityRaw(posInDensityMap);
                     if((lowerEndPointDensity >= 0 && halfWayDensity >= 0) || (lowerEndPointDensity < 0 && halfWayDensity < 0)){
                         lowerEndPointPos = posInDensityMap;
                         lowerEndPointDensity = halfWayDensity;
@@ -185,9 +181,9 @@ namespace WorldGeneration
             int u = 0x0100 - t;
             float3 vertPos;
             float3 vertNormal;
-            float3 N0 = GetVertexNormal(lowerEndPointPos, 1);
+            float3 N0 = helper.GetVertexNormal(lowerEndPointPos, 1);
             if(!lowerEndPointPos.Equals(higherEndPointPos)){
-                float3 N1 = GetVertexNormal(higherEndPointPos, 1);
+                float3 N1 = helper.GetVertexNormal(higherEndPointPos, 1);
                 vertPos = (t * lowerEndPointPos + u * higherEndPointPos);
                 vertNormal = (t * N0 + u * N1);
             }else{
@@ -198,7 +194,7 @@ namespace WorldGeneration
             vertNormal = math.normalize(vertNormal);
             var secondaryPos = vertPos;
             if(transitionOffset){
-                var offsetVector = GetTransitionDirection(vertPos);
+                var offsetVector = helper.GetTransitionDirection(vertPos);
                 secondaryPos.x += ((1 - math.pow(vertNormal.x, 2)) * offsetVector.x + (-vertNormal.x*vertNormal.y) * offsetVector.y + (-vertNormal.x*vertNormal.z) * offsetVector.z);
                 secondaryPos.y += ((-vertNormal.x*vertNormal.y) * offsetVector.x + (1-math.pow(vertNormal.y, 2)) * offsetVector.y + (-vertNormal.y*vertNormal.z) * offsetVector.z);
                 secondaryPos.z += ((-vertNormal.x*vertNormal.z) * offsetVector.x + (-vertNormal.y*vertNormal.z) * offsetVector.y + (1-math.pow(vertNormal.z, 2)) * offsetVector.z);
@@ -208,31 +204,6 @@ namespace WorldGeneration
             vertices.Add(new TransitionVertexData(vertPos, secondaryPos, near, vertNormal));
             int vertexIndex = vertices.Length - 1;
             return (ushort)vertexIndex;
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private int GetVertexNearEdgeMask(float3 vertPos){
-            return ((vertPos.x == depthMultiplier * chunkSize ? 0b_0000_0001 : 0) 
-                | (vertPos.x == 0 ? 0b_0000_0010 : 0) 
-                | (vertPos.y == depthMultiplier * chunkSize ? 0b_0000_0100 : 0) 
-                | (vertPos.y == 0 ? 0b_0000_1000 : 0) 
-                | (vertPos.z == depthMultiplier * chunkSize ? 0b_0001_0000 : 0) 
-                | (vertPos.z == 0 ? 0b_0010_0000 : 0));
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private float3 GetTransitionDirection(float3 vertPos){
-            var offsetVector = new float3(0);
-            var highFence = depthMultiplier*(chunkSize-1);
-            bool3x2 skirtDirections = new bool3x2();
-            skirtDirections.c0.x = vertPos.x > highFence;
-            skirtDirections.c0.y = vertPos.y > highFence;
-            skirtDirections.c0.z = vertPos.z > highFence;
-            skirtDirections.c1.x = vertPos.x < depthMultiplier;
-            skirtDirections.c1.y = vertPos.y < depthMultiplier;
-            skirtDirections.c1.z = vertPos.z < depthMultiplier;
-
-            offsetVector += math.select(new float3(0), (chunkSize - 1 - negativeDepthMultiplier * vertPos) * (depthMultiplier / 2), skirtDirections.c0);
-            offsetVector += math.select(new float3(0), (1 - negativeDepthMultiplier * vertPos) * (depthMultiplier / 2), skirtDirections.c1);
-            return offsetVector;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetTransitionCase(TransitionCorners<short> transitionFaceSamples){
@@ -251,66 +222,26 @@ namespace WorldGeneration
         public TransitionCorners<short> GetTransitionFace(int3 voxelLocalPosition, int transitionDirectionIndex){
             TransitionCorners<short> result = new TransitionCorners<short>();
             for(int i = 0; i < 9; i++){
-                result[i] = SampleDensityRaw(voxelLocalPosition * depthMultiplier + Tables.TransitionDirectionTable[transitionDirectionIndex * 9 + i] * depthMultiplier / 2);
+                result[i] = helper.SampleDensityRaw(voxelLocalPosition * helper.depthMultiplier + Tables.TransitionDirectionTable[transitionDirectionIndex * 9 + i] * helper.depthMultiplier / 2);
             }
             return result;
-        }
-        
-        public float3 GetVertexNormal(int3 voxelLocalPosition, int step){
-            //if(voxelLocalPosition.x >= chunkSize || voxelLocalPosition.y >= chunkSize || voxelLocalPosition.z >= chunkSize) return new float3(0);
-            float nx = (SampleDensityRaw(voxelLocalPosition + new int3(step, 0, 0)) - SampleDensityRaw(voxelLocalPosition - new int3(step, 0, 0)));
-            float ny = (SampleDensityRaw(voxelLocalPosition + new int3(0, step, 0)) - SampleDensityRaw(voxelLocalPosition - new int3(0, step, 0)));
-            float nz = (SampleDensityRaw(voxelLocalPosition + new int3(0, 0, step)) - SampleDensityRaw(voxelLocalPosition - new int3(0, 0, step)));
-            return (new float3(nx,ny,nz));
-        }
-        public sbyte SampleDensity(int3 pos){
-            return GetDensityWithCache(pos * depthMultiplier + chunkPos);
-        }
-        public sbyte SampleDensityRaw(int3 pos){
-            return GetDensityWithCache(pos + chunkPos);
-        }
-        private sbyte GetDensityWithCache(int3 worldPos){
-            var chunkPos = Utils.WorldPosToChunkPos(worldPos);
-            var localPosInChunk = math.abs(worldPos - chunkPos);
-            if(!cache.cachedPos.Equals(chunkPos)){
-                if(densities.ContainsPos(chunkPos)){
-                    cache.cachedDensityMap = densities.GetDensityMap(chunkPos);
-                    cache.cachedPos = chunkPos;
-                }else if(densities.IsEmpty(chunkPos)) {return 127;}
-                else if(densities.IsFull(chunkPos)) {return -127;}
-                else{
-                    return TerraxelGenerated.GenerateDensity(worldPos);
-                }
-            }
-            unsafe{
-            return UnsafeUtility.ReadArrayElement<sbyte>((void*)cache.cachedDensityMap, Utils.XyzToIndex(localPosInChunk, ChunkManager.chunkResolution));
-            }
         }
     }
     [BurstCompile]
     public struct MeshJob : IJobFor
     {
-        [ReadOnly] public DensityData densities;
-        [ReadOnly] public int3 chunkPos;
-        [ReadOnly] public int chunkSize;
-        //[WriteOnly] public Counter vertexCounter;
-        
-        //[WriteOnly] public Counter indexCounter;
-         public NativeList<TransitionVertexData> vertices;
-        
-         public NativeList<ushort> triangles;
-        [ReadOnly] public int depthMultiplier;
-        [ReadOnly] public float negativeDepthMultiplier;
+        public NativeList<TransitionVertexData> vertices;
+        public NativeList<ushort> triangles;
+        public MeshingHelper helper;
         [WriteOnly] public NativeList<GrassInstanceData> grassData;
         public TempBuffer vertexIndices;
-        public DensityCacheInstance cache;
         public Unity.Mathematics.Random rng;
         public void Execute(int index)
         {
-            int3 voxelLocalPosition = Utils.IndexToXyz(index, chunkSize);
+            int3 voxelLocalPosition = Utils.IndexToXyz(index, helper.chunkSize).xyz;
 
 
-            VoxelCorners<sbyte> density = GetDensities(voxelLocalPosition);
+            VoxelCorners density = helper.GetDensities(voxelLocalPosition);
 
             int caseCode = ((density[0] >> 7) & 0x01)
                                     | ((density[1] >> 6) & 0x02)
@@ -347,13 +278,13 @@ namespace WorldGeneration
                 //if ((t & 0x00FF) != 0){
                     if((edge >> 12) == 8){
                         // Vertex lies in the interior of the edge.
-                        var newVertexIndex = CreateNewVertex((voxelLocalPosition + Tables.CubeCorners[v0]) * depthMultiplier,(voxelLocalPosition + Tables.CubeCorners[v1]) * depthMultiplier, density[v0], density[v1]);
+                        var newVertexIndex = CreateNewVertex((voxelLocalPosition + Tables.CubeCorners[v0]) * helper.depthMultiplier,(voxelLocalPosition + Tables.CubeCorners[v1]) * helper.depthMultiplier, density[v0], density[v1]);
                         
                         currentCell[vertexEdgeIndex] = newVertexIndex;
                         cellIndices[i] = newVertexIndex;
                     }else{
                         if((cellDirection.x == -1 && voxelLocalPosition.x == 0) || (cellDirection.y == -1 && voxelLocalPosition.y == 0) || (cellDirection.z == -1 && voxelLocalPosition.z == 0)){
-                            cellIndices[i] = CreateNewVertex((voxelLocalPosition + Tables.CubeCorners[v0]) * depthMultiplier,(voxelLocalPosition + Tables.CubeCorners[v1]) * depthMultiplier, density[v0], density[v1]);
+                            cellIndices[i] = CreateNewVertex((voxelLocalPosition + Tables.CubeCorners[v0]) * helper.depthMultiplier,(voxelLocalPosition + Tables.CubeCorners[v1]) * helper.depthMultiplier, density[v0], density[v1]);
                             
                         }
                         else{
@@ -387,6 +318,9 @@ namespace WorldGeneration
                     }
                 }*/
             }
+            var firstVert = vertices[cellIndices[0]];
+            grassData.Add(new GrassInstanceData(float4x4.TRS(firstVert.Primary + helper.chunkPos, quaternion.LookRotation(firstVert.normal, math.normalize(new float3(rng.NextFloat(-1,1),0,rng.NextFloat(-1,1)))), new float3(0.4f,0.4f, rng.NextFloat(0.5f, 0.8f)))));
+            
             vertexIndices.vertexIndices[index] = currentCell;
             for(int i = 0; i < triangleCount; i++){
                 //var idx = indexCounter.Increment() * 3;
@@ -415,18 +349,19 @@ namespace WorldGeneration
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ReuseCell GetCell(int3 voxelLocalPosition){
-            return vertexIndices.vertexIndices[Utils.XyzToIndex(voxelLocalPosition, chunkSize)];
+            return vertexIndices.vertexIndices[Utils.XyzToIndex(voxelLocalPosition, helper.chunkSize)];
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ushort CreateNewVertex(int3 lowerEndPointPos, int3 higherEndPointPos, sbyte lowerEndPointDensity, sbyte higherEndPointDensity, bool surfaceShift = true, bool transitionOffset = true){
             //Surface shift
-            int near = GetVertexNearEdgeMask((float3)(lowerEndPointPos + higherEndPointPos) * 0.5f);
-            if(surfaceShift && near == 0 && depthMultiplier != 1){
+            int near = helper.GetVertexNearEdgeMask((float3)(lowerEndPointPos + higherEndPointPos) * 0.5f);
+            if(surfaceShift && near == 0 && helper.depthMultiplier != 1){
                 int3 posInDensityMap = new int3(0);
                 int3 oldPos = new int3(-1);
                 while(!oldPos.Equals(posInDensityMap)){
                     oldPos = posInDensityMap;
                     posInDensityMap = ((lowerEndPointPos) + (higherEndPointPos)) / 2;
-                    sbyte halfWayDensity = SampleDensityRaw(posInDensityMap);
+                    sbyte halfWayDensity = helper.SampleDensityRaw(posInDensityMap);
                     if((lowerEndPointDensity >= 0 && halfWayDensity >= 0) || (lowerEndPointDensity < 0 && halfWayDensity < 0)){
                         lowerEndPointPos = posInDensityMap;
                         lowerEndPointDensity = halfWayDensity;
@@ -438,11 +373,11 @@ namespace WorldGeneration
             }
             float3 vertPos;
             float3 vertNormal;
-            float3 N0 = GetVertexNormal(lowerEndPointPos, 1);
+            float3 N0 = helper.GetVertexNormal(lowerEndPointPos, 1);
             if(!lowerEndPointPos.Equals(higherEndPointPos)){
                 int t = (higherEndPointDensity << 8) / (higherEndPointDensity - lowerEndPointDensity);
                 int u = 0x0100 - t;
-                float3 N1 = GetVertexNormal(higherEndPointPos, 1);
+                float3 N1 = helper.GetVertexNormal(higherEndPointPos, 1);
                 vertPos = (t * lowerEndPointPos + u * higherEndPointPos);
                 vertPos = vertPos * 0.00390625f;
                 vertNormal = (t * N0 + u * N1);
@@ -453,19 +388,35 @@ namespace WorldGeneration
             vertNormal = math.normalize(vertNormal);
             float3 secondaryPos = vertPos;
             if(transitionOffset){
-                var offsetVector = GetTransitionDirection(vertPos);
+                var offsetVector = helper.GetTransitionDirection(vertPos);
                 secondaryPos.x += ((1 - math.pow(vertNormal.x, 2)) * offsetVector.x + (-vertNormal.x*vertNormal.y) * offsetVector.y + (-vertNormal.x*vertNormal.z) * offsetVector.z);
                 secondaryPos.y += ((-vertNormal.x*vertNormal.y) * offsetVector.x + (1-math.pow(vertNormal.y, 2)) * offsetVector.y + (-vertNormal.y*vertNormal.z) * offsetVector.z);
                 secondaryPos.z += ((-vertNormal.x*vertNormal.z) * offsetVector.x + (-vertNormal.y*vertNormal.z) * offsetVector.y + (1-math.pow(vertNormal.z, 2)) * offsetVector.z);
             }
-            grassData.Add(new GrassInstanceData(float4x4.TRS(vertPos + chunkPos, quaternion.LookRotation(vertNormal, math.normalize(new float3(rng.NextFloat(-1,1),0,rng.NextFloat(-1,1)))), new float3(0.4f,0.4f, rng.NextFloat(0.5f, 0.8f)))));
             //int vertexIndex = vertexCounter.Increment();
             vertices.Add(new TransitionVertexData(vertPos, secondaryPos, near, vertNormal));
             int vertexIndex = vertices.Length - 1;
             return (ushort)vertexIndex;
         }
+
+    }
+    public struct MeshingHelper{
+        public MeshingHelper(DensityData densities, DensityCacheInstance cache, int3 chunkPos, float negativeDepthMultiplier, int chunkSize, int depthMultiplier){
+            this.densities = densities;
+            this.cache = cache;
+            this.chunkPos = chunkPos;
+            this.negativeDepthMultiplier = negativeDepthMultiplier;
+            this.chunkSize = chunkSize;
+            this.depthMultiplier = depthMultiplier;
+        }
+        [ReadOnly] public DensityData densities;
+        public DensityCacheInstance cache;
+        [ReadOnly] public int3 chunkPos;
+        [ReadOnly] public float negativeDepthMultiplier;
+        [ReadOnly] public int chunkSize;
+        [ReadOnly] public int depthMultiplier;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private int GetVertexNearEdgeMask(float3 vertPos){
+        public int GetVertexNearEdgeMask(float3 vertPos){
             return ((vertPos.x == depthMultiplier * chunkSize ? 0b_0000_0001 : 0) 
                 | (vertPos.x == 0 ? 0b_0000_0010 : 0) 
                 | (vertPos.y == depthMultiplier * chunkSize ? 0b_0000_0100 : 0) 
@@ -474,11 +425,10 @@ namespace WorldGeneration
                 | (vertPos.z == 0 ? 0b_0010_0000 : 0));
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private float3 GetTransitionDirection(float3 vertPos){
+        public float3 GetTransitionDirection(float3 vertPos){
             var offsetVector = new float3(0);
             var highFence = depthMultiplier*(chunkSize-1);
             
-            //if(near == 0) return 0f;
             bool3x2 skirtDirections = new bool3x2();
             skirtDirections.c0.x = vertPos.x > highFence;
             skirtDirections.c0.y = vertPos.y > highFence;
@@ -486,26 +436,14 @@ namespace WorldGeneration
             skirtDirections.c1.x = vertPos.x < depthMultiplier;
             skirtDirections.c1.y = vertPos.y < depthMultiplier;
             skirtDirections.c1.z = vertPos.z < depthMultiplier;
-            /*bool3x2 skirtDirections2 = new bool3x2();
-            skirtDirections2.c0.x = vertPos.x == depthMultiplier * chunkSize && !((neighbourDirectionMask & 0b_0000_0001) == 0b_0000_0001);
-            skirtDirections2.c0.y = vertPos.y == depthMultiplier * chunkSize && !((neighbourDirectionMask & 0b_0000_0100) == 0b_0000_0100);
-            skirtDirections2.c0.z = vertPos.z == depthMultiplier * chunkSize && !((neighbourDirectionMask & 0b_0010_0000) == 0b_0010_0000);
-            skirtDirections2.c1.x = vertPos.x == 0 && !((neighbourDirectionMask & 0b_0000_0010) == 0b_0000_0010);
-            skirtDirections2.c1.y = vertPos.y == 0 && !((neighbourDirectionMask & 0b_0000_1000) == 0b_0000_1000);
-            skirtDirections2.c1.z = vertPos.z == 0 && !((neighbourDirectionMask & 0b_0001_0000) == 0b_0001_0000);
-            if(!(skirtDirections2.c0.x ^ skirtDirections2.c0.y ^ skirtDirections2.c0.z ^ skirtDirections2.c1.x ^ skirtDirections2.c1.y ^ skirtDirections2.c1.z)) {*/
             
-            //if(math.ispow2(near >> 6)){
-                offsetVector += math.select(new float3(0), (chunkSize - 1 - negativeDepthMultiplier * vertPos) * (depthMultiplier / 2), skirtDirections.c0);
-                offsetVector += math.select(new float3(0), (1 - negativeDepthMultiplier * vertPos) * (depthMultiplier / 2), skirtDirections.c1);
-                return offsetVector;
-            //}
-            //}
-            //return 0;
+            offsetVector += math.select(new float3(0), (chunkSize - 1 - negativeDepthMultiplier * vertPos) * (depthMultiplier / 2), skirtDirections.c0);
+            offsetVector += math.select(new float3(0), (1 - negativeDepthMultiplier * vertPos) * (depthMultiplier / 2), skirtDirections.c1);
+            return offsetVector;
         }
-        private VoxelCorners<sbyte> GetDensities(int3 localPosition)
+        public VoxelCorners GetDensities(int3 localPosition)
         {
-            VoxelCorners<sbyte> densities = new VoxelCorners<sbyte>();
+            VoxelCorners densities = new VoxelCorners();
             for (int i = 0; i < 8; i++)
             {
                 int3 voxelCorner = localPosition + Tables.CubeCorners[i];
@@ -546,32 +484,6 @@ namespace WorldGeneration
             }
         }
     }
-    //Chunk noisemap update job, in a ball shape. Could implement more complex logic for this as well.
-    [BurstCompile]
-    public struct ChunkExplodeJob : IJobParallelFor
-    {
-        //Chunk's noisemap to edit.
-        [NativeDisableContainerSafetyRestriction, WriteOnly] public NativeArray<float> noiseMap;
-        //Chunk size + 1 to account for borders
-        [ReadOnly] public int size;
-        //New density value
-        [ReadOnly] public float newDensity;
-        //Where the "explosion" happens, in local coordinates relative to chunk
-        [ReadOnly] public int3 explosionOrigin;
-        //How big of an explosion should happen
-        [ReadOnly] public float explosionRange;
-
-        public void Execute(int index)
-        {
-            var pos = new float3(index / (size * size), index / size % size, index % size);
-            if(math.distance(pos, explosionOrigin) < explosionRange)
-            {
-                noiseMap[index] = newDensity;
-            }
-
-        }
-    }
-    //A job to bake chunk colliders
     public struct ChunkColliderBakeJob : IJob
     {
         [ReadOnly] public int meshId;
@@ -595,7 +507,7 @@ namespace WorldGeneration
 
         public void Execute(int index)
         {
-            var value = TerraxelGenerated.GenerateDensity(Utils.IndexToXyz(index, size) * depthMultiplier + offset);
+            var value = TerraxelGenerated.GenerateDensity(Utils.IndexToXyz(index, size).xyz * depthMultiplier + offset);
             data.densityMap[index] = value;
             if(!allowEmptyOrFull) return;
             if(value != 127){

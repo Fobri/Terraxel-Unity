@@ -120,32 +120,22 @@ public class Chunk3D : BaseChunk{
             var cache = new DensityCacheInstance(new int3(int.MaxValue));
             var marchingJob = new MeshJob()
             {
-                densities = densityData,
-                chunkPos = (int3)WorldPosition,
-                chunkSize = ChunkManager.chunkResolution,
                 vertices = meshData.vertexBuffer,
-                depthMultiplier = depthMultiplier,
-                negativeDepthMultiplier = negativeDepthMultiplier,
                 vertexIndices = vertexIndexBuffer,
                 triangles = meshData.indexBuffer,
-                cache = cache,
+                helper = new MeshingHelper(densityData, cache, (int3)WorldPosition, negativeDepthMultiplier, ChunkManager.chunkResolution, depthMultiplier),
                 grassData = base.grassData,
                 rng = base.rng
             };
             base.ScheduleJobFor(marchingJob, (ChunkManager.chunkResolution) * (ChunkManager.chunkResolution) * (ChunkManager.chunkResolution), false);
             var transitionJob = new TransitionMeshJob()
             {
-                densities = densityData,
-                chunkPos = (int3)WorldPosition,
-                chunkSize = ChunkManager.chunkResolution,
                 vertices = meshData.vertexBuffer,
-                depthMultiplier = depthMultiplier,
                 vertexIndices = vertexIndexBuffer,
                 triangles = meshData.indexBuffer,
-                cache = cache,
                 indexTracker = -1,
+                helper = new MeshingHelper(densityData, cache, (int3)WorldPosition, negativeDepthMultiplier, ChunkManager.chunkResolution, depthMultiplier),
                 meshStarts = meshStarts,
-                negativeDepthMultiplier = negativeDepthMultiplier
             };
             base.ScheduleJobFor(transitionJob, 6 * (ChunkManager.chunkResolution) * (ChunkManager.chunkResolution), true);
             var _pos = (int3)WorldPosition;

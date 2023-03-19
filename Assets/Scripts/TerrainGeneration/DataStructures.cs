@@ -113,24 +113,33 @@ namespace WorldGeneration.DataStructures
         public static sbyte HeightMapToIsosurface(float3 worldPos, float height){
             float yPos = worldPos.y;
             float density = (height - yPos) * 0.5f;
-            return Convert.ToSByte(math.clamp(-density * 127f, -127f, 127f));
+            return (sbyte)(math.clamp(-density * 127f, -127f, 127f));
         }
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static float SurfaceNoise2D(float2 worldPos, float ampl, float freq, int seed, int oct, float lacunarity, float gain, bool ad)
         {
             float total = 0;
             float2 dsum = 0;
-            for (int i = 0; i < oct; i++)
-            {
-                if(ad){
+            if(ad){
+                for (int i = 0; i < oct; i++)
+                {
+                    //Unity.Burst.CompilerServices.Loop.ExpectVectorized();
                     float3 n = noise.srdnoise(math.float2(worldPos * freq));
                     dsum += new float2(n.y, n.z);
-                    total += (n.x + 1) * 0.5f * ampl * (1/(1+math.dot(dsum, dsum)));
-                }else{
-                    total += (noise.snoise(math.float2(worldPos * freq)) + 1) * 0.5f * ampl;
-                }
+                    total += (n.x + 1) * 0.5f * ampl* (1/(1+math.dot(dsum, dsum)));
 
-                ampl *= gain;
-                freq *= lacunarity;
+                    ampl *= gain;
+                    freq *= lacunarity;
+                }
+            }
+            else{
+                for (int i = 0; i < oct; i++)
+                {
+                    //Unity.Burst.CompilerServices.Loop.ExpectVectorized();
+                    total += (noise.snoise(math.float2(worldPos * freq)) + 1) * 0.5f * ampl;
+                    ampl *= gain;
+                    freq *= lacunarity;
+                }
             }
             //total = total % 5f;
             //total /= oct;
@@ -263,12 +272,12 @@ namespace WorldGeneration.DataStructures
             //if(worldPos.z < 0 && worldPos.z % ChunkManager.chunkResolution != 0) chunkPos.z -= ChunkManager.chunkResolution;
             return chunkPos;
         }
-        public static int3 IndexToXyz(int index, int size)
+        public static int4 IndexToXyz(int index, int size)
         {
-            int3 position = new int3(
+            int4 position = new int4(
                 index % size,
                 index / (size * size),
-                index / size % size);
+                index / size % size, 0);
             return position;
         }
         public static int2 IndexToXz(int index, int size){
