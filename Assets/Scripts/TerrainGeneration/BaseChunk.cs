@@ -18,6 +18,7 @@ public abstract class BaseChunk : Octree
     //public Matrix4x4[] _grassPositions;
     protected NativeList<GrassInstanceData> grassData;
     private ComputeBuffer grassBuffer;
+    RenderParams rp;
     private Bounds grassBounds;
     
     public ChunkState chunkState = ChunkState.INVALID;
@@ -40,6 +41,8 @@ public abstract class BaseChunk : Octree
         disposeStatus = DisposeState.NOTHING;
         propertyBlock = new MaterialPropertyBlock();
         grassMaterial = UnityEngine.Object.Instantiate(Resources.Load("GrassMaterial", typeof(Material)) as Material);
+        rp = new RenderParams(grassMaterial);
+        rp.matProps = propertyBlock;
         rng = new Unity.Mathematics.Random((uint)TerraxelWorld.seed);
     }
     public BaseChunk() : base(){
@@ -60,12 +63,14 @@ public abstract class BaseChunk : Octree
         TerraxelWorld.ChunkManager.DisposeChunk(this);
     }
     protected void RenderGrass(){
+        if(!TerraxelWorld.renderGrass) return;
         /*if(_grassPositions != null){
             Graphics.DrawMeshInstanced(grassMesh, 0, grassMaterial, _grassPositions, grassPositions.Length, null, ShadowCastingMode.On, false, 0, null, LightProbeUsage.Off, null);
         }*/
         if(grassData.IsCreated){
             if(grassData.Length == 0) return;
-            Graphics.DrawMeshInstancedProcedural(grassMesh, 0, grassMaterial, grassBounds, grassData.Length, propertyBlock);
+            //Graphics.DrawMeshInstancedProcedural(grassMesh, 0, grassMaterial, grassBounds, grassData.Length, propertyBlock);
+            Graphics.RenderMeshPrimitives(rp, grassMesh, 0, grassData.Length);
         }
     }
     internal override void OnJobsReady()
@@ -77,7 +82,9 @@ public abstract class BaseChunk : Octree
         if(!grassData.IsCreated || grassData.Length == 0) return;
         grassBuffer = new ComputeBuffer(grassData.Length, sizeof(float) * 16);
         grassBuffer.SetData(grassData.AsArray());
-        grassMaterial.SetBuffer("positionBuffer", grassBuffer);
+        //grassMaterial.SetBuffer("positionBuffer", grassBuffer);
+        rp.worldBounds = grassBounds;
+        rp.matProps.SetBuffer("positionBuffer", grassBuffer);
     }
     public void ScheduleMeshUpdate(){
         grassBounds = new Bounds(region.center, region.bounds);

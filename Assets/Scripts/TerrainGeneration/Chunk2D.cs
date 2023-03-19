@@ -87,7 +87,6 @@ public class Chunk2D : BaseChunk
         chunkMesh.SetSubMesh(0, desc, MESH_UPDATE_FLAGS);
         var bounds = new Bounds(new float3(ChunkManager.chunkResolution * depthMultiplier / 2), region.bounds);
         chunkMesh.bounds = bounds;
-        chunkMesh.RecalculateNormals();
         OnMeshReady();
     }
     public override void RenderChunk()

@@ -35,7 +35,7 @@ namespace WorldGeneration
             var normal = GetVertexNormal(vertPos);
             vertices[index] = new VertexData(_vertPos, normal);
             if(height > chunkPos.y && height < chunkPos.y + chunkSize * depthMultiplier){
-                grassData.Add(new GrassInstanceData(float4x4.TRS(_vertPos + chunkPos, quaternion.LookRotation(normal,new float3(0,1,0)), new float3(1,rng.NextFloat(0.9f, 1.1f),1))));
+                grassData.Add(new GrassInstanceData(float4x4.TRS(_vertPos + chunkPos, quaternion.LookRotation(normal, math.normalize(new float3(rng.NextFloat(-1,1),0,rng.NextFloat(-1,1)))), new float3(0.4f,0.4f, rng.NextFloat(0.5f, 0.8f)))));
                 if(vertPos.x > 0 && vertPos.y > 0){
                     isEmpty.Value = false;
                     indices[triIndex * 6 + 0] = (ushort)Utils.XzToIndex(vertPos + new int2(-1, -1), chunkSize);
@@ -50,9 +50,9 @@ namespace WorldGeneration
             //vertices[index] = vert;
         }
         public float3 GetVertexNormal(int2 localPos){
-            float3 xVec = new float3(localPos.x + 1, SampleHeight(new int2(localPos.x + 1, localPos.y)), localPos.y) - new float3(localPos.x - 1, SampleHeight(new int2(localPos.x - 1, localPos.y)), localPos.y);
+            float3 xVec = new float3(localPos.x + depthMultiplier, SampleHeight(new int2(localPos.x + 1, localPos.y)), localPos.y) - new float3(localPos.x - depthMultiplier, SampleHeight(new int2(localPos.x - 1, localPos.y)), localPos.y);
             //Debug.Log(xVec);
-            float3 yVec = new float3(localPos.x, SampleHeight(new int2(localPos.x, localPos.y + 1)), localPos.y + 1) - new float3(localPos.x, SampleHeight(new int2(localPos.x, localPos.y - 1)), localPos.y - 1);
+            float3 yVec = new float3(localPos.x, SampleHeight(new int2(localPos.x, localPos.y + 1)), localPos.y + depthMultiplier) - new float3(localPos.x, SampleHeight(new int2(localPos.x, localPos.y - 1)), localPos.y - depthMultiplier);
             return math.normalize(math.cross(yVec, xVec));
         }
         float SampleHeight(int2 localPos){
@@ -458,7 +458,7 @@ namespace WorldGeneration
                 secondaryPos.y += ((-vertNormal.x*vertNormal.y) * offsetVector.x + (1-math.pow(vertNormal.y, 2)) * offsetVector.y + (-vertNormal.y*vertNormal.z) * offsetVector.z);
                 secondaryPos.z += ((-vertNormal.x*vertNormal.z) * offsetVector.x + (-vertNormal.y*vertNormal.z) * offsetVector.y + (1-math.pow(vertNormal.z, 2)) * offsetVector.z);
             }
-            grassData.Add(new GrassInstanceData(float4x4.TRS(vertPos + chunkPos, quaternion.LookRotation(vertNormal, new float3(0,0,1)), new float3(0.2f,rng.NextFloat(0.3f, 0.45f),0.2f))));
+            grassData.Add(new GrassInstanceData(float4x4.TRS(vertPos + chunkPos, quaternion.LookRotation(vertNormal, math.normalize(new float3(rng.NextFloat(-1,1),0,rng.NextFloat(-1,1)))), new float3(0.4f,0.4f, rng.NextFloat(0.5f, 0.8f)))));
             //int vertexIndex = vertexCounter.Increment();
             vertices.Add(new TransitionVertexData(vertPos, secondaryPos, near, vertNormal));
             int vertexIndex = vertices.Length - 1;

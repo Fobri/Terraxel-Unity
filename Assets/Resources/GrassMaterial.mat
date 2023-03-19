@@ -45,7 +45,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 2800000, guid: a0551088e50d8d245a25a23c6245a32a, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MetallicGlossMap:
@@ -60,26 +60,48 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _RampTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _WindTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
     - _BumpScale: 1
-    - _Cutoff: 0.63
+    - _Cutoff: 0.427
     - _DetailNormalMapScale: 1
     - _DstBlend: 0
     - _GlossMapScale: 1
     - _Glossiness: 0
     - _GlossyReflections: 1
+    - _HeightCutoff: 1.2
+    - _HeightFactor: 1
+    - _MeshDeformationLimit: 0.86
     - _Metallic: 0
     - _Mode: 1
     - _OcclusionStrength: 1
     - _Parallax: 0.02
+    - _Scale: 1.07
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _UVSec: 0
+    - _WaveAmp: 1
+    - _WaveSpeed: 1
+    - _WindNoiseScale: 1
+    - _WindStrength: 1
     - _ZWrite: 1
     m_Colors:
+    - _AOColor: {r: 1, g: 0, b: 1, a: 1}
     - _Color: {r: 0.20627463, g: 0.3019608, b: 0.050980393, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
+    - _PrimaryCol: {r: 1, g: 1, b: 1, a: 1}
+    - _SecondaryCol: {r: 1, g: 0, b: 1, a: 1}
+    - _TipColor: {r: 0, g: 0, b: 1, a: 1}
+    - _WindSpeed: {r: 1, g: 0, b: 1, a: 0}
     - _WorldPos: {r: 0, g: 0, b: 0, a: 1}
+    - _WorldSize: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []

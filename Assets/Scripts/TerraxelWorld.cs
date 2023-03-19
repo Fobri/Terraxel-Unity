@@ -26,6 +26,7 @@ public class TerraxelWorld : MonoBehaviour
     public GameObject player;
     public static BoundingBox playerBounds;
     public static int seed = 1;
+    public static bool renderGrass = true;
     public NoiseProperties noiseData;
     public Transform poolParent;
     public Transform activeParent;
