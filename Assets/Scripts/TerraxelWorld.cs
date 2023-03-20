@@ -217,6 +217,9 @@ public TextMeshProUGUI[] debugLabels;
         }
         ChunkManager.RegenerateChunkMesh(pos, radius);
     }
+    public static void Test(int number, int size){
+        Debug.Log(number / size % size + " " + number / size);
+    }
     public void OnDisable(){
         JobRunner.CompleteAll();
         MemoryManager.Dispose();

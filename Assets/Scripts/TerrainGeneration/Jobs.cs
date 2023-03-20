@@ -48,7 +48,7 @@ namespace WorldGeneration
                 }
             }
             //var localPos = math.abs(vertices[index].vertex);
-            //VertexData vert = new VertexData(new float3(localPos.x, heightMap[Utils.XzToIndex(new int2((int)localPos.x, (int)localPos.z), chunkSize)], localPos.z), 0);
+            //VertexData vert = new VertexData(new float3(localPos.x, heightMap[Utils.XzToIndex(new int2((int)localPos.x, (int)localPos.z), ChunkManager.chunkResolution)], localPos.z), 0);
             //vertices[index] = vert;
         }
         public float3 GetVertexNormal(int2 localPos){
@@ -75,8 +75,8 @@ namespace WorldGeneration
         public MeshingHelper helper;
         public void Execute(int index)
         {
-            //int index = Utils.XyzToIndex(voxel2DLocalPosition.x, transitionIndex, voxel2DLocalPosition.y, chunkSize);
-            var localPos =  Utils.IndexToXyz(index, helper.chunkSize);
+            //int index = Utils.XyzToIndex(voxel2DLocalPosition.x, transitionIndex, voxel2DLocalPosition.y, ChunkManager.chunkResolution);
+            var localPos =  Utils.IndexToXyz(index, ChunkManager.chunkResolution);
             int transitionIndex = localPos.y;
             if(indexTracker != transitionIndex){
                 int2 counts = new int2(vertices.Length, triangles.Length);
@@ -84,15 +84,16 @@ namespace WorldGeneration
                 meshStarts[transitionIndex] = counts;
                 indexTracker = transitionIndex;
             }
+            var shit = Utils.XyzToIndex(localPos.x, transitionIndex, localPos.z, ChunkManager.chunkResolution);
             if(helper.depthMultiplier == 1) return;
             int3 voxelLocalPosition = 0;
-            int2 voxel2DLocalPosition = new int2(localPos.x, localPos.z);
-            if(transitionIndex == 0) {voxelLocalPosition = new int3(helper.chunkSize - 1, localPos.x, localPos.z);}
+            if(transitionIndex == 0) {voxelLocalPosition = new int3(ChunkManager.chunkResolution - 1, localPos.x, localPos.z);}
             else if(transitionIndex == 1) {voxelLocalPosition = new int3(0, localPos.x, localPos.z);}
-            else if(transitionIndex == 2) {voxelLocalPosition = new int3(localPos.x, localPos.z, helper.chunkSize - 1);}
+            else if(transitionIndex == 2) {voxelLocalPosition = new int3(localPos.x, localPos.z, ChunkManager.chunkResolution - 1);}
             else if(transitionIndex == 3) {voxelLocalPosition = new int3(localPos.x, localPos.z, 0);}
-            else if(transitionIndex == 4) {voxelLocalPosition = new int3(localPos.x, helper.chunkSize - 1, localPos.z);}
+            else if(transitionIndex == 4) {voxelLocalPosition = new int3(localPos.x, ChunkManager.chunkResolution - 1, localPos.z);}
             else if(transitionIndex == 5) {voxelLocalPosition = new int3(localPos.x, 0, localPos.z);}
+            int2 voxel2DLocalPosition = new int2(localPos.x, localPos.z);
             var density = GetTransitionFace(voxelLocalPosition, transitionIndex);
             int transitionCase = GetTransitionCase(density);
             if(transitionCase == 0 || transitionCase == 511) return;
@@ -112,7 +113,7 @@ namespace WorldGeneration
                 byte v1 = (byte)(edge & 0x0F); //Second Corner Index
 
 
-                int2 cellDirection = DecodeTransitionCellIndices((byte)(edge >> 12));
+                int2 cellDirection = DecodeTransitionCellIndices((byte)(edge >> 12), transitionIndex);
                 int vertexEdgeIndex = (edge >> 8) & 0xF;
                 if((edge >> 12) == 8 || (edge >> 12) == 4){
                     // Vertex lies in the interior of the edge.
@@ -125,8 +126,7 @@ namespace WorldGeneration
                         transitionCellIndices[i] = CreateNewVertex(voxelLocalPosition * helper.depthMultiplier + Tables.TransitionDirectionTable[transitionIndex * 9 + Tables.TransitionEdgeRemap[v0]] * helper.depthMultiplier / 2,voxelLocalPosition * helper.depthMultiplier + Tables.TransitionDirectionTable[transitionIndex * 9 + Tables.TransitionEdgeRemap[v1]] * helper.depthMultiplier / 2, (sbyte)density[v0], (sbyte)density[v1], true, v0 > 8 && v1 > 8);
                     }
                     else{
-                        transitionCellIndices[i] = CreateNewVertex(voxelLocalPosition * helper.depthMultiplier + Tables.TransitionDirectionTable[transitionIndex * 9 + Tables.TransitionEdgeRemap[v0]] * helper.depthMultiplier / 2,voxelLocalPosition * helper.depthMultiplier + Tables.TransitionDirectionTable[transitionIndex * 9 + Tables.TransitionEdgeRemap[v1]] * helper.depthMultiplier / 2, (sbyte)density[v0], (sbyte)density[v1], true, v0 > 8 && v1 > 8);
-                        //if(transitionCellIndices[i] == 0) Debug.Log(index);
+                        transitionCellIndices[i] = GetTransitionCell(voxel2DLocalPosition + cellDirection, transitionIndex)[vertexEdgeIndex];
                     }
                 }
             }
@@ -143,16 +143,25 @@ namespace WorldGeneration
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private CellIndices GetTransitionCell(int2 voxelLocalPosition, int faceIdx){
-            //Debug.Log(Utils.XyzToIndex(voxelLocalPosition.x, faceIdx, voxelLocalPosition.y, chunkSize));
-            return vertexIndices.transitionVertexIndices[Utils.XyzToIndex(voxelLocalPosition.x, faceIdx, voxelLocalPosition.y, helper.chunkSize)];
+            //Debug.Log(Utils.XyzToIndex(voxelLocalPosition.x, faceIdx, voxelLocalPosition.y, ChunkManager.chunkResolution));
+            return vertexIndices.transitionVertexIndices[Utils.XyzToIndex(voxelLocalPosition.x, faceIdx, voxelLocalPosition.y, ChunkManager.chunkResolution)];
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        int2 DecodeTransitionCellIndices(byte idx){
+        int2 DecodeTransitionCellIndices(byte idx, int transitionIndex){
             int2 value = new int2();
-            if(idx == 1){
-                value.x = -1;
-            }else if(idx == 2){
-                value.y = -1;
+            //TODO: wtf is going on here
+            if(transitionIndex == 2 || transitionIndex == 3){
+                if(idx == 1){
+                    value.x = -1;
+                }else if(idx == 2){
+                    value.y = -1;
+                }
+            }else{
+                if(idx == 2){
+                    value.x = -1;
+                }else if(idx == 1){
+                    value.y = -1;
+                }
             }
             return value;
         }
@@ -238,7 +247,7 @@ namespace WorldGeneration
         public Unity.Mathematics.Random rng;
         public void Execute(int index)
         {
-            int3 voxelLocalPosition = Utils.IndexToXyz(index, helper.chunkSize).xyz;
+            int3 voxelLocalPosition = Utils.IndexToXyz(index, ChunkManager.chunkResolution).xyz;
 
 
             VoxelCorners density = helper.GetDensities(voxelLocalPosition);
@@ -318,13 +327,15 @@ namespace WorldGeneration
                     }
                 }*/
             }
-            var firstVert = vertices[cellIndices[0]];
-            grassData.Add(new GrassInstanceData(float4x4.TRS(firstVert.Primary + helper.chunkPos, quaternion.LookRotation(firstVert.normal, math.normalize(new float3(rng.NextFloat(-1,1),0,rng.NextFloat(-1,1)))), new float3(0.4f,0.4f, rng.NextFloat(0.5f, 0.8f)))));
-            
+            //if(math.all(voxelLocalPosition > 0)){
+                var firstVert = vertices[cellIndices[0]];
+                grassData.Add(new GrassInstanceData(float4x4.TRS(firstVert.Primary + helper.chunkPos, quaternion.LookRotation(firstVert.normal, math.normalize(new float3(rng.NextFloat(-1,1),0,rng.NextFloat(-1,1)))), new float3(0.4f,0.4f, rng.NextFloat(0.5f, 0.8f)))));
+            //}
+
             vertexIndices.vertexIndices[index] = currentCell;
             for(int i = 0; i < triangleCount; i++){
                 //var idx = indexCounter.Increment() * 3;
-                if(cellIndices[Tables.RegularCellData[cell][i * 3 + 1]].Equals(cellIndices[Tables.RegularCellData[cell][i * 3 + 2]]) ||
+                /*if(cellIndices[Tables.RegularCellData[cell][i * 3 + 1]].Equals(cellIndices[Tables.RegularCellData[cell][i * 3 + 2]]) ||
                     cellIndices[Tables.RegularCellData[cell][i * 3 + 1]].Equals(cellIndices[Tables.RegularCellData[cell][i * 3 + 3]]) ||
                     cellIndices[Tables.RegularCellData[cell][i * 3 + 2]].Equals(cellIndices[Tables.RegularCellData[cell][i * 3 + 3]])){
                         continue;
@@ -349,7 +360,7 @@ namespace WorldGeneration
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ReuseCell GetCell(int3 voxelLocalPosition){
-            return vertexIndices.vertexIndices[Utils.XyzToIndex(voxelLocalPosition, helper.chunkSize)];
+            return vertexIndices.vertexIndices[Utils.XyzToIndex(voxelLocalPosition, ChunkManager.chunkResolution)];
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ushort CreateNewVertex(int3 lowerEndPointPos, int3 higherEndPointPos, sbyte lowerEndPointDensity, sbyte higherEndPointDensity, bool surfaceShift = true, bool transitionOffset = true){
@@ -401,33 +412,31 @@ namespace WorldGeneration
 
     }
     public struct MeshingHelper{
-        public MeshingHelper(DensityData densities, DensityCacheInstance cache, int3 chunkPos, float negativeDepthMultiplier, int chunkSize, int depthMultiplier){
+        public MeshingHelper(DensityData densities, DensityCacheInstance cache, int3 chunkPos, float negativeDepthMultiplier, int depthMultiplier){
             this.densities = densities;
             this.cache = cache;
             this.chunkPos = chunkPos;
             this.negativeDepthMultiplier = negativeDepthMultiplier;
-            this.chunkSize = chunkSize;
             this.depthMultiplier = depthMultiplier;
         }
         [ReadOnly] public DensityData densities;
         public DensityCacheInstance cache;
         [ReadOnly] public int3 chunkPos;
         [ReadOnly] public float negativeDepthMultiplier;
-        [ReadOnly] public int chunkSize;
         [ReadOnly] public int depthMultiplier;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetVertexNearEdgeMask(float3 vertPos){
-            return ((vertPos.x == depthMultiplier * chunkSize ? 0b_0000_0001 : 0) 
+            return ((vertPos.x == depthMultiplier * ChunkManager.chunkResolution ? 0b_0000_0001 : 0) 
                 | (vertPos.x == 0 ? 0b_0000_0010 : 0) 
-                | (vertPos.y == depthMultiplier * chunkSize ? 0b_0000_0100 : 0) 
+                | (vertPos.y == depthMultiplier * ChunkManager.chunkResolution ? 0b_0000_0100 : 0) 
                 | (vertPos.y == 0 ? 0b_0000_1000 : 0) 
-                | (vertPos.z == depthMultiplier * chunkSize ? 0b_0001_0000 : 0) 
+                | (vertPos.z == depthMultiplier * ChunkManager.chunkResolution ? 0b_0001_0000 : 0) 
                 | (vertPos.z == 0 ? 0b_0010_0000 : 0));
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public float3 GetTransitionDirection(float3 vertPos){
             var offsetVector = new float3(0);
-            var highFence = depthMultiplier*(chunkSize-1);
+            var highFence = depthMultiplier*(ChunkManager.chunkResolution-1);
             
             bool3x2 skirtDirections = new bool3x2();
             skirtDirections.c0.x = vertPos.x > highFence;
@@ -437,7 +446,7 @@ namespace WorldGeneration
             skirtDirections.c1.y = vertPos.y < depthMultiplier;
             skirtDirections.c1.z = vertPos.z < depthMultiplier;
             
-            offsetVector += math.select(new float3(0), (chunkSize - 1 - negativeDepthMultiplier * vertPos) * (depthMultiplier / 2), skirtDirections.c0);
+            offsetVector += math.select(new float3(0), (ChunkManager.chunkResolution - 1 - negativeDepthMultiplier * vertPos) * (depthMultiplier / 2), skirtDirections.c0);
             offsetVector += math.select(new float3(0), (1 - negativeDepthMultiplier * vertPos) * (depthMultiplier / 2), skirtDirections.c1);
             return offsetVector;
         }
@@ -454,7 +463,7 @@ namespace WorldGeneration
             return densities;
         }
         public float3 GetVertexNormal(int3 voxelLocalPosition, int step){
-            //if(voxelLocalPosition.x >= chunkSize || voxelLocalPosition.y >= chunkSize || voxelLocalPosition.z >= chunkSize) return new float3(0);
+            //if(voxelLocalPosition.x >= ChunkManager.chunkResolution || voxelLocalPosition.y >= ChunkManager.chunkResolution || voxelLocalPosition.z >= ChunkManager.chunkResolution) return new float3(0);
             float nx = (SampleDensityRaw(voxelLocalPosition + new int3(step, 0, 0)) - SampleDensityRaw(voxelLocalPosition - new int3(step, 0, 0)));
             float ny = (SampleDensityRaw(voxelLocalPosition + new int3(0, step, 0)) - SampleDensityRaw(voxelLocalPosition - new int3(0, step, 0)));
             float nz = (SampleDensityRaw(voxelLocalPosition + new int3(0, 0, step)) - SampleDensityRaw(voxelLocalPosition - new int3(0, 0, step)));

@@ -255,7 +255,7 @@ namespace WorldGeneration.DataStructures
         }
         public static int XyzToIndex(int x, int y, int z, int size)
         {
-            return y * size * size + z * size + x;
+            return x + size * (z + size * y);
         }
         public static int XyzToIndex(int3 index, int size)
         {
