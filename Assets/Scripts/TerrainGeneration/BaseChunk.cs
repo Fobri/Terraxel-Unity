@@ -41,7 +41,7 @@ public abstract class BaseChunk : Octree
         chunkState = ChunkState.INVALID;
         disposeStatus = DisposeState.NOTHING;
         propertyBlock = new MaterialPropertyBlock();
-        grassMaterial = UnityEngine.Object.Instantiate(Resources.Load("GrassMaterial", typeof(Material)) as Material);
+        grassMaterial = (Resources.Load("GrassMaterial", typeof(Material)) as Material);
         rp = new RenderParams(grassMaterial);
         rp.matProps = propertyBlock;
         rng = new Unity.Mathematics.Random((uint)TerraxelWorld.seed);
@@ -90,7 +90,7 @@ public abstract class BaseChunk : Octree
         rp.matProps.SetBuffer("positionBuffer", grassBuffer);
     }
     public void ScheduleMeshUpdate(){
-        propertyBlock.SetVector("_WorldPos", new float4(WorldPosition, 1));
+        //propertyBlock.SetVector("_WorldPos", new float4(WorldPosition, 1));
         vertCount = 0;
         idxCount = 0;
         chunkState = ChunkState.DIRTY;
@@ -107,6 +107,7 @@ public abstract class BaseChunk : Octree
     public void FreeBuffers(){
         grassBuffer?.Release();
         grassBuffer = null;
+        rp.matProps?.Clear();
         if(grassData.IsCreated){
             MemoryManager.ReturnGrassData(grassData);
             grassData = default;
