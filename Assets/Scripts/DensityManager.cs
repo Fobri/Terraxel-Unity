@@ -56,7 +56,7 @@ public class DensityManager : JobRunner, IDisposable {
     }
     void DoModification(int3 pos, sbyte value){
         if(value == 0) return;
-        var chunkPos = Utils.WorldPosToChunkPos(pos, true);
+        var chunkPos = Utils.WorldPosToChunkPos(pos);
         var localPosInChunk = math.abs(pos - chunkPos);
 
         if(densityData.fullChunks.Contains(chunkPos) || densityData.emptyChunks.Contains(chunkPos)){

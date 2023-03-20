@@ -126,6 +126,8 @@ namespace WorldGeneration
                         transitionCellIndices[i] = CreateNewVertex(voxelLocalPosition * helper.depthMultiplier + Tables.TransitionDirectionTable[transitionIndex * 9 + Tables.TransitionEdgeRemap[v0]] * helper.depthMultiplier / 2,voxelLocalPosition * helper.depthMultiplier + Tables.TransitionDirectionTable[transitionIndex * 9 + Tables.TransitionEdgeRemap[v1]] * helper.depthMultiplier / 2, (sbyte)density[v0], (sbyte)density[v1], true, v0 > 8 && v1 > 8);
                     }
                     else{
+                        //transitionCellIndices[i] = CreateNewVertex(voxelLocalPosition * helper.depthMultiplier + Tables.TransitionDirectionTable[transitionIndex * 9 + Tables.TransitionEdgeRemap[v0]] * helper.depthMultiplier / 2,voxelLocalPosition * helper.depthMultiplier + Tables.TransitionDirectionTable[transitionIndex * 9 + Tables.TransitionEdgeRemap[v1]] * helper.depthMultiplier / 2, (sbyte)density[v0], (sbyte)density[v1], true, v0 > 8 && v1 > 8);
+                    
                         transitionCellIndices[i] = GetTransitionCell(voxel2DLocalPosition + cellDirection, transitionIndex)[vertexEdgeIndex];
                     }
                 }
@@ -412,15 +414,19 @@ namespace WorldGeneration
 
     }
     public struct MeshingHelper{
-        public MeshingHelper(DensityData densities, DensityCacheInstance cache, int3 chunkPos, float negativeDepthMultiplier, int depthMultiplier){
+        public MeshingHelper(DensityData densities, DensityCacheInstance cache, int3 chunkPos, float negativeDepthMultiplier, int depthMultiplier, NativeReference<int2> misses){
             this.densities = densities;
             this.cache = cache;
             this.chunkPos = chunkPos;
             this.negativeDepthMultiplier = negativeDepthMultiplier;
             this.depthMultiplier = depthMultiplier;
+            this.cacheMisses = misses;
+            lastEmptyChunk = new int3(int.MaxValue);
+            lastFullChunk = new int3(int.MaxValue);
         }
         [ReadOnly] public DensityData densities;
         public DensityCacheInstance cache;
+        public NativeReference<int2> cacheMisses;
         [ReadOnly] public int3 chunkPos;
         [ReadOnly] public float negativeDepthMultiplier;
         [ReadOnly] public int depthMultiplier;
@@ -475,19 +481,25 @@ namespace WorldGeneration
         public sbyte SampleDensityRaw(int3 pos){
             return GetDensityWithCache(pos + chunkPos);
         }
+        int3 lastEmptyChunk;
+        int3 lastFullChunk;
         private sbyte GetDensityWithCache(int3 worldPos){
             var chunkPos = Utils.WorldPosToChunkPos(worldPos);
+            if(chunkPos.Equals(lastEmptyChunk)) {cacheMisses.Value += new int2(0,1);return 127;}
+            if(chunkPos.Equals(lastFullChunk)) {cacheMisses.Value += new int2(0,1);return -127;}
             var localPosInChunk = math.abs(worldPos - chunkPos);
             if(!cache.cachedPos.Equals(chunkPos)){
+                cacheMisses.Value += new int2(1,0);
                 if(densities.ContainsPos(chunkPos)){
                     cache.cachedDensityMap = densities.GetDensityMap(chunkPos);
                     cache.cachedPos = chunkPos;
-                }else if(densities.IsEmpty(chunkPos)) {return 127;}
-                else if(densities.IsFull(chunkPos)) {return -127;}
+                }else if(densities.IsEmpty(chunkPos)) {lastEmptyChunk = chunkPos; return 127;}
+                else if(densities.IsFull(chunkPos)) {lastFullChunk = chunkPos; return -127;}
                 else{
                     return TerraxelGenerated.GenerateDensity(worldPos);
                 }
-            }
+            }else
+                cacheMisses.Value += new int2(0,1);
             unsafe{
             return UnsafeUtility.ReadArrayElement<sbyte>((void*)cache.cachedDensityMap, Utils.XyzToIndex(localPosInChunk, ChunkManager.chunkResolution));
             }

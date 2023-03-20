@@ -24,6 +24,7 @@ public class TerraxelWorld : MonoBehaviour
     public static WorldState worldState = WorldState.IDLE;
     public static Camera renderCamera;
     public GameObject player;
+    public bool placePlayerOnSurface = true;
     public static BoundingBox playerBounds;
     public static int seed = 1;
     public static bool renderGrass = true;
@@ -120,10 +121,11 @@ public TextMeshProUGUI[] debugLabels;
         DensityManager.Init(noiseData);
         ChunkManager = new ChunkManager();
         ChunkManager.Init(poolParent, activeParent, simpleChunkPrefab, chunkPrefab);
-        
         player.SetActive(false);
-        var startHeight = TerraxelGenerated.GenerateDensity(new float2(player.transform.position.x, player.transform.position.z)) + 0.1f;
-        player.transform.position = player.transform.position * new float3(1,0,1) + new float3(0,startHeight, 0);
+        if(placePlayerOnSurface){
+            var startHeight = TerraxelGenerated.GenerateDensity(new float2(player.transform.position.x, player.transform.position.z)) + 0.1f;
+            player.transform.position = player.transform.position * new float3(1,0,1) + new float3(0,startHeight, 0);
+        }
     }
     void Update(){
         JobRunner.Update();
@@ -281,6 +283,10 @@ public TextMeshProUGUI[] debugLabels;
                 if(drawChunkVariables.type){
                     offset.y += 4f;
                     Handles.Label(offset, chunkDatas[i].GetType().Name);
+                }
+                if(drawChunkVariables.position){
+                    offset.y += 4f;
+                    Handles.Label(offset, chunkDatas[i].ToString());
                 }
             }
         }

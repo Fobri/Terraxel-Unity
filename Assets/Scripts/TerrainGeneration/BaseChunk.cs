@@ -127,4 +127,8 @@ public abstract class BaseChunk : Octree
             return (float3)region.center - new float3(ChunkManager.chunkResolution * depthMultiplier / 2);
         }
     }
+    public override string ToString()
+    {
+        return "Chunk " + WorldPosition.ToString();
+    }
 }

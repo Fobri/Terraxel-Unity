@@ -253,25 +253,31 @@ namespace WorldGeneration.DataStructures
         public static string floatToString(float value){
             return value.ToString("F4", new CultureInfo("en-US"))+"f";
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int XyzToIndex(int x, int y, int z, int size)
         {
-            return x + size * (z + size * y);
+            return x + size * z + size * size * y;
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int XyzToIndex(int3 index, int size)
         {
             return XyzToIndex(index.x, index.y, index.z, size);
+        }[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int3 WorldPosToChunkPos(int3 worldPos){
+            return WorldPosToChunkPos(new int4(worldPos,0)).xyz;
         }
-        public static int3 WorldPosToChunkPos(int3 worldPos, bool positionFix = true){
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int4 WorldPosToChunkPos(int4 worldPos){
             //var chunkPos = math.select((int3)(math.floor(worldPos / ChunkManager.chunkResolution) * ChunkManager.chunkResolution), (int3)(math.floor(worldPos / ChunkManager.chunkResolution) * ChunkManager.chunkResolution - ChunkManager.chunkResolution), (worldPos < 0) & (worldPos % ChunkManager.chunkResolution != 0));
-            
-            var chunkPos = (int3)(math.floor(worldPos / ChunkManager.chunkResolution)) * ChunkManager.chunkResolution;
-            if(positionFix)
-                chunkPos -= math.select(new int3(0), new int3(ChunkManager.chunkResolution), (worldPos < 0) & (worldPos % ChunkManager.chunkResolution != 0));
+            var chunkPos = (int4)(math.floor(worldPos / (float4)ChunkManager.chunkResolution)) * ChunkManager.chunkResolution;
+            //if(positionFix)
+                //chunkPos -= math.select(new int3(0), new int3(ChunkManager.chunkResolution), (worldPos < 0) & (worldPos % ChunkManager.chunkResolution != 0));
             //if(worldPos.x < 0 && worldPos.x % ChunkManager.chunkResolution != 0) chunkPos.x -= ChunkManager.chunkResolution;
             //if(worldPos.y < 0 && worldPos.y % ChunkManager.chunkResolution != 0) chunkPos.y -= ChunkManager.chunkResolution;
             //if(worldPos.z < 0 && worldPos.z % ChunkManager.chunkResolution != 0) chunkPos.z -= ChunkManager.chunkResolution;
             return chunkPos;
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int4 IndexToXyz(int index, int size)
         {
             int4 position = new int4(
@@ -280,9 +286,11 @@ namespace WorldGeneration.DataStructures
                 index / size % size, 0);
             return position;
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int2 IndexToXz(int index, int size){
             return new int2(index % size, index / size);
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int XzToIndex(int2 index, int size){
             return index.y * size + index.x;
         }
