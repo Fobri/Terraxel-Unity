@@ -15,6 +15,7 @@ public abstract class BaseChunk : Octree
     protected static Mesh grassMesh;
     protected Material grassMaterial;
     protected Unity.Mathematics.Random rng;
+    static Transform cam;
     //public Matrix4x4[] _grassPositions;
     protected NativeList<GrassInstanceData> grassData;
     protected NativeReference<float3x2> renderBoundsData;
@@ -44,6 +45,7 @@ public abstract class BaseChunk : Octree
         grassMaterial = (Resources.Load("GrassMaterial", typeof(Material)) as Material);
         rp = new RenderParams(grassMaterial);
         rp.matProps = propertyBlock;
+        rp.shadowCastingMode = ShadowCastingMode.On;
         rng = new Unity.Mathematics.Random((uint)TerraxelWorld.seed);
     }
     public BaseChunk() : base(){
@@ -51,6 +53,7 @@ public abstract class BaseChunk : Octree
     }
     static BaseChunk(){
         grassMesh = Resources.Load("GrassMesh", typeof(Mesh)) as Mesh;
+        cam = Camera.main.transform;
     }
     public void SetActive(bool active){
         this.active = active;

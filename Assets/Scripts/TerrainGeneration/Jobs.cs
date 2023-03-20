@@ -253,6 +253,7 @@ namespace WorldGeneration
         public TempBuffer vertexIndices;
         public Unity.Mathematics.Random rng;
         public NativeReference<float3x2> renderBounds;
+        float3 lastGrassPos;
         public void Execute(int index)
         {
             int3 voxelLocalPosition = Utils.IndexToXyz(index, ChunkManager.chunkResolution).xyz;
@@ -335,10 +336,11 @@ namespace WorldGeneration
                     }
                 }*/
             }
-            //if(math.all(voxelLocalPosition > 0)){
-                var firstVert = vertices[cellIndices[0]];
-                grassData.Add(new GrassInstanceData(float4x4.TRS(firstVert.Primary + helper.chunkPos, quaternion.LookRotation(firstVert.normal, math.normalize(new float3(rng.NextFloat(-1,1),0,rng.NextFloat(-1,1)))), new float3(0.4f,0.4f, rng.NextFloat(0.5f, 0.8f)))));
-            //}
+            var firstVert = vertices[cellIndices[0]];
+            if(math.distance(firstVert.Primary, lastGrassPos) > 4f){
+                grassData.Add(new GrassInstanceData(float4x4.TRS(firstVert.Primary + helper.chunkPos, quaternion.LookRotation(firstVert.normal, math.normalize(new float3(rng.NextFloat(-1,1),0,rng.NextFloat(-1,1)))), new float3(0.2f,0.2f, rng.NextFloat(0.2f, 0.4f)))));
+                lastGrassPos = firstVert.Primary;
+            }
 
             vertexIndices.vertexIndices[index] = currentCell;
             for(int i = 0; i < triangleCount; i++){

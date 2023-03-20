@@ -12,14 +12,17 @@ Shader "Custom/Grass"
         _WindTex("Wind Texture", 2D) = "white" {}
         _WorldSize("World Size", vector) = (1, 1, 1, 1)
         _WindSpeed("Wind Speed", vector) = (1, 1, 1, 1)
+        _Cutout("Cutout", float) = 0.5
 	}
 
 	SubShader
 	{
-        Tags{ "Queue"="Transparent" "RenderType" = "Transparent"}
-        ZWrite Off
-        Blend SrcAlpha OneMinusSrcAlpha
-        Cull Off
+        Tags{ "Queue"="Geometry" "RenderType" = "Opaque"}
+        ZWrite On
+        ZTest Less
+        //Blend SrcAlpha OneMinusSrcAlpha
+        Cull Back
+        //AlphaToMask On
         Lod 100
 		Pass
 		{
@@ -45,6 +48,7 @@ Shader "Custom/Grass"
 			float _HeightCutoff;
             float4 _WindSpeed;
             sampler2D _MainTex;
+            float _Cutout;
 
             StructuredBuffer<float4x4> positionBuffer;
 
@@ -114,6 +118,7 @@ Shader "Custom/Grass"
 
 			float4 frag(vertexOutput input) : COLOR
 			{
+                if(tex2D(_MainTex, input.uv).a < _Cutout) discard;
 				// normalize light dir
 				//float3 lightDir = normalize(_WorldSpaceLightPos0.xyz);
 
@@ -121,7 +126,7 @@ Shader "Custom/Grass"
 				//float ramp = clamp(dot(input.normal, lightDir), 0.001, 1.0);
 				//float3 lighting = tex2D(_RampTex, float2(ramp, 0.5)).rgb;
 
-                fixed4 col = tex2D(_MainTex, input.uv);
+                fixed4 col = _Color;
                 col.rgb *= input.diff;
 
                 //return float4(frac(input.sp.x), 0, 0, 1); // test sample position
