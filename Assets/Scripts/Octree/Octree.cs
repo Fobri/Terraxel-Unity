@@ -255,7 +255,7 @@ public abstract class Octree : JobRunner
         thisChunk.RenderChunk();
         if(!HasSubChunks) return;
         for(int s = 0; s < 8; s++){
-            if(!cull || GeometryUtility.TestPlanesAABB(frustumPlanes, new Bounds(children[s].region.center,children[s].region.bounds))){
+            if(!cull || GeometryUtility.TestPlanesAABB(frustumPlanes, children[s].thisChunk.renderBounds)){
                 children[s].RenderChunksRecursive(frustumPlanes, cull);
                 //break;
             }

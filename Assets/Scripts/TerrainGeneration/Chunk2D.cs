@@ -62,7 +62,8 @@ public class Chunk2D : BaseChunk
             depthMultiplier = depthMultiplier / 2,
             isEmpty = isEmpty,
             grassData = base.grassData,
-            rng = base.rng
+            rng = base.rng,
+            renderBounds = renderBoundsData
         };
         base.ScheduleJobFor(meshJob, vertexCount, true);
     }

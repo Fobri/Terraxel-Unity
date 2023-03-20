@@ -17,7 +17,6 @@ public class Chunk3D : BaseChunk{
         public GameObject worldObject;
         private Mesh chunkMesh;
         private Mesh[] transitionMeshes = new Mesh[6];
-        NativeReference<int2> cacheMisses;
         public override bool CanBeCreated{
             get{
                 return meshData.IsCreated || (!meshData.IsCreated && MemoryManager.GetFreeMeshDataCount() > 0);
@@ -69,6 +68,10 @@ public class Chunk3D : BaseChunk{
             }
         }
         internal override void OnJobsReady(){
+            if(renderBoundsData.IsCreated){
+                renderBounds = new Bounds((renderBoundsData.Value.c1 - renderBoundsData.Value.c0) * 0.5f + WorldPosition, renderBoundsData.Value.c1 - renderBoundsData.Value.c0);
+                renderBoundsData.Dispose();
+            }
             if(colliderBaking){
                 if(worldObject == null) return;
                 worldObject.GetComponent<MeshCollider>().sharedMesh = null;
@@ -119,15 +122,15 @@ public class Chunk3D : BaseChunk{
             MemoryManager.ClearArray(meshStarts, 7);
             var densityData = TerraxelWorld.DensityManager.GetJobDensityData();
             var cache = new DensityCacheInstance(new int3(int.MaxValue));
-            cacheMisses = new NativeReference<int2>(Allocator.TempJob);
             var marchingJob = new MeshJob()
             {
                 vertices = meshData.vertexBuffer,
                 vertexIndices = vertexIndexBuffer,
                 triangles = meshData.indexBuffer,
-                helper = new MeshingHelper(densityData, cache, (int3)WorldPosition, negativeDepthMultiplier, depthMultiplier, cacheMisses),
+                helper = new MeshingHelper(densityData, cache, (int3)WorldPosition, negativeDepthMultiplier, depthMultiplier),
                 grassData = base.grassData,
-                rng = base.rng
+                rng = base.rng,
+                renderBounds = renderBoundsData
             };
             base.ScheduleJobFor(marchingJob, (ChunkManager.chunkResolution) * (ChunkManager.chunkResolution) * (ChunkManager.chunkResolution), false);
             var transitionJob = new TransitionMeshJob()
@@ -136,7 +139,7 @@ public class Chunk3D : BaseChunk{
                 vertexIndices = vertexIndexBuffer,
                 triangles = meshData.indexBuffer,
                 indexTracker = -1,
-                helper = new MeshingHelper(densityData, cache, (int3)WorldPosition, negativeDepthMultiplier, depthMultiplier, cacheMisses),
+                helper = new MeshingHelper(densityData, cache, (int3)WorldPosition, negativeDepthMultiplier, depthMultiplier),
                 meshStarts = meshStarts,
             };
             base.ScheduleJobFor(transitionJob, 6 * (ChunkManager.chunkResolution) * (ChunkManager.chunkResolution), true);
@@ -162,8 +165,7 @@ public class Chunk3D : BaseChunk{
             return false;
         }
         public override void ApplyMesh(){
-            Debug.Log(cacheMisses.Value.x + " cache misses and " + cacheMisses.Value.y + " hits for " + this.ToString());
-            cacheMisses.Dispose();
+            //Debug.Log(cacheMisses.Value.x + " cache misses and " + cacheMisses.Value.y + " hits for " + this.ToString());
             //_grassPositions = grassPositions.ToArray();
             int2 totalCount = new int2(meshData.vertexBuffer.Length, meshData.indexBuffer.Length);
             meshStarts[6] = totalCount;

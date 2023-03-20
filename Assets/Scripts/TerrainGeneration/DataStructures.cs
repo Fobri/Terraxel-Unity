@@ -7,6 +7,7 @@ using System;
 using UnityEngine;
 using System.Globalization;
 using System.Runtime.InteropServices;
+using Unity.Burst.CompilerServices;
 
 namespace WorldGeneration.DataStructures
 {
@@ -35,9 +36,13 @@ namespace WorldGeneration.DataStructures
         [NativeDisableUnsafePtrRestriction]
         public IntPtr cachedDensityMap;
         public int3 cachedPos;
+        public int3 lastEmptyChunk;
+        public int3 lastFullChunk;
         public DensityCacheInstance(int3 pos){
             this.cachedDensityMap = default;
             this.cachedPos = pos;
+            lastEmptyChunk = new int3(int.MaxValue);
+            lastFullChunk = new int3(int.MaxValue);
         }
     }
     public struct TransitionVertexData{
@@ -262,16 +267,19 @@ namespace WorldGeneration.DataStructures
         public static int XyzToIndex(int3 index, int size)
         {
             return XyzToIndex(index.x, index.y, index.z, size);
-        }[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int3 WorldPosToChunkPos(int3 worldPos){
             return WorldPosToChunkPos(new int4(worldPos,0)).xyz;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int4 WorldPosToChunkPos(int4 worldPos){
             //var chunkPos = math.select((int3)(math.floor(worldPos / ChunkManager.chunkResolution) * ChunkManager.chunkResolution), (int3)(math.floor(worldPos / ChunkManager.chunkResolution) * ChunkManager.chunkResolution - ChunkManager.chunkResolution), (worldPos < 0) & (worldPos % ChunkManager.chunkResolution != 0));
-            var chunkPos = (int4)(math.floor(worldPos / (float4)ChunkManager.chunkResolution)) * ChunkManager.chunkResolution;
+           
+            var chunkPos = (int4)(math.floor((float4)worldPos / ChunkManager.chunkResolution)) * ChunkManager.chunkResolution;
+            //(int4)(math.floor((int4)worldPos / ChunkManager.chunkResolution)) * ChunkManager.chunkResolution;
             //if(positionFix)
-                //chunkPos -= math.select(new int3(0), new int3(ChunkManager.chunkResolution), (worldPos < 0) & (worldPos % ChunkManager.chunkResolution != 0));
+                //chunkPos -= math.select(new int4(0), new int4(ChunkManager.chunkResolution), (worldPos < 0) & (worldPos % ChunkManager.chunkResolution != 0));
             //if(worldPos.x < 0 && worldPos.x % ChunkManager.chunkResolution != 0) chunkPos.x -= ChunkManager.chunkResolution;
             //if(worldPos.y < 0 && worldPos.y % ChunkManager.chunkResolution != 0) chunkPos.y -= ChunkManager.chunkResolution;
             //if(worldPos.z < 0 && worldPos.z % ChunkManager.chunkResolution != 0) chunkPos.z -= ChunkManager.chunkResolution;

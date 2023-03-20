@@ -17,9 +17,10 @@ public abstract class BaseChunk : Octree
     protected Unity.Mathematics.Random rng;
     //public Matrix4x4[] _grassPositions;
     protected NativeList<GrassInstanceData> grassData;
+    protected NativeReference<float3x2> renderBoundsData;
+    public Bounds renderBounds;
     private ComputeBuffer grassBuffer;
     RenderParams rp;
-    private Bounds grassBounds;
     
     public ChunkState chunkState = ChunkState.INVALID;
     public OnMeshReadyAction onMeshReady = OnMeshReadyAction.ALERT_PARENT;
@@ -64,17 +65,19 @@ public abstract class BaseChunk : Octree
     }
     protected void RenderGrass(){
         if(!TerraxelWorld.renderGrass) return;
-        /*if(_grassPositions != null){
-            Graphics.DrawMeshInstanced(grassMesh, 0, grassMaterial, _grassPositions, grassPositions.Length, null, ShadowCastingMode.On, false, 0, null, LightProbeUsage.Off, null);
-        }*/
         if(grassData.IsCreated){
             if(grassData.Length == 0) return;
-            //Graphics.DrawMeshInstancedProcedural(grassMesh, 0, grassMaterial, grassBounds, grassData.Length, propertyBlock);
             Graphics.RenderMeshPrimitives(rp, grassMesh, 0, grassData.Length);
         }
     }
     internal override void OnJobsReady()
     {
+        if(renderBoundsData.IsCreated){
+            renderBounds = new Bounds((renderBoundsData.Value.c1 - renderBoundsData.Value.c0) * 0.5f + WorldPosition, renderBoundsData.Value.c1 - renderBoundsData.Value.c0);
+            renderBoundsData.Dispose();
+        }else{
+            renderBounds = new Bounds(region.center, region.bounds);
+        }
         ApplyMesh();
         PushGrassData();
     }
@@ -83,17 +86,17 @@ public abstract class BaseChunk : Octree
         grassBuffer = new ComputeBuffer(grassData.Length, sizeof(float) * 16);
         grassBuffer.SetData(grassData.AsArray());
         //grassMaterial.SetBuffer("positionBuffer", grassBuffer);
-        rp.worldBounds = grassBounds;
+        rp.worldBounds = renderBounds;
         rp.matProps.SetBuffer("positionBuffer", grassBuffer);
     }
     public void ScheduleMeshUpdate(){
-        grassBounds = new Bounds(region.center, region.bounds);
         propertyBlock.SetVector("_WorldPos", new float4(WorldPosition, 1));
         vertCount = 0;
         idxCount = 0;
         chunkState = ChunkState.DIRTY;
         genTime = Time.realtimeSinceStartup;
         grassData = MemoryManager.GetGrassData();
+        renderBoundsData = new NativeReference<float3x2>(Allocator.TempJob);
         OnScheduleMeshUpdate();
         
     }

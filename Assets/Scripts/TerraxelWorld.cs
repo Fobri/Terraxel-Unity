@@ -219,9 +219,6 @@ public TextMeshProUGUI[] debugLabels;
         }
         ChunkManager.RegenerateChunkMesh(pos, radius);
     }
-    public static void Test(int number, int size){
-        Debug.Log(number / size % size + " " + number / size);
-    }
     public void OnDisable(){
         JobRunner.CompleteAll();
         MemoryManager.Dispose();
@@ -278,7 +275,7 @@ public TextMeshProUGUI[] debugLabels;
                     Handles.Label(offset, Utils.DirectionMaskToString(chunkDatas[i].dirMask));
                 }
                 if(drawChunkBounds){
-                    chunkDatas[i].region.DebugDraw();
+                    Gizmos.DrawWireCube(chunkDatas[i].renderBounds.center, chunkDatas[i].renderBounds.size);
                 }
                 if(drawChunkVariables.type){
                     offset.y += 4f;
