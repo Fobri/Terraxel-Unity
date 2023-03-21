@@ -5,7 +5,7 @@ using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Mathematics;
 
-namespace WorldGeneration
+namespace Terraxel
 {
     public unsafe struct Counter : IDisposable
     {

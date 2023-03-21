@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using GraphProcessor;
 using System.Linq;
-using WorldGeneration.DataStructures;
+using Terraxel.DataStructures;
 
 [System.Serializable, NodeMenuItem("Custom/TerraxelPreviewNode")]
 public class TerraxelPreviewNode : BaseNode

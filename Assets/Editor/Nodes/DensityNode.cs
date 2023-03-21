@@ -4,7 +4,7 @@ using UnityEngine;
 using GraphProcessor;
 using System.Linq;
 using Unity.Mathematics;
-using WorldGeneration.DataStructures;
+using Terraxel.DataStructures;
 using UnityEditor.UIElements;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine.UIElements;

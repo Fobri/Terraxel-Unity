@@ -2,16 +2,18 @@ using UnityEngine;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
-using WorldGeneration;
+using Terraxel;
 using UnityEngine.Rendering;
 using System;
-using WorldGeneration.DataStructures;
+using Terraxel.DataStructures;
+using Terraxel.WorldGeneration;
 using System.Collections.Generic;
 
 public class Chunk3D : BaseChunk{
         private bool colliderBaking = false;
         private TempBuffer vertexIndexBuffer;
         private MeshData meshData;
+        private MeshData oldMeshData;
         static Material chunkMaterial;
         private NativeArray<int2> meshStarts;
         public GameObject worldObject;
@@ -19,7 +21,7 @@ public class Chunk3D : BaseChunk{
         private Mesh[] transitionMeshes = new Mesh[6];
         public override bool CanBeCreated{
             get{
-                return meshData.IsCreated || (!meshData.IsCreated && MemoryManager.GetFreeMeshDataCount() > 0);
+                return MemoryManager.GetFreeMeshDataCount() > 0;
             }
         }
         static VertexAttributeDescriptor[] layout = new[]
@@ -38,7 +40,7 @@ public class Chunk3D : BaseChunk{
             }
         }
         static Chunk3D(){
-            chunkMaterial = Resources.Load("TerrainMaterial", typeof(Material)) as Material;
+            chunkMaterial = Resources.Load("Materials/TerrainMaterial", typeof(Material)) as Material;
         }
         //ROOT chunk
         public Chunk3D() : base() {
@@ -49,7 +51,7 @@ public class Chunk3D : BaseChunk{
             worldObject.transform.position = WorldPosition;
         }
         public override void RenderChunk(){
-            if(!active || chunkState != ChunkState.READY) return;
+            if(!active) return;
             Graphics.DrawMesh(chunkMesh, WorldPosition, Quaternion.identity, chunkMaterial, 0, null, 0, propertyBlock, true, true, true);
             for(int i = 0; i < transitionMeshes.Length; i++){
                 if(transitionMeshes[i] == null || (dirMask & transitionMeshIndexMap[i]) == 0) continue;
@@ -116,8 +118,10 @@ public class Chunk3D : BaseChunk{
                 vertexIndexBuffer.ClearBuffers();
             if(!meshData.IsCreated)
                 meshData = MemoryManager.GetMeshData();
-            else
-                meshData.ClearBuffers();
+            else{
+                oldMeshData = meshData;
+                meshData = MemoryManager.GetMeshData();
+            }
             colliderBaking = false;
             MemoryManager.ClearArray(meshStarts, 7);
             var densityData = TerraxelWorld.DensityManager.GetJobDensityData();
@@ -143,7 +147,6 @@ public class Chunk3D : BaseChunk{
                 meshStarts = meshStarts,
             };
             base.ScheduleJobFor(transitionJob, 6 * (ChunkManager.chunkResolution) * (ChunkManager.chunkResolution), true);
-            var _pos = (int3)WorldPosition;
         }
         bool CheckNeighbour(int3 relativeOffset, bool refreshNeighbours = false){
             float3 pos = ChunkManager.chunkResolution * depthMultiplier * relativeOffset;
@@ -177,7 +180,7 @@ public class Chunk3D : BaseChunk{
             var indexCount = meshStarts[0].y;
             if (vertexCount > 0)
             {
-                if(onMeshReady == OnMeshReadyAction.ALERT_PARENT)
+                if(onMeshReady == OnMeshReadyAction.ALERT_PARENT && !oldMeshData.IsCreated)
                     SetActive(false);
                 //var mesh = worldObject.GetComponent<MeshFilter>().sharedMesh;
                 var bounds = new Bounds(new float3(ChunkManager.chunkResolution * depthMultiplier / 2), region.bounds);
@@ -228,6 +231,10 @@ public class Chunk3D : BaseChunk{
             OnMeshReady();
         }
         public override void OnMeshReady(){
+            if(oldMeshData.IsCreated){
+                MemoryManager.ReturnMeshData(oldMeshData);
+                oldMeshData = default;
+            }
             genTime = Time.realtimeSinceStartup - genTime;
             chunkState = ChunkState.READY;
             if(onMeshReady == OnMeshReadyAction.ALERT_PARENT){
@@ -246,6 +253,10 @@ public class Chunk3D : BaseChunk{
             if(meshData.IsCreated){
                 MemoryManager.ReturnMeshData(meshData);
                 meshData = default;
+            }
+            if(oldMeshData.IsCreated){
+                MemoryManager.ReturnMeshData(oldMeshData);
+                oldMeshData = default;
             }
         }
 

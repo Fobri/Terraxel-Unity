@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace WorldGeneration
+namespace Terraxel.DataStructures
 {
     public struct VoxelCorners
     {

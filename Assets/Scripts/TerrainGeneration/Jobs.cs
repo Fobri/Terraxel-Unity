@@ -8,11 +8,11 @@ using Unity.Burst;
 using System.Runtime.CompilerServices;
 using System;
 using Unity.Collections.LowLevel.Unsafe;
-using WorldGeneration.DataStructures;
+using Terraxel.DataStructures;
 
-namespace WorldGeneration
+namespace Terraxel.WorldGeneration
 {
-    [BurstCompile]
+    [BurstCompile(FloatPrecision.Low, FloatMode.Fast)]
     public struct Mesh2DJob : IJobFor
     {
         [ReadOnly] public NativeArray<float> heightMap;
@@ -22,7 +22,7 @@ namespace WorldGeneration
         [ReadOnly] public int depthMultiplier;
         [WriteOnly] public NativeReference<bool> isEmpty;
         [WriteOnly] public NativeArray<VertexData> vertices;
-        [WriteOnly] public NativeList<GrassInstanceData> grassData;
+        [WriteOnly] public NativeList<InstanceData> grassData;
         [WriteOnly, NativeDisableParallelForRestriction] public NativeArray<ushort> indices;
         public Unity.Mathematics.Random rng;
         public NativeReference<float3x2> renderBounds;
@@ -41,7 +41,7 @@ namespace WorldGeneration
             renderBounds.Value = bounds;
             if(height > chunkPos.y && height < chunkPos.y + chunkSize * depthMultiplier){
                 if(depthMultiplier < 2) {
-                    grassData.Add(new GrassInstanceData(float4x4.TRS(_vertPos + chunkPos, quaternion.LookRotation(normal, math.normalize(new float3(rng.NextFloat(-1,1),0,rng.NextFloat(-1,1)))), new float3(0.4f,0.4f, rng.NextFloat(0.5f, 0.8f)))));
+                    grassData.Add(new InstanceData(float4x4.TRS(_vertPos + chunkPos, quaternion.LookRotation(normal, math.normalize(new float3(rng.NextFloat(-1,1),0,rng.NextFloat(-1,1)))), new float3(0.4f,0.4f, rng.NextFloat(0.5f, 0.8f)))));
                 }
                 if(vertPos.x > 0 && vertPos.y > 0){
                     isEmpty.Value = false;
@@ -66,7 +66,7 @@ namespace WorldGeneration
             return heightMap[Utils.XzToIndex(localPos + 1, chunkSize + 2)];
         }
     }
-    [BurstCompile]
+    [BurstCompile(FloatPrecision.Low, FloatMode.Fast)]
     public struct TransitionMeshJob : IJobFor
     {
         //[WriteOnly] public Counter vertexCounter;
@@ -243,13 +243,13 @@ namespace WorldGeneration
             return result;
         }
     }
-    [BurstCompile]
+    [BurstCompile(FloatPrecision.Low, FloatMode.Fast)]
     public struct MeshJob : IJobFor
     {
         public NativeList<TransitionVertexData> vertices;
         public NativeList<ushort> triangles;
         public MeshingHelper helper;
-        [WriteOnly] public NativeList<GrassInstanceData> grassData;
+        [WriteOnly] public NativeList<InstanceData> grassData;
         public TempBuffer vertexIndices;
         public Unity.Mathematics.Random rng;
         public NativeReference<float3x2> renderBounds;
@@ -337,8 +337,8 @@ namespace WorldGeneration
                 }*/
             }
             var firstVert = vertices[cellIndices[0]];
-            if(math.distance(firstVert.Primary, lastGrassPos) > 4f){
-                grassData.Add(new GrassInstanceData(float4x4.TRS(firstVert.Primary + helper.chunkPos, quaternion.LookRotation(firstVert.normal, math.normalize(new float3(rng.NextFloat(-1,1),0,rng.NextFloat(-1,1)))), new float3(0.2f,0.2f, rng.NextFloat(0.2f, 0.4f)))));
+            if(math.distance(firstVert.Primary, lastGrassPos) > 2f){
+                grassData.Add(new InstanceData(float4x4.TRS(firstVert.Primary + helper.chunkPos, quaternion.LookRotation(firstVert.normal, math.normalize(new float3(rng.NextFloat(-1,1),0,rng.NextFloat(-1,1)))), new float3(0.2f,0.2f, rng.NextFloat(0.3f, 0.5f)))));
                 lastGrassPos = firstVert.Primary;
             }
 
@@ -522,7 +522,8 @@ namespace WorldGeneration
         }
     }
     //Calculate noise in jobs
-    [BurstCompile]
+    
+    [BurstCompile(FloatPrecision.Low, FloatMode.Fast)]
     public struct NoiseJob : IJobParallelFor
     {
         [ReadOnly] public float3 offset;
@@ -546,7 +547,8 @@ namespace WorldGeneration
             }
         }
     }
-    [BurstCompile]
+    
+    [BurstCompile(FloatPrecision.Low, FloatMode.Fast)]
     public struct NoiseJob2D : IJobParallelFor
     {
         [ReadOnly] public float2 offset;

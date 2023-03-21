@@ -2,10 +2,11 @@ using UnityEngine;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
-using WorldGeneration;
+using Terraxel;
 using UnityEngine.Rendering;
 using System;
-using WorldGeneration.DataStructures;
+using Terraxel.DataStructures;
+using Terraxel.WorldGeneration;
 using System.Collections.Generic;
 public class Chunk2D : BaseChunk
 {
@@ -32,7 +33,7 @@ public class Chunk2D : BaseChunk
         chunkMesh = new Mesh();
     }
     static Chunk2D(){
-            chunkMaterial = Resources.Load("TerrainSimple", typeof(Material)) as Material;
+            chunkMaterial = Resources.Load("Materials/TerrainSimple", typeof(Material)) as Material;
     }
 
     protected override void OnScheduleMeshUpdate()

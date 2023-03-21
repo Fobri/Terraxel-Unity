@@ -2,10 +2,10 @@ using UnityEngine;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
-using WorldGeneration;
+using Terraxel;
 using UnityEngine.Rendering;
 using System;
-using WorldGeneration.DataStructures;
+using Terraxel.DataStructures;
 using System.Collections.Generic;
 
 public abstract class BaseChunk : Octree
@@ -17,7 +17,7 @@ public abstract class BaseChunk : Octree
     protected Unity.Mathematics.Random rng;
     static Transform cam;
     //public Matrix4x4[] _grassPositions;
-    protected NativeList<GrassInstanceData> grassData;
+    protected NativeList<InstanceData> grassData;
     protected NativeReference<float3x2> renderBoundsData;
     public Bounds renderBounds;
     private ComputeBuffer grassBuffer;
@@ -42,17 +42,18 @@ public abstract class BaseChunk : Octree
         chunkState = ChunkState.INVALID;
         disposeStatus = DisposeState.NOTHING;
         propertyBlock = new MaterialPropertyBlock();
-        grassMaterial = (Resources.Load("GrassMaterial", typeof(Material)) as Material);
+        grassMaterial = (Resources.Load("Materials/GrassMaterial", typeof(Material)) as Material);
         rp = new RenderParams(grassMaterial);
         rp.matProps = propertyBlock;
         rp.shadowCastingMode = ShadowCastingMode.On;
+        rp.receiveShadows = true;
         rng = new Unity.Mathematics.Random((uint)TerraxelWorld.seed);
     }
     public BaseChunk() : base(){
 
     }
     static BaseChunk(){
-        grassMesh = Resources.Load("GrassMesh", typeof(Mesh)) as Mesh;
+        grassMesh = Resources.Load("Meshes/GrassMesh", typeof(Mesh)) as Mesh;
         cam = Camera.main.transform;
     }
     public void SetActive(bool active){
@@ -67,7 +68,7 @@ public abstract class BaseChunk : Octree
         TerraxelWorld.ChunkManager.DisposeChunk(this);
     }
     protected void RenderGrass(){
-        if(!TerraxelWorld.renderGrass) return;
+        if(!TerraxelWorld.renderGrass || chunkState != ChunkState.READY) return;
         if(grassData.IsCreated){
             if(grassData.Length == 0) return;
             Graphics.RenderMeshPrimitives(rp, grassMesh, 0, grassData.Length);
@@ -90,7 +91,7 @@ public abstract class BaseChunk : Octree
         grassBuffer.SetData(grassData.AsArray());
         //grassMaterial.SetBuffer("positionBuffer", grassBuffer);
         rp.worldBounds = renderBounds;
-        rp.matProps.SetBuffer("positionBuffer", grassBuffer);
+        rp.matProps.SetBuffer("Matrices", grassBuffer);
     }
     public void ScheduleMeshUpdate(){
         //propertyBlock.SetVector("_WorldPos", new float4(WorldPosition, 1));

@@ -9,7 +9,7 @@ using System.Globalization;
 using System.Runtime.InteropServices;
 using Unity.Burst.CompilerServices;
 
-namespace WorldGeneration.DataStructures
+namespace Terraxel.DataStructures
 {
 
     public enum ChunkState { DIRTY, READY, INVALID, ROOT, QUEUED }
@@ -26,9 +26,9 @@ namespace WorldGeneration.DataStructures
         public NativeReference<bool> isFull;
     }
     [StructLayout(LayoutKind.Sequential)]
-    public struct GrassInstanceData{
+    public struct InstanceData{
         public float4x4 matrix;
-        public GrassInstanceData(float4x4 matrix){
+        public InstanceData(float4x4 matrix){
             this.matrix = matrix;
         }
     }
@@ -92,6 +92,32 @@ namespace WorldGeneration.DataStructures
             indexBuffer.Dispose();
             heightMap.Dispose();
         }
+    }
+    [Serializable]
+    public class InstancingData{
+        [SerializeField]
+        public Mesh mesh;
+        [SerializeField]
+        public Material material;
+    }
+    public struct JobInstancingData : IDisposable{
+        public InstanceProperties c0;
+        public InstanceProperties c1;
+        public InstanceProperties c2;
+        public InstanceProperties c3;
+        public InstanceProperties c4;
+
+        public void Dispose(){
+            MemoryManager.ReturnGrassData(c0.matrices);
+            MemoryManager.ReturnGrassData(c1.matrices);
+            MemoryManager.ReturnGrassData(c2.matrices);
+            MemoryManager.ReturnGrassData(c3.matrices);
+            MemoryManager.ReturnGrassData(c4.matrices);
+        }
+    }
+    public struct InstanceProperties{
+        public NativeList<InstanceData> matrices;
+        public float3 lastInstancePos;
     }
     public struct DensityGenerator{
         

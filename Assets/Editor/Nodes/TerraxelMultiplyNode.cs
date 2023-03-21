@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using GraphProcessor;
 using System.Linq;
-using WorldGeneration.DataStructures;
+using Terraxel.DataStructures;
 
 [System.Serializable, NodeMenuItem("Math/TerraxelMultiplyNode")]
 public class TerraxelMultiplyNode : TerraxelPreviewNode

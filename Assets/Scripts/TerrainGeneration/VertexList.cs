@@ -4,7 +4,7 @@ using UnityEngine;
 using Unity.Mathematics;
 using System.Runtime.InteropServices;
 
-namespace WorldGeneration
+namespace Terraxel.DataStructures
 {
     [StructLayout(LayoutKind.Sequential)]
     public struct CellIndices

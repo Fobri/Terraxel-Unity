@@ -1,6 +1,6 @@
 using Unity.Collections;
 using Unity.Mathematics;
-using WorldGeneration.DataStructures;
+using Terraxel.DataStructures;
 using System.Runtime.CompilerServices;
 
 
