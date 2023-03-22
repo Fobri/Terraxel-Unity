@@ -157,7 +157,7 @@ namespace Terraxel.DataStructures
                     //Unity.Burst.CompilerServices.Loop.ExpectVectorized();
                     float3 n = noise.srdnoise(math.float2(worldPos * freq));
                     dsum += new float2(n.y, n.z);
-                    total += (n.x + 1) * 0.5f * ampl* (1/(1+math.dot(dsum, dsum)));
+                    total += (n.x) * ampl* (1/(1+math.dot(dsum, dsum)));
 
                     ampl *= gain;
                     freq *= lacunarity;
@@ -167,7 +167,7 @@ namespace Terraxel.DataStructures
                 for (int i = 0; i < oct; i++)
                 {
                     //Unity.Burst.CompilerServices.Loop.ExpectVectorized();
-                    total += (noise.snoise(math.float2(worldPos * freq)) + 1) * 0.5f * ampl;
+                    total += (noise.snoise(math.float2(worldPos * freq))) * ampl;
                     ampl *= gain;
                     freq *= lacunarity;
                 }

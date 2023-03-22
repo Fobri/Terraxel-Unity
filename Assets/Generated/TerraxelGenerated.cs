@@ -13,6 +13,6 @@ public class TerraxelGenerated
     }
     //[MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static float GenerateDensity(float2 pos2D){
-        return (DensityGenerator.SurfaceNoise2D(pos2D + new float2(DensityGenerator.SurfaceNoise2D(pos2D + new float2(457.0000f,700.0000f), 19.2000f, 0.0050f, 62, 2, 3.0000f, 2.0000f, false),0.0000f), 24.0000f, 0.0020f, 62, 3, 2.0000f, 1.0000f, false) + DensityGenerator.SurfaceNoise2D(pos2D + new float2(DensityGenerator.SurfaceNoise2D(pos2D + new float2(457.0000f,700.0000f), 19.2000f, 0.0050f, 62, 2, 3.0000f, 2.0000f, false),0.0000f), -4.8000f, 0.0010f, 62, 3, 3.0000f, 1.3000f, true));
+        return (DensityGenerator.SurfaceNoise2D(pos2D + new float2(DensityGenerator.SurfaceNoise2D(pos2D + new float2(457.0000f,700.0000f), 24.0000f, 0.0050f, 62, 2, 3.0000f, 0.5000f, false),DensityGenerator.SurfaceNoise2D(pos2D + new float2(457.0000f,700.0000f), 24.0000f, 0.0050f, 62, 2, 3.0000f, 0.5000f, false)), 40.8000f, 0.0010f, 62, 4, 4.0000f, 0.3000f, false) + DensityGenerator.SurfaceNoise2D(pos2D + new float2(DensityGenerator.SurfaceNoise2D(pos2D + new float2(1.0000f,1.0000f), 24.0000f, 0.0060f, 62, 2, 2.0000f, 0.8000f, false),0.0000f), 48.0000f, 0.0020f, 62, 2, 3.0000f, 0.7000f, true));
     }
 }
