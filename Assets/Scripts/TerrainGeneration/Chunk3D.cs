@@ -29,7 +29,8 @@ public class Chunk3D : BaseChunk{
                     new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float32, 3),
                     new VertexAttributeDescriptor(VertexAttribute.Normal, VertexAttributeFormat.Float32, 3),
                     new VertexAttributeDescriptor(VertexAttribute.Tangent, VertexAttributeFormat.Float32, 3),
-                    new VertexAttributeDescriptor(VertexAttribute.Color, VertexAttributeFormat.SInt32, 1)
+                    new VertexAttributeDescriptor(VertexAttribute.Color, VertexAttributeFormat.SInt32, 1),
+                    new VertexAttributeDescriptor(VertexAttribute.TexCoord0, VertexAttributeFormat.Float32, 1)
                 };
         public Chunk3D(BoundingBox bounds, int depth) 
         : base(bounds, depth){
@@ -57,7 +58,7 @@ public class Chunk3D : BaseChunk{
                 if(transitionMeshes[i] == null || (dirMask & transitionMeshIndexMap[i]) == 0) continue;
                 Graphics.DrawMesh(transitionMeshes[i], WorldPosition, Quaternion.identity, chunkMaterial, 0, null, 0, propertyBlock, true, true, true);
             }
-            base.RenderGrass();
+            base.RenderInstances();
         }
         static readonly int[] transitionMeshIndexMap = new int[] {
             0b_0000_0001, 0b_0000_0010, 0b_0001_0000, 0b_0010_0000, 0b_0000_0100, 0b_0000_1000
@@ -82,7 +83,7 @@ public class Chunk3D : BaseChunk{
             }
             else{
                 ApplyMesh();
-                base.PushGrassData();
+                base.PushInstanceData();
             }
         }
         public void UpdateDirectionMask(bool refreshNeighbours = false){
@@ -132,7 +133,8 @@ public class Chunk3D : BaseChunk{
                 vertexIndices = vertexIndexBuffer,
                 triangles = meshData.indexBuffer,
                 helper = new MeshingHelper(densityData, cache, (int3)WorldPosition, negativeDepthMultiplier, depthMultiplier),
-                grassData = base.grassData,
+                grassData = base.grassRenderer.data,
+                treeData = base.treeRenderer.data,
                 rng = base.rng,
                 renderBounds = renderBoundsData
             };

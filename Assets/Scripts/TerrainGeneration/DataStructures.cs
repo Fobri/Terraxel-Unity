@@ -50,19 +50,23 @@ namespace Terraxel.DataStructures
         public float3 normal;
         public float3 Secondary;
         public int near;
-        public TransitionVertexData(float3 Primary, float3 Secondary, int near, float3 normal){
+        public float textureIndex;
+        public TransitionVertexData(float3 Primary, float3 Secondary, int near, float3 normal, float textureIndex){
             this.Primary = Primary;
             this.Secondary = Secondary;
             this.near = near;
             this.normal = normal;
+            this.textureIndex = textureIndex;
         }
     }
     public struct VertexData{
         public float3 vertex;
         public float3 normal;
-        public VertexData(float3 vertex,float3 normal){
+        public float textureIndex;
+        public VertexData(float3 vertex,float3 normal, float textureIndex){
             this.vertex = vertex;
             this.normal = normal;
+            this.textureIndex = textureIndex;
         }
     }
     [Serializable]
@@ -108,11 +112,11 @@ namespace Terraxel.DataStructures
         public InstanceProperties c4;
 
         public void Dispose(){
-            MemoryManager.ReturnGrassData(c0.matrices);
-            MemoryManager.ReturnGrassData(c1.matrices);
-            MemoryManager.ReturnGrassData(c2.matrices);
-            MemoryManager.ReturnGrassData(c3.matrices);
-            MemoryManager.ReturnGrassData(c4.matrices);
+            MemoryManager.ReturnInstanceData(c0.matrices);
+            MemoryManager.ReturnInstanceData(c1.matrices);
+            MemoryManager.ReturnInstanceData(c2.matrices);
+            MemoryManager.ReturnInstanceData(c3.matrices);
+            MemoryManager.ReturnInstanceData(c4.matrices);
         }
     }
     public struct InstanceProperties{
@@ -281,6 +285,17 @@ namespace Terraxel.DataStructures
         }
     }
     public class Utils{
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static quaternion AlignWithNormal(float3 normal, Unity.Mathematics.Random rng){
+            float4 q = 0;
+            var axis = new float3(0,1,0);
+            float3 a = math.cross(axis, normal);
+            q.xyz = a;
+            q.w = 1 + math.dot(axis, normal);
+            quaternion.RotateY(rng.NextFloat(-math.PI, math.PI));
+            return (quaternion)math.normalize(q);
+        }
         public static string floatToString(float value){
             return value.ToString("F4", new CultureInfo("en-US"))+"f";
         }

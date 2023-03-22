@@ -36,7 +36,7 @@ public class DensityView : BaseNodeView
 		if(image == null) image = new Texture2D(128, 128);
 		for(int x = 0; x < 128; x++){
 			for(int y = 0; y < 128; y++){
-				var value = math.abs(node.values[128 * y + x]);
+				var value = (node.values[128 * y + x] + 0.5f);
 				image.SetPixel(x, y, new Color(value, value, value));
 			}
 		}

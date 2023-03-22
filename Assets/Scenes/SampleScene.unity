@@ -841,8 +841,10 @@ MonoBehaviour:
   boost: 3.5
   positionLerpTime: 0.2
   mouseSensitivityCurve:
+    serializedVersion: 2
     m_Curve:
-    - time: 0
+    - serializedVersion: 3
+      time: 0
       value: 0.5
       inSlope: 0
       outSlope: 5
@@ -850,7 +852,8 @@ MonoBehaviour:
       weightedMode: 0
       inWeight: 0
       outWeight: 0
-    - time: 1
+    - serializedVersion: 3
+      time: 1
       value: 2.5
       inSlope: 0
       outSlope: 0
@@ -1218,6 +1221,10 @@ PrefabInstance:
     - target: {fileID: 919132149155446097, guid: e98f4365afc3f0d4aa71c250ac08f92f, type: 3}
       propertyPath: m_Name
       value: tree
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: e98f4365afc3f0d4aa71c250ac08f92f, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1122427853962064952, guid: e98f4365afc3f0d4aa71c250ac08f92f, type: 3}
       propertyPath: m_Materials.Array.data[0]
@@ -1933,6 +1940,10 @@ PrefabInstance:
     - target: {fileID: 919132149155446097, guid: c8d31dcbf28de9d46b73f9d654c6485c, type: 3}
       propertyPath: m_Name
       value: Spruce
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: c8d31dcbf28de9d46b73f9d654c6485c, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1122427853962064952, guid: c8d31dcbf28de9d46b73f9d654c6485c, type: 3}
       propertyPath: m_Materials.Array.data[0]

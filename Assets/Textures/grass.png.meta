@@ -11,8 +11,8 @@ TextureImporter:
     linearTexture: 0
     fadeOut: 0
     borderMipMap: 0
-    mipMapsPreserveCoverage: 0
-    alphaTestReferenceValue: 0.04
+    mipMapsPreserveCoverage: 1
+    alphaTestReferenceValue: 0.4
     mipMapFadeDistanceStart: 0
     mipMapFadeDistanceEnd: 2
   bumpmap:

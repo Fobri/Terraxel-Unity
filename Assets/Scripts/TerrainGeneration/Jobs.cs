@@ -23,6 +23,7 @@ namespace Terraxel.WorldGeneration
         [WriteOnly] public NativeReference<bool> isEmpty;
         [WriteOnly] public NativeArray<VertexData> vertices;
         [WriteOnly] public NativeList<InstanceData> grassData;
+        [WriteOnly] public NativeList<InstanceData> treeData;
         [WriteOnly, NativeDisableParallelForRestriction] public NativeArray<ushort> indices;
         public Unity.Mathematics.Random rng;
         public NativeReference<float3x2> renderBounds;
@@ -34,14 +35,20 @@ namespace Terraxel.WorldGeneration
             var height = SampleHeight(vertPos);
             var _vertPos = new float3(vertPos.x * depthMultiplier, height - chunkPos.y, vertPos.y * depthMultiplier);
             var normal = GetVertexNormal(vertPos);
-            vertices[index] = new VertexData(_vertPos, normal);
+            var angle = math.dot(normal, new float3(0,1,0));
+            vertices[index] = new VertexData(_vertPos, normal, math.clamp((1-angle),0,1));
             var bounds = renderBounds.Value;
             bounds.c0 = math.min(_vertPos, bounds.c0);
             bounds.c1 = math.max(_vertPos, bounds.c1);
             renderBounds.Value = bounds;
             if(height > chunkPos.y && height < chunkPos.y + chunkSize * depthMultiplier){
-                if(depthMultiplier < 2) {
-                    grassData.Add(new InstanceData(float4x4.TRS(_vertPos + chunkPos, quaternion.LookRotation(normal, math.normalize(new float3(rng.NextFloat(-1,1),0,rng.NextFloat(-1,1)))), new float3(0.4f,0.4f, rng.NextFloat(0.5f, 0.8f)))));
+                if(angle > 0.9f){
+                    if(depthMultiplier < 8 && rng.NextFloat(0, 100) < 2){
+                        treeData.Add(new InstanceData(float4x4.TRS(_vertPos + chunkPos, Utils.AlignWithNormal(normal, rng), new float3(rng.NextFloat(1f, 2f)))));
+                    }
+                    else if(depthMultiplier < 4 && rng.NextFloat(0, 100) < 30){
+                        grassData.Add(new InstanceData(float4x4.TRS(_vertPos + chunkPos, Utils.AlignWithNormal(normal, rng), new float3(0.2f,0.2f, rng.NextFloat(0.3f, 0.5f)))));
+                    }
                 }
                 if(vertPos.x > 0 && vertPos.y > 0){
                     isEmpty.Value = false;
@@ -66,7 +73,7 @@ namespace Terraxel.WorldGeneration
             return heightMap[Utils.XzToIndex(localPos + 1, chunkSize + 2)];
         }
     }
-    [BurstCompile(FloatPrecision.Low, FloatMode.Fast)]
+    [BurstCompile]
     public struct TransitionMeshJob : IJobFor
     {
         //[WriteOnly] public Counter vertexCounter;
@@ -217,7 +224,9 @@ namespace Terraxel.WorldGeneration
             }
             
             //int vertexIndex = vertexCounter.Increment();
-            vertices.Add(new TransitionVertexData(vertPos, secondaryPos, near, vertNormal));
+            
+            var angle = math.dot(vertNormal, new float3(0,1,0));
+            vertices.Add(new TransitionVertexData(vertPos, secondaryPos, near, vertNormal, math.clamp((1-angle),0,1)));
             int vertexIndex = vertices.Length - 1;
             return (ushort)vertexIndex;
         }
@@ -250,10 +259,10 @@ namespace Terraxel.WorldGeneration
         public NativeList<ushort> triangles;
         public MeshingHelper helper;
         [WriteOnly] public NativeList<InstanceData> grassData;
+        [WriteOnly] public NativeList<InstanceData> treeData;
         public TempBuffer vertexIndices;
         public Unity.Mathematics.Random rng;
         public NativeReference<float3x2> renderBounds;
-        float3 lastGrassPos;
         public void Execute(int index)
         {
             int3 voxelLocalPosition = Utils.IndexToXyz(index, ChunkManager.chunkResolution).xyz;
@@ -336,11 +345,8 @@ namespace Terraxel.WorldGeneration
                     }
                 }*/
             }
-            var firstVert = vertices[cellIndices[0]];
-            if(math.distance(firstVert.Primary, lastGrassPos) > 2f){
-                grassData.Add(new InstanceData(float4x4.TRS(firstVert.Primary + helper.chunkPos, quaternion.LookRotation(firstVert.normal, math.normalize(new float3(rng.NextFloat(-1,1),0,rng.NextFloat(-1,1)))), new float3(0.2f,0.2f, rng.NextFloat(0.3f, 0.5f)))));
-                lastGrassPos = firstVert.Primary;
-            }
+            //var firstVert = vertices[cellIndices[0]];
+            
 
             vertexIndices.vertexIndices[index] = currentCell;
             for(int i = 0; i < triangleCount; i++){
@@ -349,14 +355,25 @@ namespace Terraxel.WorldGeneration
                     cellIndices[Tables.RegularCellData[cell][i * 3 + 1]].Equals(cellIndices[Tables.RegularCellData[cell][i * 3 + 3]]) ||
                     cellIndices[Tables.RegularCellData[cell][i * 3 + 2]].Equals(cellIndices[Tables.RegularCellData[cell][i * 3 + 3]])){
                         continue;
-                    }
-                /*if(vertices[cellIndices[Tables.RegularCellData[cell][i * 3 + 1]]].Primary.Equals(vertices[cellIndices[Tables.RegularCellData[cell][i * 3 + 2]]].Primary) ||
-                vertices[cellIndices[Tables.RegularCellData[cell][i * 3 + 1]]].Primary.Equals(vertices[cellIndices[Tables.RegularCellData[cell][i * 3 + 3]]].Primary) ||
-                vertices[cellIndices[Tables.RegularCellData[cell][i * 3 + 2]]].Primary.Equals(vertices[cellIndices[Tables.RegularCellData[cell][i * 3 + 3]]].Primary)){
-                    Debug.Log("wtf");
+                    }*/
+                TransitionVertexData v1 = vertices[cellIndices[Tables.RegularCellData[cell][i * 3 + 1]]];
+                TransitionVertexData v2 = vertices[cellIndices[Tables.RegularCellData[cell][i * 3 + 2]]];
+                TransitionVertexData v3 = vertices[cellIndices[Tables.RegularCellData[cell][i * 3 + 3]]];
+                /*if(v1.Primary.Equals(v2.Primary) ||
+                    v1.Primary.Equals(v3.Primary) ||
+                    v2.Primary.Equals(v3.Primary)){
+                    continue;
                 }*/
-                for(int v = 0; v < 3; v++){
-                    triangles.Add(cellIndices[Tables.RegularCellData[cell][i * 3 + v + 1]]);
+                triangles.Add(cellIndices[Tables.RegularCellData[cell][i * 3 + 1]]);
+                triangles.Add(cellIndices[Tables.RegularCellData[cell][i * 3 + 2]]);
+                triangles.Add(cellIndices[Tables.RegularCellData[cell][i * 3 + 3]]);
+                float3 midPoint = (v1.Primary + v2.Primary + v3.Primary) * 0.333f;
+                float3 normal = (v1.normal + v2.normal + v3.normal) * 0.333f;
+                if(v1.textureIndex < 0.1f && v2.textureIndex < 0.1f && v3.textureIndex < 0.1f && rng.NextFloat(0, 100) < 0.5f){
+                    treeData.Add(new InstanceData(float4x4.TRS(midPoint + helper.chunkPos, Utils.AlignWithNormal(normal, rng), new float3(rng.NextFloat(1f, 2f)))));
+                }
+                else if(v1.textureIndex < 0.1f && v2.textureIndex < 0.1f && v3.textureIndex < 0.1f && rng.NextFloat(0, 100) < 45){
+                    grassData.Add(new InstanceData(float4x4.TRS(midPoint + helper.chunkPos, Utils.AlignWithNormal(normal, rng), new float3(0.2f,0.2f, rng.NextFloat(0.3f, 0.5f)))));
                 }
             }
         }
@@ -419,7 +436,8 @@ namespace Terraxel.WorldGeneration
             bounds.c0 = math.min(vertPos, bounds.c0);
             bounds.c1 = math.max(vertPos, bounds.c1);
             renderBounds.Value = bounds;
-            vertices.Add(new TransitionVertexData(vertPos, secondaryPos, near, vertNormal));
+            var angle = math.dot(vertNormal, new float3(0,1,0));
+            vertices.Add(new TransitionVertexData(vertPos, secondaryPos, near, vertNormal, math.clamp((1-angle),0,1)));
             int vertexIndex = vertices.Length - 1;
             return (ushort)vertexIndex;
         }

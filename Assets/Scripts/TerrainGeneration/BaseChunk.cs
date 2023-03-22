@@ -13,16 +13,13 @@ public abstract class BaseChunk : Octree
     public const MeshUpdateFlags MESH_UPDATE_FLAGS = MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds | MeshUpdateFlags.DontResetBoneBounds;
     protected bool active = true;
     protected static Mesh grassMesh;
-    protected Material grassMaterial;
+    protected static Mesh treeMesh;
+    protected static Mesh leafMesh;
     protected Unity.Mathematics.Random rng;
     static Transform cam;
     //public Matrix4x4[] _grassPositions;
-    protected NativeList<InstanceData> grassData;
     protected NativeReference<float3x2> renderBoundsData;
     public Bounds renderBounds;
-    private ComputeBuffer grassBuffer;
-    RenderParams rp;
-    
     public ChunkState chunkState = ChunkState.INVALID;
     public OnMeshReadyAction onMeshReady = OnMeshReadyAction.ALERT_PARENT;
     public DisposeState disposeStatus = DisposeState.NOTHING;
@@ -31,22 +28,23 @@ public abstract class BaseChunk : Octree
     public int idxCount;
     public bool hasMesh;
     public byte dirMask;
+    public InstancedRenderer grassRenderer;
+    public InstancedRenderer treeRenderer;
+    public InstancedRenderer leafRenderer;
     public abstract bool CanBeCreated{get;}
+    protected MaterialPropertyBlock propertyBlock;
     
     //public NativeList<Matrix4x4> grassPositions;
     protected SubMeshDescriptor desc = new SubMeshDescriptor();
-    protected MaterialPropertyBlock propertyBlock;
     public BaseChunk(BoundingBox bounds, int depth)
     : base(bounds, depth){
         desc.topology = MeshTopology.Triangles;
         chunkState = ChunkState.INVALID;
         disposeStatus = DisposeState.NOTHING;
+        grassRenderer = new InstancedRenderer((Resources.Load("Materials/GrassMaterial", typeof(Material)) as Material), grassMesh, ShadowCastingMode.Off);
+        treeRenderer = new InstancedRenderer((Resources.Load("Materials/Bark_Pine", typeof(Material)) as Material), treeMesh, ShadowCastingMode.On);
+        leafRenderer = new InstancedRenderer((Resources.Load("Materials/Leaves_Pine", typeof(Material)) as Material), leafMesh, ShadowCastingMode.On);
         propertyBlock = new MaterialPropertyBlock();
-        grassMaterial = (Resources.Load("Materials/GrassMaterial", typeof(Material)) as Material);
-        rp = new RenderParams(grassMaterial);
-        rp.matProps = propertyBlock;
-        rp.shadowCastingMode = ShadowCastingMode.On;
-        rp.receiveShadows = true;
         rng = new Unity.Mathematics.Random((uint)TerraxelWorld.seed);
     }
     public BaseChunk() : base(){
@@ -54,6 +52,8 @@ public abstract class BaseChunk : Octree
     }
     static BaseChunk(){
         grassMesh = Resources.Load("Meshes/GrassMesh", typeof(Mesh)) as Mesh;
+        treeMesh = Resources.Load("Meshes/PineTrunk", typeof(Mesh)) as Mesh;
+        leafMesh = Resources.Load("Meshes/PineLeaves", typeof(Mesh)) as Mesh;
         cam = Camera.main.transform;
     }
     public void SetActive(bool active){
@@ -67,12 +67,11 @@ public abstract class BaseChunk : Octree
         disposeStatus = DisposeState.POOL;
         TerraxelWorld.ChunkManager.DisposeChunk(this);
     }
-    protected void RenderGrass(){
+    protected void RenderInstances(){
         if(!TerraxelWorld.renderGrass || chunkState != ChunkState.READY) return;
-        if(grassData.IsCreated){
-            if(grassData.Length == 0) return;
-            Graphics.RenderMeshPrimitives(rp, grassMesh, 0, grassData.Length);
-        }
+        grassRenderer.Render();
+        treeRenderer.Render();
+        leafRenderer.Render();
     }
     internal override void OnJobsReady()
     {
@@ -83,23 +82,24 @@ public abstract class BaseChunk : Octree
             renderBounds = new Bounds(region.center, region.bounds);
         }
         ApplyMesh();
-        PushGrassData();
+        PushInstanceData();
     }
-    protected void PushGrassData(){
-        if(!grassData.IsCreated || grassData.Length == 0) return;
-        grassBuffer = new ComputeBuffer(grassData.Length, sizeof(float) * 16);
-        grassBuffer.SetData(grassData.AsArray());
-        //grassMaterial.SetBuffer("positionBuffer", grassBuffer);
-        rp.worldBounds = renderBounds;
-        rp.matProps.SetBuffer("Matrices", grassBuffer);
+    protected void PushInstanceData(){
+        grassRenderer.PushData();
+        leafRenderer.PushData(treeRenderer.data);
+        treeRenderer.PushData();
     }
     public void ScheduleMeshUpdate(){
-        //propertyBlock.SetVector("_WorldPos", new float4(WorldPosition, 1));
+        propertyBlock.SetVector("_WorldPos", new float4(WorldPosition, 1));
         vertCount = 0;
         idxCount = 0;
         chunkState = ChunkState.DIRTY;
         genTime = Time.realtimeSinceStartup;
-        grassData = MemoryManager.GetGrassData();
+        grassRenderer.Dispose();
+        treeRenderer.Dispose();
+        grassRenderer.AllocateData();
+        treeRenderer.AllocateData();
+        //leafRenderer.AllocateData();
         renderBoundsData = new NativeReference<float3x2>(Allocator.TempJob);
         OnScheduleMeshUpdate();
         
@@ -109,13 +109,9 @@ public abstract class BaseChunk : Octree
     public abstract void ApplyMesh();
     protected abstract void OnFreeBuffers();
     public void FreeBuffers(){
-        grassBuffer?.Release();
-        grassBuffer = null;
-        rp.matProps?.Clear();
-        if(grassData.IsCreated){
-            MemoryManager.ReturnGrassData(grassData);
-            grassData = default;
-        }
+        grassRenderer?.Dispose();
+        treeRenderer?.Dispose();
+        leafRenderer?.Dispose();
         OnFreeBuffers();
     }
     public virtual void OnMeshReady(){

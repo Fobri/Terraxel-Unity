@@ -21,7 +21,8 @@ public class Chunk2D : BaseChunk
     VertexAttributeDescriptor[] layout = new[]
             {
                 new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float32, 3),
-                new VertexAttributeDescriptor(VertexAttribute.Normal, VertexAttributeFormat.Float32, 3)
+                new VertexAttributeDescriptor(VertexAttribute.Normal, VertexAttributeFormat.Float32, 3),
+                new VertexAttributeDescriptor(VertexAttribute.TexCoord0, VertexAttributeFormat.Float32, 1)
             };
     public override bool CanBeCreated{
         get{
@@ -62,7 +63,8 @@ public class Chunk2D : BaseChunk
             chunkPos = (int3)WorldPosition,
             depthMultiplier = depthMultiplier / 2,
             isEmpty = isEmpty,
-            grassData = base.grassData,
+            grassData = base.grassRenderer.data,
+            treeData = base.treeRenderer.data,
             rng = base.rng,
             renderBounds = renderBoundsData
         };
@@ -95,7 +97,7 @@ public class Chunk2D : BaseChunk
     {
         if(!active || chunkState != ChunkState.READY) return;
         Graphics.DrawMesh(chunkMesh, localMatrix, chunkMaterial, 0, null, 0, propertyBlock, true, true, true);
-        base.RenderGrass();
+        base.RenderInstances();
     }
     protected override void OnFreeBuffers()
     {

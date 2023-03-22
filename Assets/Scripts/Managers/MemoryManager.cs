@@ -127,7 +127,7 @@ public class MemoryManager{
         if(meshDatas.Count == 0) throw new Exception("No free mesh data available", new InvalidOperationException());
         return meshDatas.Dequeue();
     }
-    public static NativeList<InstanceData> GetGrassData(){
+    public static NativeList<InstanceData> GetInstancingData(){
         if(grassDatas.Count == 0) throw new Exception("No free mesh data available", new InvalidOperationException());
         return grassDatas.Dequeue();
     }
@@ -163,7 +163,7 @@ public class MemoryManager{
         ClearArray(data.indexBuffer, data.indexBuffer.Length);
         simpleMeshDatas.Enqueue(data);
     }
-    public static void ReturnGrassData(NativeList<InstanceData> data){
+    public static void ReturnInstanceData(NativeList<InstanceData> data){
         ClearArray(data.AsArray(), data.Length);
         data.Length = 0;
         data.Capacity = 4500;
