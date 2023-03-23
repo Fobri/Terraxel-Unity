@@ -68,7 +68,7 @@ public abstract class BaseChunk : Octree
         TerraxelWorld.ChunkManager.DisposeChunk(this);
     }
     protected void RenderInstances(){
-        if(!TerraxelWorld.renderGrass || chunkState != ChunkState.READY) return;
+        if(!TerraxelWorld.renderGrass) return;
         grassRenderer.Render();
         treeRenderer.Render();
         leafRenderer.Render();

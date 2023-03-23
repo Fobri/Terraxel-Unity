@@ -252,7 +252,7 @@ public abstract class Octree : JobRunner
         }
     }
     public void RenderChunksRecursive(Plane[] frustumPlanes, bool cull){
-        thisChunk.RenderChunk();
+        if(thisChunk.chunkState != ChunkState.ROOT) thisChunk.RenderChunk();
         if(!HasSubChunks) return;
         for(int s = 0; s < 8; s++){
             if(!cull || GeometryUtility.TestPlanesAABB(frustumPlanes, children[s].thisChunk.renderBounds)){

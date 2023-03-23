@@ -293,8 +293,8 @@ namespace Terraxel.DataStructures
             float3 a = math.cross(axis, normal);
             q.xyz = a;
             q.w = 1 + math.dot(axis, normal);
-            quaternion.RotateY(rng.NextFloat(-math.PI, math.PI));
-            return (quaternion)math.normalize(q);
+            quaternion randomRotation = quaternion.RotateY(rng.NextFloat(0, 360));
+            return (quaternion)math.normalize(math.mul((quaternion)q, randomRotation));
         }
         public static string floatToString(float value){
             return value.ToString("F4", new CultureInfo("en-US"))+"f";
