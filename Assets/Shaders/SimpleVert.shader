@@ -5,10 +5,11 @@ Shader "Custom/TriplanarSimple"
         _Color ("Color", Color) = (1,1,1,1)        
         _SliceRange ("Slices", Range(0,16)) = 6
         _MainTextures ("Albedo Textures", 2DArray) = "" {}
-        _BumpMaps("Normal textures", 2DArray) = "" {}
+        //_BumpMaps("Normal textures", 2DArray) = "" {}
         _Glossiness ("Smoothness", Range(0,1)) = 0.5
         _Metallic ("Metallic", Range(0,1)) = 0.0
         _MapScale("Tiling Scale", Float) = 1
+        _BumpMap ("Normal Map", 2D) = "bump" {}
 
         _BumpScale("Normal Strength", Float) = 1
         [PerRendererData]_WorldPos("WorldPos", Vector) = (0,0,0)
@@ -44,10 +45,11 @@ Shader "Custom/TriplanarSimple"
         half _MapScale;
         float _SliceRange;
         half _BumpScale;
+        sampler2D _BumpMap;
         
         float4 _WorldPos;
         UNITY_DECLARE_TEX2DARRAY(_MainTextures);
-        UNITY_DECLARE_TEX2DARRAY(_BumpMaps);
+        //UNITY_DECLARE_TEX2DARRAY(_BumpMaps);
 
         // Add instancing support for this shader. You need to check 'Enable Instancing' on materials that use the shader.
         // See https://docs.unity3d.com/Manual/GPUInstancing.html for more information about instancing.
@@ -89,9 +91,9 @@ Shader "Custom/TriplanarSimple"
             o.Metallic = _Metallic;
             o.Smoothness = _Glossiness;
             // Normal map
-            half4 nx = UNITY_SAMPLE_TEX2DARRAY(_BumpMaps, float3(tx, IN.textureIndex)) * bf.x;
-            half4 ny = UNITY_SAMPLE_TEX2DARRAY(_BumpMaps, float3(ty, IN.textureIndex)) * bf.y;
-            half4 nz = UNITY_SAMPLE_TEX2DARRAY(_BumpMaps, float3(tz, IN.textureIndex)) * bf.z;
+            half4 nx = tex2D(_BumpMap, tx) * bf.x;
+            half4 ny = tex2D(_BumpMap, ty) * bf.y;
+            half4 nz = tex2D(_BumpMap, tz) * bf.z;
             o.Normal = UnpackScaleNormal(nx + ny + nz, _BumpScale);
         }
         ENDCG

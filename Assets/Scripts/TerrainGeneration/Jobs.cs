@@ -508,13 +508,11 @@ namespace Terraxel.WorldGeneration
             return GetDensityWithCache(pos + chunkPos);
         }
         private sbyte GetDensityWithCache(int3 worldPos){
-            int3 chunkPos;
             //if(math.all(worldPos > cache.cachedPos & worldPos < cache.cachedPos + ChunkManager.chunkResolution)) chunkPos = cache.cachedPos;
-            chunkPos = Utils.WorldPosToChunkPos(new int4(worldPos, 0)).xyz;
+            int3 chunkPos = Utils.WorldPosToChunkPos(worldPos);
 
             if(chunkPos.Equals(cache.lastEmptyChunk)) {return 127;}
             if(chunkPos.Equals(cache.lastFullChunk)) {return -127;}
-            var localPosInChunk = math.abs(worldPos - chunkPos);
             if(!cache.cachedPos.Equals(chunkPos)){
                 if(densities.ContainsPos(chunkPos)){
                     cache.cachedDensityMap = densities.GetDensityMap(chunkPos);
@@ -525,8 +523,10 @@ namespace Terraxel.WorldGeneration
                     return TerraxelGenerated.GenerateDensity(worldPos);
                 }
             }
+            int index = Utils.XyzToIndex(worldPos - chunkPos, ChunkManager.chunkResolution);
             unsafe{
-            return UnsafeUtility.ReadArrayElement<sbyte>((void*)cache.cachedDensityMap, Utils.XyzToIndex(localPosInChunk, ChunkManager.chunkResolution));
+            sbyte* ptr = (sbyte*)cache.cachedDensityMap;
+            return *(ptr + index);
             }
         }
     }

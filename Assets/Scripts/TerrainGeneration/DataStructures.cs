@@ -145,12 +145,15 @@ namespace Terraxel.DataStructures
             float density = (value - yPos) * 0.5f;
             return Convert.ToSByte(math.clamp(-density * 127f, -127f, 127f));
         }*/
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static sbyte HeightMapToIsosurface(float3 worldPos, float height){
-            float yPos = worldPos.y;
-            float density = (height - yPos) * 0.5f;
-            return (sbyte)(math.clamp(-density * 127f, -127f, 127f));
+           float density = (height - worldPos.y) * 0.5f;
+            density *= -127f;
+            density = math.max(density, -127f);
+            density = math.min(density, 127f);
+            return (sbyte)density;
         }
-        [MethodImpl(MethodImplOptions.NoInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float SurfaceNoise2D(float2 worldPos, float ampl, float freq, int seed, int oct, float lacunarity, float gain, bool ad)
         {
             float total = 0;
@@ -311,13 +314,9 @@ namespace Terraxel.DataStructures
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int3 WorldPosToChunkPos(int3 worldPos){
-            return WorldPosToChunkPos(new int4(worldPos,0)).xyz;
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int4 WorldPosToChunkPos(int4 worldPos){
             //var chunkPos = math.select((int3)(math.floor(worldPos / ChunkManager.chunkResolution) * ChunkManager.chunkResolution), (int3)(math.floor(worldPos / ChunkManager.chunkResolution) * ChunkManager.chunkResolution - ChunkManager.chunkResolution), (worldPos < 0) & (worldPos % ChunkManager.chunkResolution != 0));
            
-            var chunkPos = (int4)(math.floor((float4)worldPos / ChunkManager.chunkResolution)) * ChunkManager.chunkResolution;
+            var chunkPos = (int3)(math.floor((float3)worldPos / ChunkManager.chunkResolution)) * ChunkManager.chunkResolution;
             //(int4)(math.floor((int4)worldPos / ChunkManager.chunkResolution)) * ChunkManager.chunkResolution;
             //if(positionFix)
                 //chunkPos -= math.select(new int4(0), new int4(ChunkManager.chunkResolution), (worldPos < 0) & (worldPos % ChunkManager.chunkResolution != 0));
