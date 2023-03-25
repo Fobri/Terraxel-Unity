@@ -171,6 +171,31 @@ public struct FastNoiseLite
         mWarpTransformType3D = TransformType3D.DefaultOpenSimplex2;
         mDomainWarpAmp = 1.0f;
     }
+    public FastNoiseLite(int seed, float frequency, int octaves, float lacunarity, float gain)
+    {
+        mSeed = seed;
+        mFrequency = frequency;
+        mNoiseType = NoiseType.OpenSimplex2;
+        mRotationType3D = RotationType3D.None;
+        mTransformType3D = TransformType3D.DefaultOpenSimplex2;
+
+        mFractalType = FractalType.FBm;
+        mOctaves = octaves;
+        mLacunarity = lacunarity;
+        mGain = gain;
+        mWeightedStrength = 0.0f;
+        mPingPongStrength = 2.0f;
+
+        mFractalBounding = 1 / 1.75f;
+
+        mCellularDistanceFunction = CellularDistanceFunction.EuclideanSq;
+        mCellularReturnType = CellularReturnType.Distance;
+        mCellularJitterModifier = 1.0f;
+
+        mDomainWarpType = DomainWarpType.OpenSimplex2;
+        mWarpTransformType3D = TransformType3D.DefaultOpenSimplex2;
+        mDomainWarpAmp = 30.0f;
+    }
 
     /// <summary>
     /// Sets seed used for all noise types

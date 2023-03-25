@@ -4,15 +4,10 @@
 RWStructuredBuffer<int> Result;
 float4 offset;
 
-float noise(float2 worldPos, float amplitude, float frequency, int octaves, float lacunarity, float gain){
-    fnl_state noiseProps = fnlCreateState();
-    noiseProps.noise_type = FNL_NOISE_OPENSIMPLEX2;
-    noiseProps.fractal_type = FNL_FRACTAL_FBM;
-    noiseProps.frequency = frequency;
-    noiseProps.octaves = octaves;
-    noiseProps.lacunarity = lacunarity;
-    noiseProps.gain = gain;
-    return fnlGetNoise2D(noiseProps, worldPos.x, worldPos.y) * amplitude;
+PROPS_HERE
+
+float noise(float2 worldPos, float amplitude, fnl_state props){
+    return fnlGetNoise2D(props, worldPos.x, worldPos.y) * amplitude;
 }
 
 int noiseGenerated(int3 pos){

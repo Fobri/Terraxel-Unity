@@ -44,6 +44,6 @@ public class DensityView : BaseNodeView
 		var img = new Image();
 		img.image = image;
 		controlsContainer.Add(img);
-		debugContainer.Add(new Label(node.values.scriptString));
+		debugContainer.Add(new Label(node.values.generatorScriptBody));
 	}
 }

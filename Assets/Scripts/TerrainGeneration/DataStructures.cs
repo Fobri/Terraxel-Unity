@@ -136,9 +136,17 @@ namespace Terraxel.DataStructures
             float density = (value + noiseProperties.surfaceLevel - yPos) * 0.1f;
             return Convert.ToSByte(math.clamp(-density * 127f, -127f, 127f));
         }*/
-        public static float SurfaceNoise2D(float2 worldPos, NoiseProperties noiseProperties, bool ad)
+        public static float SurfaceNoise2D(float2 worldPos, NoiseProperties noiseProperties)
         {
-            return SurfaceNoise2D(worldPos, noiseProperties.ampl, noiseProperties.freq, noiseProperties.oct, noiseProperties.lacunarity, noiseProperties.gain);
+            
+            FastNoiseLite noise = new FastNoiseLite(1337);
+            noise.SetNoiseType(FastNoiseLite.NoiseType.OpenSimplex2);
+            noise.SetFractalType(FastNoiseLite.FractalType.FBm);
+            noise.SetFrequency(noiseProperties.freq);
+            noise.SetFractalOctaves(noiseProperties.oct);
+            noise.SetFractalLacunarity(noiseProperties.lacunarity);
+            noise.SetFractalGain(noiseProperties.gain);
+            return SurfaceNoise2D(worldPos, noiseProperties.ampl, noise);
         }
         /*public static sbyte FinalNoise(float3 worldPos, float ampl, float freq, int seed, int oct, float lacunarity, float gain)
         {   
@@ -157,15 +165,8 @@ namespace Terraxel.DataStructures
             return (sbyte)density;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float SurfaceNoise2D(float2 worldPos, float ampl, float freq, int oct, float lacunarity, float gain)
+        public static float SurfaceNoise2D(float2 worldPos, float ampl, FastNoiseLite noise)
         {
-            FastNoiseLite noise = new FastNoiseLite(1337);
-            noise.SetNoiseType(FastNoiseLite.NoiseType.OpenSimplex2);
-            noise.SetFractalType(FastNoiseLite.FractalType.FBm);
-            noise.SetFrequency(freq);
-            noise.SetFractalOctaves(oct);
-            noise.SetFractalLacunarity(lacunarity);
-            noise.SetFractalGain(gain);
             return noise.GetNoise(worldPos.x, worldPos.y) * ampl;
         }
         public static float SurfaceNoise3D(float3 worldPos, float ampl, float freq, int seed, int oct)
@@ -186,8 +187,10 @@ namespace Terraxel.DataStructures
         }
     }
     public class NoiseGraphInput{
-        public string scriptString;
-        public string computeString;
+        public string generatorScriptBody;
+        public string generatorScriptProperties;
+        public string generatorComputeBody;
+        public string generatorComputeProperties;
         public float[] previewValues;
         public float this[int index]{
             get{

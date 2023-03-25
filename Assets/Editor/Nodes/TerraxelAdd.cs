@@ -34,8 +34,10 @@ public class TerraxelAdd : TerraxelPreviewNode
 				values[i] = dataB[i] + A;
 			}
 		}else return;
-		values.scriptString = "("+(dataA != null ? dataA.scriptString : A)+" + "+(dataB != null ? dataB.scriptString : B)+")";
-		values.computeString = "("+(dataA != null ? dataA.computeString : A)+" + "+(dataB != null ? dataB.computeString : B)+")";
+		values.generatorScriptBody = "("+(dataA != null ? dataA.generatorScriptBody : A)+" + "+(dataB != null ? dataB.generatorScriptBody : B)+")";
+		values.generatorComputeBody = "("+(dataA != null ? dataA.generatorComputeBody : A)+" + "+(dataB != null ? dataB.generatorComputeBody : B)+")";
+		values.generatorComputeProperties = dataA.generatorComputeProperties + dataB.generatorComputeProperties;
+		values.generatorScriptProperties = dataA.generatorScriptProperties + dataB.generatorScriptProperties;
 	}
 	[CustomPortInput(nameof(A), typeof(NoiseGraphInput))]
 	void PullA(List< SerializableEdge > inputEdges)
@@ -47,8 +49,10 @@ public class TerraxelAdd : TerraxelPreviewNode
 		dataA = new NoiseGraphInput();
 		var buffer = ((NoiseGraphInput)inputEdges.First().passThroughBuffer);
 		dataA.previewValues = buffer.previewValues;
-		dataA.scriptString = buffer.scriptString;
-		dataA.computeString = buffer.computeString;
+		dataA.generatorScriptBody = buffer.generatorScriptBody;
+		dataA.generatorComputeBody = buffer.generatorComputeBody;
+		dataA.generatorScriptProperties = buffer.generatorScriptProperties;
+		dataA.generatorComputeProperties = buffer.generatorComputeProperties;
 	}
 	[CustomPortInput(nameof(B), typeof(NoiseGraphInput))]
 	void PullB(List< SerializableEdge > inputEdges)
@@ -60,8 +64,10 @@ public class TerraxelAdd : TerraxelPreviewNode
 		dataB = new NoiseGraphInput();
 		var buffer = ((NoiseGraphInput)inputEdges.First().passThroughBuffer);
 		dataB.previewValues = buffer.previewValues;
-		dataB.scriptString = buffer.scriptString;
-		dataB.computeString = buffer.computeString;
+		dataB.generatorScriptBody = buffer.generatorScriptBody;
+		dataB.generatorComputeBody = buffer.generatorComputeBody;
+		dataB.generatorScriptProperties = buffer.generatorScriptProperties;
+		dataB.generatorComputeProperties = buffer.generatorComputeProperties;
 	}
 	[CustomPortOutput(nameof(output), typeof(NoiseGraphInput))]
 	void PushOutputs(List< SerializableEdge > connectedEdges)

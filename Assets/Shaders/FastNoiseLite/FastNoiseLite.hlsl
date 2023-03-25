@@ -2235,17 +2235,17 @@ static void _fnlSingleDomainWarpOpenSimplex2Gradient(int seed, float warpAmp, fl
 // Public API
 // ====================
 
-fnl_state fnlCreateState(int seed)
+fnl_state fnlCreateState(int seed, float frequency, int octaves, float lacunarity, float gain)
 {
     fnl_state newState;
     newState.seed = seed;
-    newState.frequency = 0.01f;
+    newState.frequency = frequency;
     newState.noise_type = FNL_NOISE_OPENSIMPLEX2;
     newState.rotation_type_3d = FNL_ROTATION_NONE;
-    newState.fractal_type = FNL_FRACTAL_NONE;
-    newState.octaves = 3;
-    newState.lacunarity = 2.0f;
-    newState.gain = 0.5f;
+    newState.fractal_type = FNL_FRACTAL_FBM;
+    newState.octaves = octaves;
+    newState.lacunarity = lacunarity;
+    newState.gain = gain;
     newState.weighted_strength = 0.0f;
     newState.ping_pong_strength = 2.0f;
     newState.cellular_distance_func = FNL_CELLULAR_DISTANCE_EUCLIDEANSQ;
