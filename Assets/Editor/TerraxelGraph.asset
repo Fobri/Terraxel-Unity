@@ -106,8 +106,8 @@ MonoBehaviour:
   serializedParameterList: []
   stickyNotes: []
   nodeInspectorReference: {fileID: 0}
-  position: {x: -150, y: 379, z: 0}
-  scale: {x: 1, y: 1, z: 1}
+  position: {x: 135, y: 448, z: 0}
+  scale: {x: 0.65751624, y: 0.65751624, z: 1}
   references:
     version: 2
     RefIds:
@@ -129,7 +129,7 @@ MonoBehaviour:
         output: 0
         x: 0
         y: 0
-        frequency: 2.5
+        frequency: 5
         amplitude: 1.7
         octaves: 4
         lacunarity: 4
@@ -187,7 +187,7 @@ MonoBehaviour:
         output: 0
         x: 0
         y: 0
-        frequency: 8
+        frequency: 15
         amplitude: 2
         octaves: 2
         lacunarity: 3

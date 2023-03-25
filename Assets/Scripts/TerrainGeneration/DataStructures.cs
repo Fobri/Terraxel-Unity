@@ -161,6 +161,7 @@ namespace Terraxel.DataStructures
         {
             FastNoiseLite noise = new FastNoiseLite(1337);
             noise.SetNoiseType(FastNoiseLite.NoiseType.OpenSimplex2);
+            noise.SetFractalType(FastNoiseLite.FractalType.FBm);
             noise.SetFrequency(freq);
             noise.SetFractalOctaves(oct);
             noise.SetFractalLacunarity(lacunarity);
