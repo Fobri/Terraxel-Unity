@@ -11,26 +11,31 @@ using Terraxel.DataStructures;
 using Terraxel.WorldGeneration;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using UnityEngine.Rendering;
 
-public class DensityManager : JobRunner, IDisposable {
+public class DensityManager : IDisposable {
     
     DensityData densityData;
     //Queue<NoiseJob> operationQueue = new Queue<NoiseJob>();
     //Queue<KeyValuePair<int3, IntPtr>> operationQueue = new Queue<KeyValuePair<int3, IntPtr>>();
-    Queue<NoiseJob> operationQueue = new Queue<NoiseJob>();
+    Queue<int3> operationQueue = new Queue<int3>();
+    ComputeShader noiseCompute;
+    int kernel;
+    const int maxOperations = 4;
     Queue<KeyValuePair<int3, sbyte>> modifications = new Queue<KeyValuePair<int3, sbyte>>();
-    Dictionary<int3, DensityResultData> currentlyProcessedPositions = new Dictionary<int3, DensityResultData>();
+    DensityResultData currentlyProcessedPosition;
+    ComputeBuffer gpuBuffer;
+    bool gpuProgramRunning;
 
-    public void Init(NoiseProperties noiseProperties){
+    public void Init(ComputeShader noiseShader){
         densityData = new DensityData();
         densityData.densities = new NativeHashMap<int3, IntPtr>(50, Allocator.Persistent);
         densityData.emptyChunks = new NativeHashSet<int3>(100, Allocator.Persistent);
         densityData.fullChunks = new NativeHashSet<int3>(100, Allocator.Persistent);
-
-        densityData.noiseProperties = noiseProperties;
-    }
-    public NoiseProperties GetNoiseProperties(){
-        return densityData.noiseProperties;
+        noiseCompute = noiseShader;
+        gpuBuffer = new ComputeBuffer(8192, 4, ComputeBufferType.Structured);
+        kernel = noiseCompute.FindKernel("CSMain");
+        noiseCompute.SetBuffer(kernel, "Result", gpuBuffer);
     }
 
     public BoundingBox[] GetDebugArray(){
@@ -77,76 +82,89 @@ public class DensityManager : JobRunner, IDisposable {
             }
         }
     }
-    internal override void OnJobsReady()
-    {
-        foreach(var key in currentlyProcessedPositions.Keys){
-            var instance = currentlyProcessedPositions[key];
-            if(instance.isEmpty.Value || instance.isFull.Value){
+    void DataReceived(AsyncGPUReadbackRequest request){
+        if(request.hasError) throw new Exception("Error in AsyncGPUReadbackRequest");
+            /*if(instance.isEmpty.Value || instance.isFull.Value){
                 MemoryManager.ReturnDensityMap(instance.densityMap);
                 if(instance.isEmpty.Value) densityData.emptyChunks.Add(key);
                 if(instance.isFull.Value) densityData.fullChunks.Add(key);
-            }else{
-                unsafe{
-                densityData.densities.Add(key, (IntPtr)NativeArrayUnsafeUtility.GetUnsafePtr(instance.densityMap));
-                }
+            }else{*/
+            /*for(int i = 0; i < currentlyProcessedPosition.densityMap.Length; i++){
+                if(currentlyProcessedPosition.densityMap[i] != 0)
+                    Debug.Log(currentlyProcessedPosition.densityMap[i]);
+            }*/
+            unsafe{
+            densityData.densities.Add(currentlyProcessedPosition.pos, (IntPtr)NativeArrayUnsafeUtility.GetUnsafePtr(currentlyProcessedPosition.densityMap));
             }
-            instance.isEmpty.Dispose();
-            instance.isFull.Dispose();
-        }
-        currentlyProcessedPositions.Clear();
+            //currentlyProcessedPositions.Remove(key);
+            //}
+            //instance.isEmpty.Dispose();
+            //instance.isFull.Dispose();
+        //currentlyProcessedPositions.Clear();
+        gpuProgramRunning = false;
         ScheduleBatch();
     }
     void ScheduleBatch(){
         if(operationQueue.Count == 0){
+            currentlyProcessedPosition = default;
             return;
         }
-        for(int i = 0; i < 8; i++){
-            if(operationQueue.Count == 0) return;
+        //while(operationQueue.Count != 0){
+            //if(operationQueue.Count == 0) return;
             var job = operationQueue.Dequeue();
-            if(currentlyProcessedPositions.ContainsKey((int3)job.offset) || densityData.densities.ContainsKey((int3)job.offset)) continue;
+            if(densityData.densities.ContainsKey(job)){
+                ScheduleBatch();
+                return;
+            }
             var data = new DensityResultData();
             data.densityMap = MemoryManager.GetDensityMap();
-            data.isEmpty = new NativeReference<bool>(job.allowEmptyOrFull ? true : false,Allocator.TempJob);
+            noiseCompute.SetVector("offset", new float4(job, 0));
+            noiseCompute.Dispatch(kernel, 16, 1, 1);
+            data.request = AsyncGPUReadback.RequestIntoNativeArray(ref data.densityMap, gpuBuffer, new Action<AsyncGPUReadbackRequest>(DataReceived));
+            data.pos = job;
+            currentlyProcessedPosition = data;
+            gpuProgramRunning = true;
+            /*data.isEmpty = new NativeReference<bool>(job.allowEmptyOrFull ? true : false,Allocator.TempJob);
             data.isFull = new NativeReference<bool>(job.allowEmptyOrFull ? true : false,Allocator.TempJob);
             job.data = data;
             currentlyProcessedPositions.Add((int3)job.offset, data);
-            ScheduleParallelForJob(job, MemoryManager.densityMapLength);
-        }
+            ScheduleParallelForJob(job, MemoryManager.densityMapLength);*/
+        //}
     }
 
     public DensityData GetJobDensityData(){
         return densityData;
     }
-    public new bool Update(){
+    public bool Update(){
         if(IsReady && operationQueue.Count == 0){
             while(modifications.Count > 0){
                 var modification = modifications.Dequeue();
                 DoModification(modification.Key, modification.Value);
             }
             return true;
-        }else if(base.IsReady && operationQueue.Count > 0){
-            ScheduleBatch();
+        }else if(operationQueue.Count > 0){
+            //ScheduleBatch();
         }
         return false;
     }
-    public new bool IsReady{
+    public bool IsReady{
         get{
-            return base.IsReady && operationQueue.Count == 0;
+            return !gpuProgramRunning && operationQueue.Count == 0;
         }
     }
     public bool ChunkIsFullOrEmpty(int3 pos){
         return densityData.fullChunks.Contains(pos) || densityData.emptyChunks.Contains(pos);
     }
     void LoadDensityAtPosition(int3 pos, bool allowEmptyOrFull = true){
-        var noiseJob = new NoiseJob()
+        /*var noiseJob = new NoiseJob()
         {
             offset = pos,
             size = ChunkManager.chunkResolution,
             depthMultiplier = Octree.depthMultipliers[0],
             noiseProperties = densityData.noiseProperties,
             allowEmptyOrFull = allowEmptyOrFull
-        };
-        operationQueue.Enqueue(noiseJob);
+        };*/
+        operationQueue.Enqueue(pos);
     }
     public void LoadDensityData(float3 center, int radius){
         HashSet<int3> alreadyDataExists = new HashSet<int3>();
@@ -197,13 +215,13 @@ public class DensityManager : JobRunner, IDisposable {
 
     public void Dispose(){
         densityData.Dispose();
+        AsyncGPUReadback.WaitAllRequests();
     }
 }
 public struct DensityData : IDisposable{
     public NativeHashMap<int3, IntPtr> densities;
     public NativeHashSet<int3> fullChunks;
     public NativeHashSet<int3> emptyChunks;
-    public NoiseProperties noiseProperties;
 
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

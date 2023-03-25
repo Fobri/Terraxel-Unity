@@ -21,21 +21,21 @@ public class NoiseOutput : BaseNode
 	{
 		if(data == null || !CustomToolbarView.shouldCompileGraph) return;
 		CustomToolbarView.shouldCompileGraph = false;
-		TextAsset templateTextFile = AssetDatabase.LoadAssetAtPath("Assets/Generated/Templates/DensityJobTemplate.txt", typeof(TextAsset)) as TextAsset;
+		CreateFromTemplate(data.computeString, "ComputeTemplate.txt", "TerraxelGenerated.compute");
+		CreateFromTemplate(data.scriptString, "ScriptTemplate.txt", "TerraxelGenerated.cs");
+        AssetDatabase.Refresh();
+	}
+	static void CreateFromTemplate(string contents, string templateFile, string outputFile){
+		TextAsset templateTextFile = AssetDatabase.LoadAssetAtPath("Assets/Generated/Templates/" + templateFile, typeof(TextAsset)) as TextAsset;
 		if(templateTextFile == null){
-			throw new System.Exception("Template text file for density job code generation missing");
+			throw new System.Exception("Template text file for code generation missing");
 		}
-		data.generatorString = "DensityGenerator.HeightMapToIsosurface(pos, TerraxelGenerated.GenerateDensity(pos2D))";
-		data.generatorString += ";";
-		data.generator2DString += ";";
+		contents += ";";
 		string fullGeneratorString = templateTextFile.text;
-		fullGeneratorString = fullGeneratorString.Replace("DENSITY2D_FUNCTION_HERE", data.generator2DString);
-		fullGeneratorString = fullGeneratorString.Replace("DENSITY_FUNCTION_HERE", data.generatorString);
-		using(StreamWriter sw = new StreamWriter(string.Format(Application.dataPath + "/Generated/TerraxelGenerated.cs"))) {
+		fullGeneratorString = fullGeneratorString.Replace("DENSITY_FUNCTION_HERE", contents);
+		using(StreamWriter sw = new StreamWriter(string.Format(Application.dataPath + "/Generated/" + outputFile))) {
             sw.Write(fullGeneratorString);
         }
-        //Refresh the Asset Database
-        AssetDatabase.Refresh();
 	}
 	[CustomPortInput(nameof(input), typeof(NoiseGraphInput))]
 	void PullX(List< SerializableEdge > inputEdges)
@@ -47,8 +47,8 @@ public class NoiseOutput : BaseNode
 		data = new NoiseGraphInput();
 		var buffer = ((NoiseGraphInput)inputEdges.First().passThroughBuffer);
 		data.previewValues = buffer.previewValues;
-		data.generatorString = buffer.generatorString;
-		data.generator2DString = buffer.generator2DString;
+		data.scriptString = buffer.scriptString;
+		data.computeString = buffer.computeString;
 		//values.AddRange(inputEdges.Select(e => e.passThroughBuffer).ToList());
 	}
 }

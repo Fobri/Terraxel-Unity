@@ -8,6 +8,7 @@ using UnityEngine;
 using System.Globalization;
 using System.Runtime.InteropServices;
 using Unity.Burst.CompilerServices;
+using UnityEngine.Rendering;
 
 namespace Terraxel.DataStructures
 {
@@ -18,12 +19,14 @@ namespace Terraxel.DataStructures
     
     public struct DensityResultData{
         
-        [NativeDisableParallelForRestriction, NativeDisableContainerSafetyRestriction, WriteOnly]
+        //[NativeDisableParallelForRestriction, NativeDisableContainerSafetyRestriction, WriteOnly]
         public NativeArray<sbyte> densityMap;
-        [WriteOnly, NativeDisableParallelForRestriction]
+        public AsyncGPUReadbackRequest request;
+        public int3 pos;
+        /*[WriteOnly, NativeDisableParallelForRestriction]
         public NativeReference<bool> isEmpty;
         [WriteOnly, NativeDisableParallelForRestriction]
-        public NativeReference<bool> isFull;
+        public NativeReference<bool> isFull;*/
     }
     [StructLayout(LayoutKind.Sequential)]
     public struct InstanceData{
@@ -135,7 +138,7 @@ namespace Terraxel.DataStructures
         }*/
         public static float SurfaceNoise2D(float2 worldPos, NoiseProperties noiseProperties, bool ad)
         {
-            return SurfaceNoise2D(worldPos, noiseProperties.ampl, noiseProperties.freq, (int)noiseProperties.seed, noiseProperties.oct, noiseProperties.lacunarity, noiseProperties.gain, ad);
+            return SurfaceNoise2D(worldPos, noiseProperties.ampl, noiseProperties.freq, noiseProperties.oct, noiseProperties.lacunarity, noiseProperties.gain);
         }
         /*public static sbyte FinalNoise(float3 worldPos, float ampl, float freq, int seed, int oct, float lacunarity, float gain)
         {   
@@ -147,18 +150,18 @@ namespace Terraxel.DataStructures
         }*/
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static sbyte HeightMapToIsosurface(float3 worldPos, float height){
-           float density = (height - worldPos.y) * 0.5f;
+            float density = (height - worldPos.y) * 0.5f;
             density *= -127f;
             density = math.max(density, -127f);
             density = math.min(density, 127f);
             return (sbyte)density;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float SurfaceNoise2D(float2 worldPos, float ampl, float freq, int seed, int oct, float lacunarity, float gain, bool ad)
+        public static float SurfaceNoise2D(float2 worldPos, float ampl, float freq, int oct, float lacunarity, float gain)
         {
             float total = 0;
             float2 dsum = 0;
-            if(ad){
+            /*if(ad){
                 for (int i = 0; i < oct; i++)
                 {
                     //Unity.Burst.CompilerServices.Loop.ExpectVectorized();
@@ -170,15 +173,15 @@ namespace Terraxel.DataStructures
                     freq *= lacunarity;
                 }
             }
-            else{
+            else{*/
                 for (int i = 0; i < oct; i++)
                 {
                     //Unity.Burst.CompilerServices.Loop.ExpectVectorized();
-                    total += (noise.snoise(math.float2(worldPos * freq))) * ampl;
+                    total += Noise.snoise(math.float2(worldPos * freq)) * ampl;
                     ampl *= gain;
                     freq *= lacunarity;
                 }
-            }
+            //}
             //total = total % 5f;
             //total /= oct;
             return total;
@@ -201,8 +204,8 @@ namespace Terraxel.DataStructures
         }
     }
     public class NoiseGraphInput{
-        public string generatorString;
-        public string generator2DString;
+        public string scriptString;
+        public string computeString;
         public float[] previewValues;
         public float this[int index]{
             get{

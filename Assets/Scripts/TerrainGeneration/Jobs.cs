@@ -541,7 +541,7 @@ namespace Terraxel.WorldGeneration
     }
     //Calculate noise in jobs
     
-    [BurstCompile(FloatPrecision.Low, FloatMode.Fast)]
+    /*[BurstCompile(FloatPrecision.Low, FloatMode.Fast)]
     public struct NoiseJob : IJobParallelFor
     {
         [ReadOnly] public float3 offset;
@@ -564,7 +564,7 @@ namespace Terraxel.WorldGeneration
                 data.isFull.Value = false;
             }
         }
-    }
+    }*/
     
     [BurstCompile(FloatPrecision.Low, FloatMode.Fast)]
     public struct NoiseJob2D : IJobParallelFor
@@ -573,7 +573,6 @@ namespace Terraxel.WorldGeneration
         [ReadOnly] public int depthMultiplier;
         [ReadOnly] public int size;
         [WriteOnly, NativeDisableParallelForRestriction] public NativeArray<float> heightMap;
-        [ReadOnly] public NoiseProperties noiseProperties;
         public void Execute(int index)
         {
             var value = TerraxelGenerated.GenerateDensity(Utils.IndexToXz(index, size) * depthMultiplier + offset);

@@ -1694,14 +1694,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   player: {fileID: 140530054}
   placePlayerOnSurface: 1
-  noiseData:
-    surfaceLevel: 11
-    freq: 0.006
-    ampl: 24.1
-    oct: 2
-    seed: 136.5
-    lacunarity: 0
-    gain: 0
+  noiseShader: {fileID: 7200000, guid: 22b853d99254daa48b52096f1c3b1f73, type: 3}
   poolParent: {fileID: 519378266}
   activeParent: {fileID: 1759807580}
   simpleChunkPrefab: {fileID: 7716612531577036198, guid: 66a8911691ea28847bec6afb69344e1d, type: 3}

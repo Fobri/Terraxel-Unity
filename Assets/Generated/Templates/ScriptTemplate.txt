@@ -9,10 +9,10 @@ public class TerraxelGenerated
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static sbyte GenerateDensity(float3 pos){
         float2 pos2D = new float2(pos.x, pos.z);
-        return DENSITY_FUNCTION_HERE
+        return DensityGenerator.HeightMapToIsosurface(pos, TerraxelGenerated.GenerateDensity(pos2D));
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static float GenerateDensity(float2 pos2D){
-        return DENSITY2D_FUNCTION_HERE
+        return DENSITY_FUNCTION_HERE
     }
 }

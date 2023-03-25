@@ -1,0 +1,30 @@
+#pragma kernel CSMain
+#include "Assets/Shaders/noise2D.cginc"
+
+RWStructuredBuffer<int> Result;
+float4 offset;
+
+int noiseGenerated(int3 pos){
+    pos += offset.xyz;
+    float value = DENSITY_FUNCTION_HERE
+    value = (value - pos.y) * 0.5f;
+    int density = clamp(value * -127, -127, 127);
+    density = (density & 127) | ((density >> 24) & 128);
+    return density;
+}
+
+uint3 indexToPosition(uint id){
+    return uint3(
+                id % 32,
+                id / 1024,
+                id / 32 % 32);
+}
+
+[numthreads(512,1,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    uint idx = id.x;
+    int result = ((noiseGenerated(indexToPosition(idx * 4+3))) << 24) | ((noiseGenerated(indexToPosition(idx * 4 + 2))) << 16) 
+                | ((noiseGenerated(indexToPosition(idx * 4 + 1))) << 8) | ((noiseGenerated(indexToPosition(idx * 4 + 0))));
+    Result[id.x] = result;
+}

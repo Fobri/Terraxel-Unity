@@ -28,7 +28,7 @@ public class TerraxelWorld : MonoBehaviour
     public static BoundingBox playerBounds;
     public static int seed = 1;
     public static bool renderGrass = true;
-    public NoiseProperties noiseData;
+    public ComputeShader noiseShader;
     public Transform poolParent;
     public Transform activeParent;
     
@@ -118,7 +118,7 @@ public TextMeshProUGUI[] debugLabels;
         MemoryManager.Init();
         playerBounds = new BoundingBox(player.transform.position, new float3(ChunkManager.chunkResolution));
         DensityManager = new DensityManager();
-        DensityManager.Init(noiseData);
+        DensityManager.Init(noiseShader);
         ChunkManager = new ChunkManager();
         ChunkManager.Init(poolParent, activeParent, simpleChunkPrefab, chunkPrefab);
         player.SetActive(false);
@@ -129,7 +129,6 @@ public TextMeshProUGUI[] debugLabels;
     }
     void Update(){
         JobRunner.Update();
-        
         if(debugMode){
             var chunkDatas = ChunkManager.GetDebugArray();
             memoryUsed = vertCount * sizeof(float) * 9 + vertCount * sizeof(int) + 
@@ -219,10 +218,14 @@ public TextMeshProUGUI[] debugLabels;
         }
         ChunkManager.RegenerateChunkMesh(pos, radius);
     }
+    public static void Test(){
+        Debug.Log(-1 >> 24);
+        //0b1000_0000_0000_0000_0000_0000_0000_0000
+    }
     public void OnDisable(){
         JobRunner.CompleteAll();
-        MemoryManager.Dispose();
         DensityManager.Dispose();
+        MemoryManager.Dispose();
     }
     #if UNITY_EDITOR
     private void OnDrawGizmos()
