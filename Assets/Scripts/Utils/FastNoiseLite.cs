@@ -195,6 +195,7 @@ public struct FastNoiseLite
         mDomainWarpType = DomainWarpType.OpenSimplex2;
         mWarpTransformType3D = TransformType3D.DefaultOpenSimplex2;
         mDomainWarpAmp = 30.0f;
+        CalculateFractalBounding();
     }
 
     /// <summary>
