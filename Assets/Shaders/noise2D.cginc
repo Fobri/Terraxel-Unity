@@ -63,7 +63,6 @@ float noise(float2 worldPos, float ampl, float freq, int oct, float lacunarity, 
   float total = 0;
   for (int i = 0; i < oct; i++)
   {
-      //Unity.Burst.CompilerServices.Loop.ExpectVectorized();
       total += (snoise(float2(worldPos * freq))) * ampl;
       ampl *= gain;
       freq *= lacunarity;

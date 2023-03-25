@@ -159,32 +159,13 @@ namespace Terraxel.DataStructures
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float SurfaceNoise2D(float2 worldPos, float ampl, float freq, int oct, float lacunarity, float gain)
         {
-            float total = 0;
-            float2 dsum = 0;
-            /*if(ad){
-                for (int i = 0; i < oct; i++)
-                {
-                    //Unity.Burst.CompilerServices.Loop.ExpectVectorized();
-                    float3 n = noise.srdnoise(math.float2(worldPos * freq));
-                    dsum += new float2(n.y, n.z);
-                    total += (n.x) * ampl* (1/(1+math.dot(dsum, dsum)));
-
-                    ampl *= gain;
-                    freq *= lacunarity;
-                }
-            }
-            else{*/
-                for (int i = 0; i < oct; i++)
-                {
-                    //Unity.Burst.CompilerServices.Loop.ExpectVectorized();
-                    total += Noise.snoise(math.float2(worldPos * freq)) * ampl;
-                    ampl *= gain;
-                    freq *= lacunarity;
-                }
-            //}
-            //total = total % 5f;
-            //total /= oct;
-            return total;
+            FastNoiseLite noise = new FastNoiseLite(1337);
+            noise.SetNoiseType(FastNoiseLite.NoiseType.OpenSimplex2);
+            noise.SetFrequency(freq);
+            noise.SetFractalOctaves(oct);
+            noise.SetFractalLacunarity(lacunarity);
+            noise.SetFractalGain(gain);
+            return noise.GetNoise(worldPos.x, worldPos.y) * ampl;
         }
         public static float SurfaceNoise3D(float3 worldPos, float ampl, float freq, int seed, int oct)
         {
