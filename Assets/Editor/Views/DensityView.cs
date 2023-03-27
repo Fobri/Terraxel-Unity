@@ -28,7 +28,6 @@ public class DensityView : BaseNodeView
 	}*/
 	void RegenImage(){
 		controlsContainer.Clear();
-		debugContainer.Clear();
 		/*var btn = new Button(RegenImage);
 		btn.text = "Update";
 		controlsContainer.Add(btn);*/
@@ -36,7 +35,7 @@ public class DensityView : BaseNodeView
 		if(image == null) image = new Texture2D(128, 128);
 		for(int x = 0; x < 128; x++){
 			for(int y = 0; y < 128; y++){
-				var value = (node.values[128 * y + x] + 0.5f);
+				var value = (node.values[128 * y + x] + node.PreviewAmplitude) * 0.5f / node.PreviewAmplitude;
 				image.SetPixel(x, y, new Color(value, value, value));
 			}
 		}
@@ -44,6 +43,5 @@ public class DensityView : BaseNodeView
 		var img = new Image();
 		img.image = image;
 		controlsContainer.Add(img);
-		debugContainer.Add(new Label(node.values.generatorScriptBody));
 	}
 }

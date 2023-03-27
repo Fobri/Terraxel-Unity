@@ -14,6 +14,7 @@ public class TerraxelGenerated
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static float GenerateDensity(float2 pos2D){
+        FUNCTIONS_HERE
         return DENSITY_FUNCTION_HERE
     }
 }

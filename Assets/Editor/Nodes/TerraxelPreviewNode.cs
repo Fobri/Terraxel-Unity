@@ -10,6 +10,12 @@ public class TerraxelPreviewNode : BaseNode
 {
 	[HideInInspector]
 	public NoiseGraphInput values;
+	
+	public virtual float PreviewAmplitude{
+		get{
+			return 1f;
+		}
+	}
 
 	[Output(name = "Out")]
 	public float				output;

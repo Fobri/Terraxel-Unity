@@ -21,7 +21,7 @@ namespace Terraxel.DataStructures
         
         //[NativeDisableParallelForRestriction, NativeDisableContainerSafetyRestriction, WriteOnly]
         public NativeArray<sbyte> densityMap;
-        public AsyncGPUReadbackRequest request;
+        public ComputeBuffer gpuBuffer;
         public int3 pos;
         /*[WriteOnly, NativeDisableParallelForRestriction]
         public NativeReference<bool> isEmpty;
@@ -187,10 +187,8 @@ namespace Terraxel.DataStructures
         }
     }
     public class NoiseGraphInput{
-        public string generatorScriptBody;
-        public string generatorScriptProperties;
-        public string generatorComputeBody;
-        public string generatorComputeProperties;
+        public GeneratorString computeGenerator;
+        public GeneratorString scriptGenerator; 
         public float[] previewValues;
         public float this[int index]{
             get{
@@ -200,6 +198,11 @@ namespace Terraxel.DataStructures
                 previewValues[index] = value;
             }
         }
+    }
+    public struct GeneratorString{
+        public string body;
+        public string properties;
+        public string functions;
     }
     public struct MeshData : System.IDisposable{
         

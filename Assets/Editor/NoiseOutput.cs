@@ -23,20 +23,19 @@ public class NoiseOutput : BaseNode
 	{
 		if(data == null || !CustomToolbarView.shouldCompileGraph) return;
 		CustomToolbarView.shouldCompileGraph = false;
-		CreateFromTemplate(data.generatorComputeBody, data.generatorComputeProperties, "ComputeTemplate.txt", "TerraxelGenerated.compute");
-		CreateFromTemplate(data.generatorScriptBody, data.generatorScriptProperties, "ScriptTemplate.txt", "TerraxelGenerated.cs");
+		CreateFromTemplate(data.computeGenerator, "ComputeTemplate.txt", "TerraxelGenerated.compute");
+		CreateFromTemplate(data.scriptGenerator, "ScriptTemplate.txt", "TerraxelGenerated.cs");
         AssetDatabase.Refresh();
 	}
-	static void CreateFromTemplate(string contents, string props, string templateFile, string outputFile){
+	static void CreateFromTemplate(GeneratorString generatorString, string templateFile, string outputFile){
 		TextAsset templateTextFile = AssetDatabase.LoadAssetAtPath("Assets/Generated/Templates/" + templateFile, typeof(TextAsset)) as TextAsset;
 		if(templateTextFile == null){
 			throw new System.Exception("Template text file for code generation missing");
 		}
-		contents += ";";
 		string fullGeneratorString = templateTextFile.text;
-		props = RemoveDuplicateLines(props);
-		fullGeneratorString = fullGeneratorString.Replace("DENSITY_FUNCTION_HERE", contents);
-		fullGeneratorString = fullGeneratorString.Replace("PROPS_HERE", props);
+		fullGeneratorString = fullGeneratorString.Replace("DENSITY_FUNCTION_HERE", generatorString.body +";");
+		fullGeneratorString = fullGeneratorString.Replace("PROPS_HERE", RemoveDuplicateLines(generatorString.properties));
+		fullGeneratorString = fullGeneratorString.Replace("FUNCTIONS_HERE", RemoveDuplicateLines(generatorString.functions));
 		using(StreamWriter sw = new StreamWriter(string.Format(Application.dataPath + "/Generated/" + outputFile))) {
             sw.Write(fullGeneratorString);
         }
@@ -68,10 +67,7 @@ public class NoiseOutput : BaseNode
 		data = new NoiseGraphInput();
 		var buffer = ((NoiseGraphInput)inputEdges.First().passThroughBuffer);
 		data.previewValues = buffer.previewValues;
-		data.generatorScriptBody = buffer.generatorScriptBody;
-		data.generatorComputeBody = buffer.generatorComputeBody;
-		data.generatorComputeProperties = buffer.generatorComputeProperties;
-		data.generatorScriptProperties = buffer.generatorScriptProperties;
-		//values.AddRange(inputEdges.Select(e => e.passThroughBuffer).ToList());
+		data.scriptGenerator = buffer.scriptGenerator;
+		data.computeGenerator = buffer.computeGenerator;
 	}
 }

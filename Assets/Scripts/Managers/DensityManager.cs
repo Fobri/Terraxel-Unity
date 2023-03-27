@@ -23,8 +23,9 @@ public class DensityManager : IDisposable {
     int kernel;
     const int maxOperations = 4;
     Queue<KeyValuePair<int3, sbyte>> modifications = new Queue<KeyValuePair<int3, sbyte>>();
-    DensityResultData currentlyProcessedPosition;
-    ComputeBuffer gpuBuffer;
+    //DensityResultData currentlyProcessedPosition;
+    Queue<DensityResultData> requestQueue = new Queue<DensityResultData>();
+    DensityResultData currentRequest;
     bool gpuProgramRunning;
 
     public void Init(ComputeShader noiseShader){
@@ -33,9 +34,7 @@ public class DensityManager : IDisposable {
         densityData.emptyChunks = new NativeHashSet<int3>(100, Allocator.Persistent);
         densityData.fullChunks = new NativeHashSet<int3>(100, Allocator.Persistent);
         noiseCompute = noiseShader;
-        gpuBuffer = new ComputeBuffer(8192, 4, ComputeBufferType.Structured);
         kernel = noiseCompute.FindKernel("CSMain");
-        noiseCompute.SetBuffer(kernel, "Result", gpuBuffer);
     }
 
     public BoundingBox[] GetDebugArray(){
@@ -84,52 +83,40 @@ public class DensityManager : IDisposable {
     }
     void DataReceived(AsyncGPUReadbackRequest request){
         if(request.hasError) throw new Exception("Error in AsyncGPUReadbackRequest");
-            /*if(instance.isEmpty.Value || instance.isFull.Value){
-                MemoryManager.ReturnDensityMap(instance.densityMap);
-                if(instance.isEmpty.Value) densityData.emptyChunks.Add(key);
-                if(instance.isFull.Value) densityData.fullChunks.Add(key);
-            }else{*/
-            /*for(int i = 0; i < currentlyProcessedPosition.densityMap.Length; i++){
-                if(currentlyProcessedPosition.densityMap[i] != 0)
-                    Debug.Log(currentlyProcessedPosition.densityMap[i]);
-            }*/
-            unsafe{
-            densityData.densities.Add(currentlyProcessedPosition.pos, (IntPtr)NativeArrayUnsafeUtility.GetUnsafePtr(currentlyProcessedPosition.densityMap));
-            }
-            //currentlyProcessedPositions.Remove(key);
-            //}
-            //instance.isEmpty.Dispose();
-            //instance.isFull.Dispose();
-        //currentlyProcessedPositions.Clear();
-        gpuProgramRunning = false;
-        ScheduleBatch();
+        unsafe{
+        densityData.densities.Add(currentRequest.pos, (IntPtr)NativeArrayUnsafeUtility.GetUnsafePtr(currentRequest.densityMap));
+        }
+        currentRequest.gpuBuffer.Release();
+        if(requestQueue.Count > 0) {
+            currentRequest = requestQueue.Dequeue();
+            AsyncGPUReadback.RequestIntoNativeArray(ref currentRequest.densityMap, currentRequest.gpuBuffer, new Action<AsyncGPUReadbackRequest>(DataReceived));
+        }else{
+            currentRequest = default;
+            gpuProgramRunning = false;
+        }
     }
     void ScheduleBatch(){
         if(operationQueue.Count == 0){
-            currentlyProcessedPosition = default;
+            //currentlyProcessedPosition = default;
             return;
         }
-        //while(operationQueue.Count != 0){
-            //if(operationQueue.Count == 0) return;
+        while(operationQueue.Count != 0){
             var job = operationQueue.Dequeue();
             if(densityData.densities.ContainsKey(job)){
-                ScheduleBatch();
-                return;
+                continue;
             }
             var data = new DensityResultData();
-            data.densityMap = MemoryManager.GetDensityMap();
             noiseCompute.SetVector("offset", new float4(job, 0));
+            data.gpuBuffer = new ComputeBuffer(8192, 4, ComputeBufferType.Structured);
+            noiseCompute.SetBuffer(kernel, "Result", data.gpuBuffer);
             noiseCompute.Dispatch(kernel, 16, 1, 1);
-            data.request = AsyncGPUReadback.RequestIntoNativeArray(ref data.densityMap, gpuBuffer, new Action<AsyncGPUReadbackRequest>(DataReceived));
             data.pos = job;
-            currentlyProcessedPosition = data;
-            gpuProgramRunning = true;
-            /*data.isEmpty = new NativeReference<bool>(job.allowEmptyOrFull ? true : false,Allocator.TempJob);
-            data.isFull = new NativeReference<bool>(job.allowEmptyOrFull ? true : false,Allocator.TempJob);
-            job.data = data;
-            currentlyProcessedPositions.Add((int3)job.offset, data);
-            ScheduleParallelForJob(job, MemoryManager.densityMapLength);*/
-        //}
+            data.densityMap = MemoryManager.GetDensityMap();
+            requestQueue.Enqueue(data);
+        }
+        currentRequest = requestQueue.Dequeue();
+        AsyncGPUReadback.RequestIntoNativeArray(ref currentRequest.densityMap, currentRequest.gpuBuffer, new Action<AsyncGPUReadbackRequest>(DataReceived));
+        gpuProgramRunning = true;
     }
 
     public DensityData GetJobDensityData(){
