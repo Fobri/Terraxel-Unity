@@ -223,7 +223,7 @@ public class Chunk3D : BaseChunk{
                 };
                 colliderBaking = true;
                 ScheduleJob(colliderJob, false);
-            }else if(depth > 1){
+            }else if(depth > 0){
                 FreeChunkMesh();
             }
             //indexCounter.Dispose();

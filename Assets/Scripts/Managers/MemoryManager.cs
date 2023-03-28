@@ -38,7 +38,7 @@ public class MemoryManager{
     public const int maxBufferCount = 128*4;
     public const int simpleMeshAmount = 128*4;
     public const int densityCount = 128*6;
-    public static int maxConcurrentOperations = SystemInfo.processorCount - 1;
+    public static int maxConcurrentOperations = SystemInfo.processorCount - 2;
     public const int maxVertexCount = 10000;
     public const int densityMapLength = (ChunkManager.chunkResolution)*(ChunkManager.chunkResolution)*(ChunkManager.chunkResolution);
     public const int grassBufferAmount = 10000;

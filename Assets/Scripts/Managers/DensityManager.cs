@@ -24,7 +24,7 @@ public class DensityManager : IDisposable {
     DensityResultData[] currentlyGenerating = new DensityResultData[maxConcurrentOperations];
     int kernel;
     CommandBuffer commandBuffer;
-    const int maxConcurrentOperations = 16;
+    const int maxConcurrentOperations = 32;
     Queue<KeyValuePair<int3, sbyte>> modifications = new Queue<KeyValuePair<int3, sbyte>>();
     //DensityResultData currentlyProcessedPosition;
     //Queue<DensityResultData> requestQueue = new Queue<DensityResultData>();
@@ -44,7 +44,9 @@ public class DensityManager : IDisposable {
             computes[i] = UnityEngine.Object.Instantiate(cs);
             currentlyGenerating[i].gpuBuffer = new ComputeBuffer(8192, 4, ComputeBufferType.Structured);
             currentlyGenerating[i].gpuBuffer.name = "DensityBuffer" + i.ToString();
+            currentlyGenerating[i].isFullOrEmpty = new ComputeBuffer(2, 4, ComputeBufferType.Structured);
             computes[i].SetBuffer(kernel, "Result", currentlyGenerating[i].gpuBuffer);
+            computes[i].SetBuffer(kernel, "FullOrEmpty", currentlyGenerating[i].isFullOrEmpty);
             commandBuffer.DispatchCompute(computes[i], kernel, 16, 1, 1);
         }
     }
@@ -120,9 +122,19 @@ public class DensityManager : IDisposable {
 
             if(currentlyGenerating[i].readbackRequest.done){
                 if(currentlyGenerating[i].readbackRequest.hasError) {throw new Exception("Error in AsyncGPUReadback");}
-                currentlyGenerating[i].densityMap.CopyFrom(currentlyGenerating[i].readbackRequest.GetData<sbyte>());
-                unsafe{
-                densityData.densities.Add(currentlyGenerating[i].pos, (IntPtr)NativeArrayUnsafeUtility.GetUnsafePtr(currentlyGenerating[i].densityMap));
+                int[] isEmptyOrFull = new int[2];
+                currentlyGenerating[i].isFullOrEmpty.GetData(isEmptyOrFull);
+                if(isEmptyOrFull[0] == 0 || isEmptyOrFull[1] == 0){
+                    densityData.densities.Remove(currentlyGenerating[i].pos);
+                    MemoryManager.ReturnDensityMap(currentlyGenerating[i].densityMap);
+                    if(isEmptyOrFull[0] == 0){
+                        densityData.fullChunks.Add(currentlyGenerating[i].pos);
+                    }
+                    else if(isEmptyOrFull[1] == 0){
+                        densityData.emptyChunks.Add(currentlyGenerating[i].pos);
+                    }
+                }else{
+                    currentlyGenerating[i].densityMap.CopyFrom(currentlyGenerating[i].readbackRequest.GetData<sbyte>());
                 }
                 currentlyGenerating[i].isReady = true;
             }
@@ -152,7 +164,11 @@ public class DensityManager : IDisposable {
             data.hasRequest = false;
             data.isReady = false;
             data.readbackRequest = default;
+            data.isFullOrEmpty.SetData(new int[] {0,0});
             currentlyGenerating[i] = data;
+            unsafe{
+            densityData.densities.Add(currentlyGenerating[i].pos, (IntPtr)NativeArrayUnsafeUtility.GetUnsafePtr(currentlyGenerating[i].densityMap));
+            }
             //requestQueue.Enqueue(data);
         }
         Graphics.ExecuteCommandBufferAsync(commandBuffer, ComputeQueueType.Default);
@@ -196,10 +212,10 @@ public class DensityManager : IDisposable {
     }
     public void LoadDensityData(float3 center, int radius){
         HashSet<int3> alreadyDataExists = new HashSet<int3>();
-        int3 startPos = (int3)center - ChunkManager.chunkResolution * Octree.depthMultipliers[radius];
-        for(int x = 0; x < Octree.depthMultipliers[radius] * 2; x++){
-            for(int y = 0; y < Octree.depthMultipliers[radius] * 2; y++){
-                for(int z = 0; z < Octree.depthMultipliers[radius] * 2; z++){
+        int3 startPos = (int3)center - ChunkManager.chunkResolution * Octree.depthMultipliers[radius] - ChunkManager.chunkResolution;
+        for(int x = 0; x < Octree.depthMultipliers[radius] * 2 + 2; x++){
+            for(int y = 0; y < Octree.depthMultipliers[radius] * 2 + 2; y++){
+                for(int z = 0; z < Octree.depthMultipliers[radius] * 2 + 2; z++){
                     int3 pos = new int3(x,y,z) * ChunkManager.chunkResolution + startPos;
                     if(densityData.ContainsPos(pos) ||densityData.emptyChunks.Contains(pos) ||densityData.fullChunks.Contains(pos)){
                         alreadyDataExists.Add(pos);

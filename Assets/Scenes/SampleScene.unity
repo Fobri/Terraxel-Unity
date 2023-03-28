@@ -1718,7 +1718,7 @@ MonoBehaviour:
   totalGenTime: 0
   drawPlayerBounds: 0
   drawChunkBounds: 0
-  drawDensityMaps: 1
+  drawDensityMaps: 0
   drawChunkVariables:
     position: 0
     chunkState: 0
@@ -2226,7 +2226,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3276619212830280659, guid: c822f91997f3a8649ae1b0ddaac74b61, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0
+      value: 537
       objectReference: {fileID: 0}
     - target: {fileID: 3276619212830280659, guid: c822f91997f3a8649ae1b0ddaac74b61, type: 3}
       propertyPath: m_LocalPosition.y
@@ -2234,7 +2234,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3276619212830280659, guid: c822f91997f3a8649ae1b0ddaac74b61, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0
+      value: 599
       objectReference: {fileID: 0}
     - target: {fileID: 3276619212830280659, guid: c822f91997f3a8649ae1b0ddaac74b61, type: 3}
       propertyPath: m_LocalRotation.w

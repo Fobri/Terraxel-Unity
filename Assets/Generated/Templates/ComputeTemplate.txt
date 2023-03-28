@@ -2,6 +2,7 @@
 #include "Assets/Shaders/FastNoiseLite/FastNoiseLite.hlsl"
 
 RWStructuredBuffer<int> Result;
+RWStructuredBuffer<int> FullOrEmpty;
 float4 offset;
 
 float noise(float2 worldPos, float amplitude, fnl_state props){
@@ -16,6 +17,12 @@ int noiseGenerated(int3 pos){
     float value = DENSITY_FUNCTION_HERE
     value = (value - pos.y) * 0.5f;
     int density = clamp(value * -127, -127, 127);
+    if(density != -127){
+        FullOrEmpty[0] = 1;
+    }
+    if(density != 127){
+        FullOrEmpty[1] = 1;
+    }
     density = (density & 127) | ((density >> 24) & 128);
     return density;
 }
