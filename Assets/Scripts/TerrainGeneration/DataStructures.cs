@@ -23,6 +23,9 @@ namespace Terraxel.DataStructures
         public NativeArray<sbyte> densityMap;
         public ComputeBuffer gpuBuffer;
         public int3 pos;
+        public AsyncGPUReadbackRequest readbackRequest;
+        public bool hasRequest;
+        public bool isReady;
         /*[WriteOnly, NativeDisableParallelForRestriction]
         public NativeReference<bool> isEmpty;
         [WriteOnly, NativeDisableParallelForRestriction]

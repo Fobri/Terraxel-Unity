@@ -1718,7 +1718,7 @@ MonoBehaviour:
   totalGenTime: 0
   drawPlayerBounds: 0
   drawChunkBounds: 0
-  drawDensityMaps: 0
+  drawDensityMaps: 1
   drawChunkVariables:
     position: 0
     chunkState: 0

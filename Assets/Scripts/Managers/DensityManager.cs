@@ -19,13 +19,16 @@ public class DensityManager : IDisposable {
     //Queue<NoiseJob> operationQueue = new Queue<NoiseJob>();
     //Queue<KeyValuePair<int3, IntPtr>> operationQueue = new Queue<KeyValuePair<int3, IntPtr>>();
     Queue<int3> operationQueue = new Queue<int3>();
-    ComputeShader noiseCompute;
+    ComputeShader[] computes = new ComputeShader[maxConcurrentOperations];
+    ComputeShader cs;
+    DensityResultData[] currentlyGenerating = new DensityResultData[maxConcurrentOperations];
     int kernel;
-    const int maxOperations = 4;
+    CommandBuffer commandBuffer;
+    const int maxConcurrentOperations = 16;
     Queue<KeyValuePair<int3, sbyte>> modifications = new Queue<KeyValuePair<int3, sbyte>>();
     //DensityResultData currentlyProcessedPosition;
-    Queue<DensityResultData> requestQueue = new Queue<DensityResultData>();
-    DensityResultData currentRequest;
+    //Queue<DensityResultData> requestQueue = new Queue<DensityResultData>();
+    //DensityResultData currentRequest;
     bool gpuProgramRunning;
 
     public void Init(ComputeShader noiseShader){
@@ -33,8 +36,17 @@ public class DensityManager : IDisposable {
         densityData.densities = new NativeHashMap<int3, IntPtr>(50, Allocator.Persistent);
         densityData.emptyChunks = new NativeHashSet<int3>(100, Allocator.Persistent);
         densityData.fullChunks = new NativeHashSet<int3>(100, Allocator.Persistent);
-        noiseCompute = noiseShader;
-        kernel = noiseCompute.FindKernel("CSMain");
+        cs = noiseShader;
+        commandBuffer = new CommandBuffer();
+        commandBuffer.SetExecutionFlags(CommandBufferExecutionFlags.AsyncCompute);
+        kernel = noiseShader.FindKernel("CSMain");
+        for(int i = 0; i < maxConcurrentOperations; i++){
+            computes[i] = UnityEngine.Object.Instantiate(cs);
+            currentlyGenerating[i].gpuBuffer = new ComputeBuffer(8192, 4, ComputeBufferType.Structured);
+            currentlyGenerating[i].gpuBuffer.name = "DensityBuffer" + i.ToString();
+            computes[i].SetBuffer(kernel, "Result", currentlyGenerating[i].gpuBuffer);
+            commandBuffer.DispatchCompute(computes[i], kernel, 16, 1, 1);
+        }
     }
 
     public BoundingBox[] GetDebugArray(){
@@ -81,7 +93,7 @@ public class DensityManager : IDisposable {
             }
         }
     }
-    void DataReceived(AsyncGPUReadbackRequest request){
+    /*void DataReceived(AsyncGPUReadbackRequest request){
         if(request.hasError) throw new Exception("Error in AsyncGPUReadbackRequest");
         unsafe{
         densityData.densities.Add(currentRequest.pos, (IntPtr)NativeArrayUnsafeUtility.GetUnsafePtr(currentRequest.densityMap));
@@ -94,29 +106,58 @@ public class DensityManager : IDisposable {
             currentRequest = default;
             gpuProgramRunning = false;
         }
+    }*/
+    void UpdateInternal(){
+        bool allJobsReady = true;
+        for(int i = 0; i < maxConcurrentOperations; i++){
+            if(currentlyGenerating[i].isReady) continue;
+            allJobsReady = false;
+            if(!currentlyGenerating[i].hasRequest){
+                if(!currentlyGenerating[i].gpuBuffer.IsValid()) throw new Exception("Buffer not valid");
+                currentlyGenerating[i].readbackRequest = AsyncGPUReadback.Request(currentlyGenerating[i].gpuBuffer);
+                currentlyGenerating[i].hasRequest = true;
+            }
+
+            if(currentlyGenerating[i].readbackRequest.done){
+                if(currentlyGenerating[i].readbackRequest.hasError) {throw new Exception("Error in AsyncGPUReadback");}
+                currentlyGenerating[i].densityMap.CopyFrom(currentlyGenerating[i].readbackRequest.GetData<sbyte>());
+                unsafe{
+                densityData.densities.Add(currentlyGenerating[i].pos, (IntPtr)NativeArrayUnsafeUtility.GetUnsafePtr(currentlyGenerating[i].densityMap));
+                }
+                currentlyGenerating[i].isReady = true;
+            }
+        }
+        if(allJobsReady){
+            ScheduleBatch();
+        }
     }
     void ScheduleBatch(){
-        if(operationQueue.Count == 0){
-            //currentlyProcessedPosition = default;
-            return;
-        }
-        while(operationQueue.Count != 0){
+        //commandBuffer.Clear();
+        //commandBuffer.SetExecutionFlags(CommandBufferExecutionFlags.AsyncCompute);
+        for(int i = 0; i < maxConcurrentOperations; i++){
+            if(operationQueue.Count == 0){
+                gpuProgramRunning = false;
+                return;
+            }
             var job = operationQueue.Dequeue();
             if(densityData.densities.ContainsKey(job)){
+                currentlyGenerating[i].isReady = true;
                 continue;
             }
-            var data = new DensityResultData();
-            noiseCompute.SetVector("offset", new float4(job, 0));
-            data.gpuBuffer = new ComputeBuffer(8192, 4, ComputeBufferType.Structured);
-            noiseCompute.SetBuffer(kernel, "Result", data.gpuBuffer);
-            noiseCompute.Dispatch(kernel, 16, 1, 1);
+            var data = currentlyGenerating[i];
+            computes[i].SetVector("offset", new float4(job, 0));
+            //noiseCompute.Dispatch(kernel, 16, 1, 1);
             data.pos = job;
             data.densityMap = MemoryManager.GetDensityMap();
-            requestQueue.Enqueue(data);
+            data.hasRequest = false;
+            data.isReady = false;
+            data.readbackRequest = default;
+            currentlyGenerating[i] = data;
+            //requestQueue.Enqueue(data);
         }
-        currentRequest = requestQueue.Dequeue();
-        AsyncGPUReadback.RequestIntoNativeArray(ref currentRequest.densityMap, currentRequest.gpuBuffer, new Action<AsyncGPUReadbackRequest>(DataReceived));
-        gpuProgramRunning = true;
+        Graphics.ExecuteCommandBufferAsync(commandBuffer, ComputeQueueType.Default);
+        //currentRequest = requestQueue.Dequeue();
+        //AsyncGPUReadback.RequestIntoNativeArray(ref currentRequest.densityMap, currentRequest.gpuBuffer, new Action<AsyncGPUReadbackRequest>(DataReceived));
     }
 
     public DensityData GetJobDensityData(){
@@ -129,8 +170,8 @@ public class DensityManager : IDisposable {
                 DoModification(modification.Key, modification.Value);
             }
             return true;
-        }else if(operationQueue.Count > 0){
-            //ScheduleBatch();
+        }else{
+            UpdateInternal();
         }
         return false;
     }
@@ -189,6 +230,7 @@ public class DensityManager : IDisposable {
                 }
             }
         }
+        gpuProgramRunning = true;
         ScheduleBatch();
     }
     private void UnloadDensityData(int3 pos){
@@ -203,6 +245,10 @@ public class DensityManager : IDisposable {
     public void Dispose(){
         densityData.Dispose();
         AsyncGPUReadback.WaitAllRequests();
+        foreach(var data in currentlyGenerating){
+            data.gpuBuffer.Release();
+        }
+        commandBuffer.Release();
     }
 }
 public struct DensityData : IDisposable{
