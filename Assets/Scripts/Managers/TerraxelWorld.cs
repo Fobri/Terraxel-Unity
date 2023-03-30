@@ -109,6 +109,8 @@ public class TerraxelWorld : MonoBehaviour
         }
     }
 #endif
+float totalChunkGenTime;
+float totalDensityGenTime;
 public TextMeshProUGUI[] debugLabels;
     public void Start(){
 #if !UNITY_EDITOR
@@ -142,9 +144,10 @@ public TextMeshProUGUI[] debugLabels;
             debugLabels[1].text = $"Currently processing {MemoryManager.maxConcurrentOperations - MemoryManager.GetFreeVertexIndexBufferCount()}/{MemoryManager.maxConcurrentOperations}";
             debugLabels[2].text = $"Chunk count: {chunkCount}/{MemoryManager.maxBufferCount}";
             debugLabels[3].text = $"Free vertex buffers: {freeBufferCount}";
-            debugLabels[4].text = $"Total chunk generation time: {totalGenTime}";
-            debugLabels[5].text = $"Vertex count: {vertCount}";
-            debugLabels[6].text = $"Index count: {indexCount}";
+            debugLabels[4].text = $"Last chunk generation time: {totalChunkGenTime}";
+            debugLabels[5].text = $"Last density generation time: {totalDensityGenTime}";
+            debugLabels[6].text = $"Vertex count: {vertCount}";
+            debugLabels[7].text = $"Index count: {indexCount}";
             vertCount = 0;
             indexCount = 0;
             totalGenTime = 0f;
@@ -164,11 +167,13 @@ public TextMeshProUGUI[] debugLabels;
         if(worldState == WorldState.DENSITY_UPDATE){
             if(DensityManager.Update()){
                 worldState = WorldState.IDLE;
+                totalDensityGenTime = Time.realtimeSinceStartup - totalDensityGenTime;
             }
         }
         else if(worldState == WorldState.MESH_UPDATE){
             if(ChunkManager.Update()){
                 worldState = WorldState.IDLE;
+                totalChunkGenTime = Time.realtimeSinceStartup - totalChunkGenTime;
             }
         }
         int3 lodChunkPos = (int3)(math.round(player.transform.position / baseChunkSize)) * baseChunkSize;
@@ -197,8 +202,8 @@ public TextMeshProUGUI[] debugLabels;
                 ChunkManager.chunkTree.region.center = worldOffset;
                 ChunkManager.chunkTree.RepositionOctets(newPositions, baseChunkSize);
             }
-            if(!DensityManager.IsReady) worldState = WorldState.DENSITY_UPDATE;
-            else if(!ChunkManager.IsReady) worldState = WorldState.MESH_UPDATE;
+            if(!DensityManager.IsReady) { worldState = WorldState.DENSITY_UPDATE; totalDensityGenTime = Time.realtimeSinceStartup;}
+            else if(!ChunkManager.IsReady) { worldState = WorldState.MESH_UPDATE; totalChunkGenTime = Time.realtimeSinceStartup;}
             else if(ChunkManager.shouldUpdateTree){
                 ChunkManager.shouldUpdateTree = false;
                 ChunkManager.chunkTree.UpdateTreeRecursive();

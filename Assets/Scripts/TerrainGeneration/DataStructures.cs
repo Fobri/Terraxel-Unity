@@ -104,12 +104,26 @@ namespace Terraxel.DataStructures
             heightMap.Dispose();
         }
     }
-    [Serializable]
-    public class InstancingData{
+    public class InstancingData : ScriptableObject{
         [SerializeField]
         public Mesh mesh;
         [SerializeField]
         public Material material;
+        [SerializeField]
+        public float2 angleLimit;
+        
+        [SerializeField]
+        public float3x2 sizeVariation;
+    }
+    [CreateAssetMenu(fileName = "Grass Data", menuName = "Terraxel/Grass", order = 1), System.Serializable]
+    public class GrassData : InstancingData{
+        [SerializeField]
+        public float density;
+    }
+    [CreateAssetMenu(fileName = "Tree Data", menuName = "Terraxel/Tree", order = 1), System.Serializable]
+    public class TreeData : GrassData{
+        [SerializeField]
+        public GameObject colliderObject;
     }
     public struct JobInstancingData : IDisposable{
         public InstanceProperties c0;

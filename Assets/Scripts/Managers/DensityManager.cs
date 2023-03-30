@@ -123,10 +123,11 @@ public class DensityManager : IDisposable {
             if(currentlyGenerating[i].readbackRequest.done){
                 if(currentlyGenerating[i].readbackRequest.hasError) {throw new Exception("Error in AsyncGPUReadback");}
                 int[] isEmptyOrFull = new int[2];
+                //TODO: causes lag
                 currentlyGenerating[i].isFullOrEmpty.GetData(isEmptyOrFull);
                 if(isEmptyOrFull[0] == 0 || isEmptyOrFull[1] == 0){
-                    densityData.densities.Remove(currentlyGenerating[i].pos);
-                    MemoryManager.ReturnDensityMap(currentlyGenerating[i].densityMap);
+                    //densityData.densities.Remove(currentlyGenerating[i].pos);
+                    //MemoryManager.ReturnDensityMap(currentlyGenerating[i].densityMap);
                     if(isEmptyOrFull[0] == 0){
                         densityData.fullChunks.Add(currentlyGenerating[i].pos);
                     }
@@ -134,7 +135,11 @@ public class DensityManager : IDisposable {
                         densityData.emptyChunks.Add(currentlyGenerating[i].pos);
                     }
                 }else{
+                    currentlyGenerating[i].densityMap = MemoryManager.GetDensityMap();
                     currentlyGenerating[i].densityMap.CopyFrom(currentlyGenerating[i].readbackRequest.GetData<sbyte>());
+                    unsafe{
+                    densityData.densities.Add(currentlyGenerating[i].pos, (IntPtr)NativeArrayUnsafeUtility.GetUnsafePtr(currentlyGenerating[i].densityMap));
+                    }
                 }
                 currentlyGenerating[i].isReady = true;
             }
@@ -160,15 +165,11 @@ public class DensityManager : IDisposable {
             computes[i].SetVector("offset", new float4(job, 0));
             //noiseCompute.Dispatch(kernel, 16, 1, 1);
             data.pos = job;
-            data.densityMap = MemoryManager.GetDensityMap();
             data.hasRequest = false;
             data.isReady = false;
             data.readbackRequest = default;
             data.isFullOrEmpty.SetData(new int[] {0,0});
             currentlyGenerating[i] = data;
-            unsafe{
-            densityData.densities.Add(currentlyGenerating[i].pos, (IntPtr)NativeArrayUnsafeUtility.GetUnsafePtr(currentlyGenerating[i].densityMap));
-            }
             //requestQueue.Enqueue(data);
         }
         Graphics.ExecuteCommandBufferAsync(commandBuffer, ComputeQueueType.Default);
