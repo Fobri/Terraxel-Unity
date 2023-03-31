@@ -65,7 +65,7 @@ public class MemoryManager{
         }
         grassDatas.InitArray();
     }
-    public static void AllocateSimpleMeshData(Mesh source){
+    public static void AllocateSimpleMeshData(){
         /*var verts = source.vertices;
         NativeArray<VertexData> vertices = new NativeArray<VertexData>(verts.Length, Allocator.Temp);
         var tris = source.triangles;

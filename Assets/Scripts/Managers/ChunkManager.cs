@@ -18,7 +18,6 @@ using TMPro;
 using Unity.Profiling;
 public class ChunkManager
 {
-    GameObject simpleChunkPrefab;
     GameObject chunkPrefab;
     public bool shouldUpdateTree = false;
     public const int chunkResolution = 32;
@@ -40,8 +39,7 @@ public class ChunkManager
     public List<BaseChunk> GetDebugArray(){
         return activeChunks;
     }
-    public void Init(Transform poolParent, Transform activeParent, GameObject simpleChunkPrefab, GameObject chunkPrefab){
-        this.simpleChunkPrefab = simpleChunkPrefab;
+    public void Init(Transform poolParent, Transform activeParent, GameObject chunkPrefab){
         this.chunkPrefab = chunkPrefab;
         meshQueue = new PriorityQueue<BaseChunk>(lodLevels);
         chunkPool3D = new Queue<BaseChunk>();
@@ -50,7 +48,7 @@ public class ChunkManager
         objectPool = new Queue<GameObject>();
         this.poolParent = poolParent;
         this.activeParent = activeParent;
-        MemoryManager.AllocateSimpleMeshData(simpleChunkPrefab.GetComponent<MeshFilter>().sharedMesh);
+        MemoryManager.AllocateSimpleMeshData();
 
         activeChunks = new List<BaseChunk>();
         chunkTree = new Chunk3D();

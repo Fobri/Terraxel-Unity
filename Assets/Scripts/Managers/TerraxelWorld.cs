@@ -17,23 +17,21 @@ using UnityEditor;
 using TMPro;
 using Unity.Profiling;
 
-public class TerraxelWorld : MonoBehaviour
+[CreateAssetMenu(fileName = "World Settings", menuName = "Terraxel/World Settings", order = 0), System.Serializable]
+public class TerraxelWorld : ScriptableObject, IDisposable
 {
     public enum WorldState { DENSITY_UPDATE, MESH_UPDATE, IDLE }
     [ShowInInspector]
     public static WorldState worldState = WorldState.IDLE;
     public static Camera renderCamera;
-    public GameObject player;
+    GameObject player;
     public bool placePlayerOnSurface = true;
     public static BoundingBox playerBounds;
     public static int seed = 1;
     public static bool renderGrass = true;
-    public ComputeShader noiseShader;
-    public Transform poolParent;
-    public Transform activeParent;
-    
-    public GameObject simpleChunkPrefab;
-    public GameObject chunkPrefab;
+    ComputeShader noiseShader;
+    GameObject chunkPrefab;
+    public GameObject debugCanvas;
     int baseChunkSize = ChunkManager.chunkResolution * Octree.depthMultipliers[ChunkManager.lodLevels - 2];
     public int3 worldOffset = Int16.MaxValue;
     
@@ -99,37 +97,46 @@ public class TerraxelWorld : MonoBehaviour
         public bool genTime;
         public bool vertexCount;
         public bool indexCount;
-        public bool maxVertexCount;
         public bool dirMask;
         public bool type;
         public bool draw{
             get{
-                return position || chunkState || depth || genTime || vertexCount || indexCount || maxVertexCount || dirMask || type;
+                return position || chunkState || depth || genTime || vertexCount || indexCount || dirMask || type;
             }
         }
     }
 #endif
 float totalChunkGenTime;
 float totalDensityGenTime;
-public TextMeshProUGUI[] debugLabels;
-    public void Start(){
+TextMeshProUGUI[] debugLabels;
+    public void Init(Transform poolParent, Transform activeParent, GameObject player){
 #if !UNITY_EDITOR
         frustumCulling = true;
 #endif
+        if(debugMode){
+            debugCanvas = Resources.Load<GameObject>("Prefabs/TerraxelDebug");
+            var canv = Instantiate(debugCanvas);
+            debugLabels = new TextMeshProUGUI[canv.transform.childCount];
+            for(int i = 0; i < debugLabels.Length; i++){
+                debugLabels[i] = canv.transform.GetChild(i).GetComponent<TextMeshProUGUI>();
+            }
+        }
+        chunkPrefab = Resources.Load<GameObject>("Prefabs/Chunk");
         renderCamera = Camera.main;
         MemoryManager.Init();
         playerBounds = new BoundingBox(player.transform.position, new float3(ChunkManager.chunkResolution));
         DensityManager = new DensityManager();
         DensityManager.Init(noiseShader);
         ChunkManager = new ChunkManager();
-        ChunkManager.Init(poolParent, activeParent, simpleChunkPrefab, chunkPrefab);
+        ChunkManager.Init(poolParent, activeParent, chunkPrefab);
+        this.player = player;
         player.SetActive(false);
         if(placePlayerOnSurface){
             var startHeight = TerraxelGenerated.GenerateDensity(new float2(player.transform.position.x, player.transform.position.z)) + 0.1f;
             player.transform.position = player.transform.position * new float3(1,0,1) + new float3(0,startHeight, 0);
         }
     }
-    void Update(){
+    public void Run(){
         JobRunner.Update();
         if(debugMode){
             var chunkDatas = ChunkManager.GetDebugArray();
@@ -227,13 +234,15 @@ public TextMeshProUGUI[] debugLabels;
         Debug.Log(-1 >> 24);
         //0b1000_0000_0000_0000_0000_0000_0000_0000
     }
-    public void OnDisable(){
+    public void Dispose(){
         JobRunner.CompleteAll();
         DensityManager.Dispose();
         MemoryManager.Dispose();
+        worldOffset = Int16.MaxValue;
+        playerOffset = Int16.MaxValue;
     }
     #if UNITY_EDITOR
-    private void OnDrawGizmos()
+    public void DebugDraw()
     {
         if(!debugMode) return;
         
@@ -273,10 +282,6 @@ public TextMeshProUGUI[] debugLabels;
                 if(drawChunkVariables.indexCount){
                     offset.y += 4f;
                     Handles.Label(offset, chunkDatas[i].idxCount.ToString());
-                }
-                if(drawChunkVariables.maxVertexCount){
-                    offset.y += 4f;
-                    Handles.Label(offset, MemoryManager.maxVertexCount.ToString());
                 }
                 if(drawChunkVariables.dirMask){
                     offset.y += 4f;

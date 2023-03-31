@@ -1,0 +1,47 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: af55ce50d98f351478ebc00f5436a31d, type: 3}
+  m_Name: World Settings
+  m_EditorClassIdentifier: 
+  placePlayerOnSurface: 1
+  noiseShader: {fileID: 7200000, guid: 22b853d99254daa48b52096f1c3b1f73, type: 3}
+  chunkPrefab: {fileID: 4194868686972551607, guid: 6c35f3c6ef85df74c950c7dc8cd341fc, type: 3}
+  debugCanvas: {fileID: 6740031201353786636, guid: 442397bc3201b2b41ae64cf2dc1cc737, type: 3}
+  worldOffset:
+    x: 32767
+    y: 32767
+    z: 32767
+  playerOffset:
+    x: 32767
+    y: 32767
+    z: 32767
+  frustumCulling: 0
+  debugMode: 0
+  chunkCount: 65
+  freeBufferCount: 478
+  freeDensityMaps: 606
+  memoryUsed: 4
+  vertCount: 44898
+  indexCount: 219630
+  totalGenTime: 2.0909476
+  drawPlayerBounds: 0
+  drawChunkBounds: 0
+  drawDensityMaps: 0
+  drawChunkVariables:
+    position: 0
+    chunkState: 0
+    depth: 0
+    genTime: 0
+    vertexCount: 0
+    indexCount: 0
+    dirMask: 0
+    type: 0

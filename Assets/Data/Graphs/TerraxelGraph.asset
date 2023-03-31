@@ -112,17 +112,7 @@ MonoBehaviour:
     outputFieldName: output
     inputPortIdentifier: 
     outputPortIdentifier: 
-  groups:
-  - title: q
-    color: {r: 0, g: 0, b: 0, a: 0.3}
-    position:
-      serializedVersion: 2
-      x: -97.15558
-      y: -327.75696
-      width: 786
-      height: 826
-    size: {x: 400, y: 200}
-    innerNodeGUIDs: []
+  groups: []
   stackNodes: []
   pinnedElements:
   - position:
@@ -131,7 +121,7 @@ MonoBehaviour:
       y: 452
       width: 150
       height: 200
-    opened: 0
+    opened: 1
     editorType:
       serializedType: GraphProcessor.ProcessorView, com.alelievr.NodeGraphProcessor.Editor,
         Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
@@ -159,8 +149,8 @@ MonoBehaviour:
   serializedParameterList: []
   stickyNotes: []
   nodeInspectorReference: {fileID: 0}
-  position: {x: 356, y: 447, z: 0}
-  scale: {x: 0.8695652, y: 0.8695652, z: 1}
+  position: {x: 294, y: 280, z: 0}
+  scale: {x: 0.65751624, y: 0.65751624, z: 1}
   references:
     version: 2
     RefIds:
