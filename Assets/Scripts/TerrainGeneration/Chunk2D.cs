@@ -51,7 +51,8 @@ public class Chunk2D : BaseChunk
             offset = new float2(pos.x, pos.z) - depthMultiplier / 2,
             depthMultiplier = depthMultiplier / 2,
             size = (ChunkManager.chunkResolution * 2) + 3,
-            heightMap = meshData.heightMap
+            heightMap = meshData.heightMap,
+            seed = TerraxelWorld.seed
         };
         base.ScheduleParallelForJob(noiseJob, 4489);
         var meshJob = new Mesh2DJob(){

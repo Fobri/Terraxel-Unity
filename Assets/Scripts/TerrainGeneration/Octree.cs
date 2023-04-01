@@ -251,12 +251,12 @@ public abstract class Octree : JobRunner
             children[i].UpdateTreeRecursive();
         }
     }
-    public void RenderChunksRecursive(Plane[] frustumPlanes, bool cull){
+    public void RenderChunksRecursive(Plane[] frustumPlanes){
         if(thisChunk.chunkState != ChunkState.ROOT) thisChunk.RenderChunk();
         if(!HasSubChunks) return;
         for(int s = 0; s < 8; s++){
-            if(!cull || GeometryUtility.TestPlanesAABB(frustumPlanes, children[s].thisChunk.renderBounds)){
-                children[s].RenderChunksRecursive(frustumPlanes, cull);
+            if(!TerraxelWorld.frustumCulling || GeometryUtility.TestPlanesAABB(frustumPlanes, children[s].thisChunk.renderBounds)){
+                children[s].RenderChunksRecursive(frustumPlanes);
                 //break;
             }
             /*for(int i = 0; i < 6; i++){

@@ -21,25 +21,28 @@ using Unity.Profiling;
 public class TerraxelWorld : ScriptableObject, IDisposable
 {
     public enum WorldState { DENSITY_UPDATE, MESH_UPDATE, IDLE }
-    [ShowInInspector]
-    public static WorldState worldState = WorldState.IDLE;
-    public static Camera renderCamera;
-    GameObject player;
     public bool placePlayerOnSurface = true;
-    public static BoundingBox playerBounds;
-    public static int seed = 1;
-    public static bool renderGrass = true;
+    public GameObject debugCanvas;
+    public int3 worldOffset = Int16.MaxValue;
+    public int3 playerOffset = Int16.MaxValue;
+    public int m_seed;
+    
     ComputeShader noiseShader;
     GameObject chunkPrefab;
-    public GameObject debugCanvas;
+    GameObject player;
     int baseChunkSize = ChunkManager.chunkResolution * Octree.depthMultipliers[ChunkManager.lodLevels - 2];
-    public int3 worldOffset = Int16.MaxValue;
     
-    public int3 playerOffset = Int16.MaxValue;
+    //STATIC VARS
+    public static bool renderGrass = true;
     public static DensityManager DensityManager {get; private set;}
     public static ChunkManager ChunkManager {get; private set;}
     public static bool worldUpdatePending {get; private set;}
-    public bool frustumCulling = true;
+    public static bool frustumCulling = true;
+    public static BoundingBox playerBounds;
+    [ShowInInspector]
+    public static WorldState worldState = WorldState.IDLE;
+    public static Camera renderCamera;
+    public static int seed;
 
     //DEBUG
     [DisableInPlayMode]
@@ -113,6 +116,9 @@ TextMeshProUGUI[] debugLabels;
 #if !UNITY_EDITOR
         frustumCulling = true;
 #endif
+        if(m_seed == 0){
+            seed = UnityEngine.Random.Range(Int16.MinValue, Int16.MaxValue);
+        }else seed = m_seed;
         if(debugMode){
             debugCanvas = Resources.Load<GameObject>("Prefabs/TerraxelDebug");
             var canv = Instantiate(debugCanvas);
@@ -122,6 +128,7 @@ TextMeshProUGUI[] debugLabels;
             }
         }
         chunkPrefab = Resources.Load<GameObject>("Prefabs/Chunk");
+        noiseShader = Resources.Load<ComputeShader>("Generated/TerraxelGenerated");
         renderCamera = Camera.main;
         MemoryManager.Init();
         playerBounds = new BoundingBox(player.transform.position, new float3(ChunkManager.chunkResolution));
@@ -132,7 +139,7 @@ TextMeshProUGUI[] debugLabels;
         this.player = player;
         player.SetActive(false);
         if(placePlayerOnSurface){
-            var startHeight = TerraxelGenerated.GenerateDensity(new float2(player.transform.position.x, player.transform.position.z)) + 0.1f;
+            var startHeight = TerraxelGenerated.GenerateDensity(new float2(player.transform.position.x, player.transform.position.z), seed) + 0.1f;
             player.transform.position = player.transform.position * new float3(1,0,1) + new float3(0,startHeight, 0);
         }
     }
@@ -170,7 +177,7 @@ TextMeshProUGUI[] debugLabels;
             ChunkManager.GetDebugArray()[i].RenderChunk();
         }*/
         var planes = GeometryUtility.CalculateFrustumPlanes(renderCamera);
-        ChunkManager.RenderChunks(planes, frustumCulling);
+        ChunkManager.RenderChunks(planes);
         if(worldState == WorldState.DENSITY_UPDATE){
             if(DensityManager.Update()){
                 worldState = WorldState.IDLE;

@@ -63,8 +63,8 @@ public class ChunkManager
             return meshQueue.Count == 0 && MemoryManager.GetFreeVertexIndexBufferCount() == MemoryManager.maxConcurrentOperations;
         }
     }
-    public void RenderChunks(Plane[] frustumPlanes, bool cull){
-        chunkTree.RenderChunksRecursive(frustumPlanes, cull);
+    public void RenderChunks(Plane[] frustumPlanes){
+        chunkTree.RenderChunksRecursive(frustumPlanes);
     }
     public bool Update(){
         var disposeCount = disposeQueue.Count;

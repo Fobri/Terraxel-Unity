@@ -28,7 +28,7 @@ public class NoiseOutput : BaseNode
         AssetDatabase.Refresh();
 	}
 	static void CreateFromTemplate(GeneratorString generatorString, string templateFile, string outputFile){
-		TextAsset templateTextFile = AssetDatabase.LoadAssetAtPath("Assets/Generated/Templates/" + templateFile, typeof(TextAsset)) as TextAsset;
+		TextAsset templateTextFile = AssetDatabase.LoadAssetAtPath("Assets/Resources/Generated/Templates/" + templateFile, typeof(TextAsset)) as TextAsset;
 		if(templateTextFile == null){
 			throw new System.Exception("Template text file for code generation missing");
 		}
@@ -36,7 +36,7 @@ public class NoiseOutput : BaseNode
 		fullGeneratorString = fullGeneratorString.Replace("DENSITY_FUNCTION_HERE", generatorString.body +";");
 		fullGeneratorString = fullGeneratorString.Replace("PROPS_HERE", RemoveDuplicateLines(generatorString.properties));
 		fullGeneratorString = fullGeneratorString.Replace("FUNCTIONS_HERE", RemoveDuplicateLines(generatorString.functions));
-		using(StreamWriter sw = new StreamWriter(string.Format(Application.dataPath + "/Generated/" + outputFile))) {
+		using(StreamWriter sw = new StreamWriter(string.Format(Application.dataPath + "/Resources/Generated/" + outputFile))) {
             sw.Write(fullGeneratorString);
         }
 	}

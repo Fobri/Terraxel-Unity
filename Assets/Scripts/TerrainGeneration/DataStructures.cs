@@ -183,8 +183,9 @@ namespace Terraxel.DataStructures
             return (sbyte)density;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float SurfaceNoise2D(float2 worldPos, float ampl, FastNoiseLite noise)
-        {
+        public static float SurfaceNoise2D(float2 worldPos, float ampl, FastNoiseLite noise, int seed = 1337)
+        {   
+            noise.SetSeed(seed);
             return noise.GetNoise(worldPos.x, worldPos.y) * ampl;
         }
         public static float SurfaceNoise3D(float3 worldPos, float ampl, float freq, int seed, int oct)

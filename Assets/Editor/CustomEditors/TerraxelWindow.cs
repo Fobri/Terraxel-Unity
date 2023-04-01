@@ -61,16 +61,18 @@ public class TerraxelWindow : EditorWindow
         if(worldSettings == null){
             m_rightPanel.Add(new Label("No Terraxel instance found in scene. Make sure you have a GameObject with the TerraxelBehaviour component and have assigned worldsettings."));
         }else{
-            /*var objField = new ObjectField("Settings");
-            objField.allowSceneObjects = true;
-            objField.objectType = typeof(TerraxelWorld);
-            objField.value = worldSettings;
-            m_rightPanel.Add(objField);*/
             Label header = new Label("Settings");
             var style = header.style;
             style.fontSize = 35;
             style.alignSelf = Align.Center;
             m_rightPanel.Add(header);
+
+            HelpBox seedHelp = new HelpBox("If seed is 0 a random seed is generated on startup", HelpBoxMessageType.Info);
+            m_rightPanel.Add(seedHelp);
+            IntegerField seedField = new IntegerField("Seed");
+            seedField.value = worldSettings.m_seed;
+            seedField.RegisterValueChangedCallback((change) => worldSettings.m_seed = change.newValue);
+            m_rightPanel.Add(seedField);
 
             Toggle placePlayerOnSurface = new Toggle("Place player on surface");
             placePlayerOnSurface.value = worldSettings.placePlayerOnSurface;
@@ -78,23 +80,9 @@ public class TerraxelWindow : EditorWindow
             m_rightPanel.Add(placePlayerOnSurface);
 
             Toggle frustumCulling = new Toggle("Frustum culling");
-            frustumCulling.value = worldSettings.frustumCulling;
-            frustumCulling.RegisterValueChangedCallback((change) => worldSettings.frustumCulling = change.newValue);
+            frustumCulling.value = TerraxelWorld.frustumCulling;
+            frustumCulling.RegisterValueChangedCallback((change) => TerraxelWorld.frustumCulling = change.newValue);
             m_rightPanel.Add(frustumCulling);
-
-            /*var noiseShader = new ObjectField("Noise Shader");
-            noiseShader.allowSceneObjects = false;
-            noiseShader.objectType = typeof(ComputeShader);
-            noiseShader.value = worldSettings.noiseShader;
-            noiseShader.RegisterValueChangedCallback((change) => worldSettings.noiseShader = change.newValue as ComputeShader);
-            m_rightPanel.Add(noiseShader);
-
-            var chunkPrefab = new ObjectField("Chunk Prefab");
-            chunkPrefab.allowSceneObjects = false;
-            chunkPrefab.objectType = typeof(GameObject);
-            chunkPrefab.value = worldSettings.chunkPrefab;
-            chunkPrefab.RegisterValueChangedCallback((change) => worldSettings.chunkPrefab = change.newValue as GameObject);
-            m_rightPanel.Add(chunkPrefab);*/
 
             Toggle debugMode = new Toggle("Enable debug mode");
             debugMode.value = worldSettings.debugMode;

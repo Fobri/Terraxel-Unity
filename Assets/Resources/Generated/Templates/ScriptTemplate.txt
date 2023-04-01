@@ -1,0 +1,20 @@
+using Unity.Collections;
+using Unity.Mathematics;
+using Terraxel.DataStructures;
+using System.Runtime.CompilerServices;
+
+
+public class TerraxelGenerated
+{
+    PROPS_HERE
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static sbyte GenerateDensity(float3 pos, int seed = 1337){
+        float2 pos2D = new float2(pos.x, pos.z);
+        return DensityGenerator.HeightMapToIsosurface(pos, TerraxelGenerated.GenerateDensity(pos2D, seed));
+    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static float GenerateDensity(float2 pos2D, int seed = 1337){
+        FUNCTIONS_HERE
+        return DENSITY_FUNCTION_HERE
+    }
+}

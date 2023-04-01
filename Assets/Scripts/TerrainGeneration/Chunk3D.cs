@@ -132,7 +132,7 @@ public class Chunk3D : BaseChunk{
                 vertices = meshData.vertexBuffer,
                 vertexIndices = vertexIndexBuffer,
                 triangles = meshData.indexBuffer,
-                helper = new MeshingHelper(densityData, cache, (int3)WorldPosition, negativeDepthMultiplier, depthMultiplier),
+                helper = new MeshingHelper(densityData, cache, (int3)WorldPosition, negativeDepthMultiplier, depthMultiplier, TerraxelWorld.seed),
                 grassData = base.grassRenderer.data,
                 treeData = base.treeRenderer.data,
                 rng = base.rng,
@@ -145,7 +145,7 @@ public class Chunk3D : BaseChunk{
                 vertexIndices = vertexIndexBuffer,
                 triangles = meshData.indexBuffer,
                 indexTracker = -1,
-                helper = new MeshingHelper(densityData, cache, (int3)WorldPosition, negativeDepthMultiplier, depthMultiplier),
+                helper = new MeshingHelper(densityData, cache, (int3)WorldPosition, negativeDepthMultiplier, depthMultiplier, TerraxelWorld.seed),
                 meshStarts = meshStarts,
             };
             base.ScheduleJobFor(transitionJob, 6 * (ChunkManager.chunkResolution) * (ChunkManager.chunkResolution), true);

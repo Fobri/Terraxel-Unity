@@ -444,18 +444,20 @@ namespace Terraxel.WorldGeneration
 
     }
     public struct MeshingHelper{
-        public MeshingHelper(DensityData densities, DensityCacheInstance cache, int3 chunkPos, float negativeDepthMultiplier, int depthMultiplier){
+        public MeshingHelper(DensityData densities, DensityCacheInstance cache, int3 chunkPos, float negativeDepthMultiplier, int depthMultiplier, int seed){
             this.densities = densities;
             this.cache = cache;
             this.chunkPos = chunkPos;
             this.negativeDepthMultiplier = negativeDepthMultiplier;
             this.depthMultiplier = depthMultiplier;
+            this.seed = seed;
         }
         [ReadOnly] public DensityData densities;
         public DensityCacheInstance cache;
         [ReadOnly] public int3 chunkPos;
         [ReadOnly] public float negativeDepthMultiplier;
         [ReadOnly] public int depthMultiplier;
+        [ReadOnly] public int seed;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetVertexNearEdgeMask(float3 vertPos){
             return ((vertPos.x == depthMultiplier * ChunkManager.chunkResolution ? 0b_0000_0001 : 0) 
@@ -520,7 +522,7 @@ namespace Terraxel.WorldGeneration
                 }else if(densities.IsEmpty(chunkPos)) {cache.lastEmptyChunk = chunkPos; return 127;}
                 else if(densities.IsFull(chunkPos)) {cache.lastFullChunk = chunkPos; return -127;}
                 else{
-                    return TerraxelGenerated.GenerateDensity(worldPos);
+                    return TerraxelGenerated.GenerateDensity(worldPos, seed);
                 }
             }
             int index = Utils.XyzToIndex(worldPos - chunkPos, ChunkManager.chunkResolution);
@@ -572,10 +574,11 @@ namespace Terraxel.WorldGeneration
         [ReadOnly] public float2 offset;
         [ReadOnly] public int depthMultiplier;
         [ReadOnly] public int size;
+        [ReadOnly] public int seed;
         [WriteOnly, NativeDisableParallelForRestriction] public NativeArray<float> heightMap;
         public void Execute(int index)
         {
-            var value = TerraxelGenerated.GenerateDensity(Utils.IndexToXz(index, size) * depthMultiplier + offset);
+            var value = TerraxelGenerated.GenerateDensity(Utils.IndexToXz(index, size) * depthMultiplier + offset, seed);
             //TODO: Fix 2d 3d transition gaps
             /*float remainder = value - (int)value;
             remainder = math.round(remainder * 127) / 127;

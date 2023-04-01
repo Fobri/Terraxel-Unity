@@ -47,6 +47,7 @@ public class DensityManager : IDisposable {
             currentlyGenerating[i].isFullOrEmpty = new ComputeBuffer(2, 4, ComputeBufferType.Structured);
             computes[i].SetBuffer(kernel, "Result", currentlyGenerating[i].gpuBuffer);
             computes[i].SetBuffer(kernel, "FullOrEmpty", currentlyGenerating[i].isFullOrEmpty);
+            computes[i].SetInt("seed", TerraxelWorld.seed);
             commandBuffer.DispatchCompute(computes[i], kernel, 16, 1, 1);
         }
     }
@@ -273,27 +274,6 @@ public struct DensityData : IDisposable{
     public NativeHashSet<int3> fullChunks;
     public NativeHashSet<int3> emptyChunks;
 
-    
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public sbyte GetDensity(int3 worldPos){
-        var chunkPos = Utils.WorldPosToChunkPos(worldPos);
-
-        var localPosInChunk = math.abs(worldPos - chunkPos);
-
-        if(fullChunks.Contains(chunkPos)) return -127;
-        if(emptyChunks.Contains(chunkPos)) return 127;
-        if(densities.ContainsKey(chunkPos)){
-            var data = densities[chunkPos];
-            unsafe{
-            return UnsafeUtility.ReadArrayElement<sbyte>((void*)data, Utils.XyzToIndex(localPosInChunk, ChunkManager.chunkResolution));
-            }
-        }
-        return GenerateDensity(worldPos);
-    }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public sbyte GenerateDensity(int3 worldPos){
-        return TerraxelGenerated.GenerateDensity(worldPos);
-    }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IntPtr GetDensityMap(int3 chunkPos){
         unsafe{

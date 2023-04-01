@@ -82,7 +82,6 @@ public class DensityNode : TerraxelPreviewNode
 				values[y * 128 + x] = value;
 			}
 		}
-		var seed = new Unity.Mathematics.Random((uint)TerraxelWorld.seed).NextInt(0, 1_000_000);
 		var _x = inputValues[0] != null ? inputValues[0].scriptGenerator.body : Utils.floatToString(x);
 		var _y = inputValues[1] != null ? inputValues[1].scriptGenerator.body : Utils.floatToString(y);
 		var _x2d = inputValues[0] != null ? inputValues[0].computeGenerator.body : Utils.floatToString(x);
@@ -93,14 +92,14 @@ public class DensityNode : TerraxelPreviewNode
 		}
 		values.scriptGenerator.properties = scriptProperties;
 		string scriptFunctions = "float op"+base.computeOrder.ToString()+" = DensityGenerator.SurfaceNoise2D(pos2D"+ ((_x != "0.0000f" || _y != "0.0000f") ? " + new float2("+_x+","+_y+")" : "") +
-									", "+(inputValues[3] != null ? inputValues[3].scriptGenerator.body : Utils.floatToString(amplitude * 24))+", props"+base.computeOrder.ToString()+");" + System.Environment.NewLine;
+									", "+(inputValues[3] != null ? inputValues[3].scriptGenerator.body : Utils.floatToString(amplitude * 24))+", props"+base.computeOrder.ToString()+", seed);" + System.Environment.NewLine;
 		for(int i = 0; i < 5; i++){
 			if(inputValues[i] != null && inputValues[i].scriptGenerator.functions != "") scriptFunctions = inputValues[i].scriptGenerator.functions + scriptFunctions;
 		}
 		values.scriptGenerator.functions = scriptFunctions;
 		values.scriptGenerator.body = "op"+base.computeOrder.ToString();
 	    
-		string computeProperties = "static const fnl_state props"+base.computeOrder.ToString()+" = fnlCreateState(1337, "+(inputValues[2] != null ? inputValues[2].computeGenerator.body : Utils.floatToString(frequency * 0.0002f))+", "+(inputValues[4] != null ? inputValues[4].computeGenerator.body : octaves)+", "+Utils.floatToString(lacunarity)+", "+Utils.floatToString(gain)+");" + System.Environment.NewLine;
+		string computeProperties = "static const fnl_state props"+base.computeOrder.ToString()+" = fnlCreateState(seed, "+(inputValues[2] != null ? inputValues[2].computeGenerator.body : Utils.floatToString(frequency * 0.0002f))+", "+(inputValues[4] != null ? inputValues[4].computeGenerator.body : octaves)+", "+Utils.floatToString(lacunarity)+", "+Utils.floatToString(gain)+");" + System.Environment.NewLine;
 		for(int i = 0; i < 5; i++){
 			if(inputValues[i] != null && inputValues[i].computeGenerator.properties != "") computeProperties = inputValues[i].computeGenerator.properties + computeProperties;
 		}
