@@ -15,5 +15,5 @@ MonoBehaviour:
   placePlayerOnSurface: 1
   seed: 0
   renderGrass: 1
-  frustumCulling: 1
+  frustumCulling: 0
   generator: {fileID: 11400000, guid: 9f2d41799eafcf74f9944899bf6e2b03, type: 2}
