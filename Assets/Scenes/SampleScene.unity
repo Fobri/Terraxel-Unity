@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 705507994}
-  m_IndirectSpecularColor: {r: 0.18028378, g: 0.22571412, b: 0.30692285, a: 1}
+  m_IndirectSpecularColor: {r: 0.44657898, g: 0.4964133, b: 0.5748178, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -127,11 +127,6 @@ NavMeshSettings:
 GameObject:
   m_CorrespondingSourceObject: {fileID: 3186469250366012285, guid: 176f2781749996940bc0d40d81054d3f, type: 3}
   m_PrefabInstance: {fileID: 751448115071167178}
-  m_PrefabAsset: {fileID: 0}
---- !u!1 &140530054 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 3276619212830280649, guid: c822f91997f3a8649ae1b0ddaac74b61, type: 3}
-  m_PrefabInstance: {fileID: 4817792346050605795}
   m_PrefabAsset: {fileID: 0}
 --- !u!1 &548729968
 GameObject:
@@ -497,11 +492,24 @@ MonoBehaviour:
   m_GameObject: {fileID: 1802255372}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: cd49fd2ef8baff349a37495f4625566e, type: 3}
+  m_Script: {fileID: 11500000, guid: 33aaa202948b1d445b4b2b6257a5a5fb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   worldSettings: {fileID: 11400000, guid: 8b04c464dba9af04db856e93c68e9efb, type: 2}
-  player: {fileID: 140530054}
+  player: {fileID: 4817792346050605796}
+  debugMode: 0
+  drawPlayerBounds: 0
+  drawChunkBounds: 0
+  drawDensityMaps: 0
+  drawChunkVariables:
+    position: 0
+    chunkState: 0
+    depth: 0
+    genTime: 0
+    vertexCount: 0
+    indexCount: 0
+    dirMask: 0
+    type: 0
 --- !u!1001 &751448115071167178
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -693,6 +701,11 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: c822f91997f3a8649ae1b0ddaac74b61, type: 3}
+--- !u!1 &4817792346050605796 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3276619212830280649, guid: c822f91997f3a8649ae1b0ddaac74b61, type: 3}
+  m_PrefabInstance: {fileID: 4817792346050605795}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &4817792346050605797 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 3276619212081290564, guid: c822f91997f3a8649ae1b0ddaac74b61, type: 3}

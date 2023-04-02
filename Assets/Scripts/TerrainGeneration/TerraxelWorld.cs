@@ -8,90 +8,69 @@ using Terraxel.DataStructures;
 using Unity.Jobs;
 using UnityEngine.Rendering;
 using System;
-#if ODIN_INSPECTOR    
-using Sirenix.OdinInspector;
-using ReadOnly = Sirenix.OdinInspector.ReadOnlyAttribute;
-#endif
 using System.Linq;
 using UnityEditor;
 using TMPro;
 using Unity.Profiling;
 
-[CreateAssetMenu(fileName = "World Settings", menuName = "Terraxel/World Settings", order = 0), System.Serializable]
-public class TerraxelWorld : ScriptableObject, IDisposable
+[DisallowMultipleComponent]
+public class TerraxelWorld : MonoBehaviour
 {
     public enum WorldState { DENSITY_UPDATE, MESH_UPDATE, IDLE }
-    public bool placePlayerOnSurface = true;
-    public GameObject debugCanvas;
-    public int3 worldOffset = Int16.MaxValue;
-    public int3 playerOffset = Int16.MaxValue;
-    public int m_seed;
+    [HideInInspector]
+    public TerraxelWorldSettings worldSettings;
+    static TerraxelWorldSettings m_worldSettings;
+    [HideInInspector]
+    public GameObject player;
     
+    Transform poolParent;
+    Transform activeParent;
+    GameObject debugCanvas;
+    int3 worldOffset = Int16.MaxValue;
+    int3 playerOffset = Int16.MaxValue;
+
     ComputeShader noiseShader;
     GameObject chunkPrefab;
-    GameObject player;
     int baseChunkSize = ChunkManager.chunkResolution * Octree.depthMultipliers[ChunkManager.lodLevels - 2];
     
     //STATIC VARS
-    public static bool renderGrass = true;
     public static DensityManager DensityManager {get; private set;}
     public static ChunkManager ChunkManager {get; private set;}
     public static bool worldUpdatePending {get; private set;}
-    public static bool frustumCulling = true;
+    public static bool frustumCulling{
+        get{
+            return m_worldSettings.frustumCulling;
+        }
+    }
+    public static bool renderGrass{
+        get{
+            return m_worldSettings.renderGrass;
+        }
+    }
     public static BoundingBox playerBounds;
-    [ShowInInspector]
     public static WorldState worldState = WorldState.IDLE;
     public static Camera renderCamera;
     public static int seed;
 
     //DEBUG
-    [DisableInPlayMode]
-    public bool debugMode;
-#if ODIN_INSPECTOR    
-[BoxGroup("DEBUG"), HideIf("@!debugMode"), ReadOnly]
-#endif
-    public int chunkCount;
-#if ODIN_INSPECTOR    
-    [BoxGroup("DEBUG"), HideIf("@!debugMode"), ReadOnly]
-#endif
-    public int freeBufferCount;
-#if ODIN_INSPECTOR    
-    [BoxGroup("DEBUG"), HideIf("@!debugMode"), ReadOnly, InfoBox("Temporary buffers available. Should be @MemoryManager.densityMapCount")]
-#endif
-    public int freeDensityMaps;
-#if ODIN_INSPECTOR    
-    [BoxGroup("DEBUG"), HideIf("@!debugMode"), ReadOnly]
-#endif
-    public int memoryUsed;
-#if ODIN_INSPECTOR    
-    [BoxGroup("DEBUG"), HideIf("@!debugMode"), ReadOnly]
-#endif
-    public int vertCount;
-#if ODIN_INSPECTOR    
-    [BoxGroup("DEBUG"), HideIf("@!debugMode"), ReadOnly]
-#endif
-    public int indexCount;
-#if ODIN_INSPECTOR    
-    [BoxGroup("DEBUG"), HideIf("@!debugMode"), ReadOnly]
-#endif
-    public float totalGenTime;
+    [SerializeField, HideInInspector]
+    private bool debugMode;
+    private int chunkCount;
+    private int freeBufferCount;
+    private int freeDensityMaps;
+    private int memoryUsed;
+    private int vertCount;
+    private int indexCount;
+    private float totalGenTime;
 #if UNITY_EDITOR
-#if ODIN_INSPECTOR    
-    [BoxGroup("DEBUG"), HideIf("@!debugMode")]
-#endif
-    public bool drawPlayerBounds;
-#if ODIN_INSPECTOR    
-    [BoxGroup("DEBUG"), HideIf("@!debugMode")]
-#endif
-    public bool drawChunkBounds;
-    #if ODIN_INSPECTOR    
-    [BoxGroup("DEBUG"), HideIf("@!debugMode")]
-#endif
-    public bool drawDensityMaps;
-#if ODIN_INSPECTOR    
-    [BoxGroup("DEBUG"), HideIf("@!debugMode")]
-#endif
-    public ChunkDebugView drawChunkVariables;
+    [SerializeField]
+    private bool drawPlayerBounds;
+    [SerializeField]
+    private bool drawChunkBounds;
+    [SerializeField]
+    private bool drawDensityMaps;
+    [SerializeField]
+    private ChunkDebugView drawChunkVariables;
     [Serializable]
     public class ChunkDebugView{
         public bool position;
@@ -112,21 +91,22 @@ public class TerraxelWorld : ScriptableObject, IDisposable
 float totalChunkGenTime;
 float totalDensityGenTime;
 TextMeshProUGUI[] debugLabels;
-    public void Init(Transform poolParent, Transform activeParent, GameObject player){
+    public void Start(){
 #if !UNITY_EDITOR
         frustumCulling = true;
 #endif
-        if(m_seed == 0){
-            seed = UnityEngine.Random.Range(Int16.MinValue, Int16.MaxValue);
-        }else seed = m_seed;
-        if(debugMode){
-            debugCanvas = Resources.Load<GameObject>("Prefabs/TerraxelDebug");
-            var canv = Instantiate(debugCanvas);
-            debugLabels = new TextMeshProUGUI[canv.transform.childCount];
-            for(int i = 0; i < debugLabels.Length; i++){
-                debugLabels[i] = canv.transform.GetChild(i).GetComponent<TextMeshProUGUI>();
-            }
+        m_worldSettings = worldSettings;
+        seed = worldSettings.seed == 0 ? UnityEngine.Random.Range(Int16.MinValue, Int16.MaxValue) : worldSettings.seed;
+        debugCanvas = Resources.Load<GameObject>("Prefabs/TerraxelDebug");
+        var canv = Instantiate(debugCanvas);
+        debugLabels = new TextMeshProUGUI[canv.transform.childCount];
+        for(int i = 0; i < debugLabels.Length; i++){
+            debugLabels[i] = canv.transform.GetChild(i).GetComponent<TextMeshProUGUI>();
         }
+        poolParent = new GameObject("Pooled Chunks").transform;
+        poolParent.SetParent(transform);
+        activeParent = new GameObject("Active Chunks").transform;
+        activeParent.SetParent(transform);
         chunkPrefab = Resources.Load<GameObject>("Prefabs/Chunk");
         noiseShader = Resources.Load<ComputeShader>("Generated/TerraxelGenerated");
         renderCamera = Camera.main;
@@ -136,14 +116,13 @@ TextMeshProUGUI[] debugLabels;
         DensityManager.Init(noiseShader);
         ChunkManager = new ChunkManager();
         ChunkManager.Init(poolParent, activeParent, chunkPrefab);
-        this.player = player;
         player.SetActive(false);
-        if(placePlayerOnSurface){
+        if(worldSettings.placePlayerOnSurface){
             var startHeight = TerraxelGenerated.GenerateDensity(new float2(player.transform.position.x, player.transform.position.z), seed) + 0.1f;
             player.transform.position = player.transform.position * new float3(1,0,1) + new float3(0,startHeight, 0);
         }
     }
-    public void Run(){
+    public void Update(){
         JobRunner.Update();
         if(debugMode){
             var chunkDatas = ChunkManager.GetDebugArray();
@@ -241,7 +220,7 @@ TextMeshProUGUI[] debugLabels;
         Debug.Log(-1 >> 24);
         //0b1000_0000_0000_0000_0000_0000_0000_0000
     }
-    public void Dispose(){
+    public void OnDisable(){
         JobRunner.CompleteAll();
         DensityManager.Dispose();
         MemoryManager.Dispose();
@@ -249,7 +228,7 @@ TextMeshProUGUI[] debugLabels;
         playerOffset = Int16.MaxValue;
     }
     #if UNITY_EDITOR
-    public void DebugDraw()
+    public void OnDrawGizmos()
     {
         if(!debugMode) return;
         

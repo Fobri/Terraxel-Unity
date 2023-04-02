@@ -57,7 +57,7 @@ public class TerraxelWindow : EditorWindow
     }
 
     void DrawTerraxelSettingsWindow(){
-        TerraxelWorld worldSettings = Object.FindObjectOfType<TerraxelBehaviour>()?.worldSettings;
+        TerraxelWorldSettings worldSettings = Object.FindObjectOfType<TerraxelWorld>()?.worldSettings;
         if(worldSettings == null){
             m_rightPanel.Add(new Label("No Terraxel instance found in scene. Make sure you have a GameObject with the TerraxelBehaviour component and have assigned worldsettings."));
         }else{
@@ -70,8 +70,8 @@ public class TerraxelWindow : EditorWindow
             HelpBox seedHelp = new HelpBox("If seed is 0 a random seed is generated on startup", HelpBoxMessageType.Info);
             m_rightPanel.Add(seedHelp);
             IntegerField seedField = new IntegerField("Seed");
-            seedField.value = worldSettings.m_seed;
-            seedField.RegisterValueChangedCallback((change) => worldSettings.m_seed = change.newValue);
+            seedField.value = worldSettings.seed;
+            seedField.RegisterValueChangedCallback((change) => worldSettings.seed = change.newValue);
             m_rightPanel.Add(seedField);
 
             Toggle placePlayerOnSurface = new Toggle("Place player on surface");
@@ -80,11 +80,16 @@ public class TerraxelWindow : EditorWindow
             m_rightPanel.Add(placePlayerOnSurface);
 
             Toggle frustumCulling = new Toggle("Frustum culling");
-            frustumCulling.value = TerraxelWorld.frustumCulling;
-            frustumCulling.RegisterValueChangedCallback((change) => TerraxelWorld.frustumCulling = change.newValue);
+            frustumCulling.value = worldSettings.frustumCulling;
+            frustumCulling.RegisterValueChangedCallback((change) => worldSettings.frustumCulling = change.newValue);
             m_rightPanel.Add(frustumCulling);
 
-            Toggle debugMode = new Toggle("Enable debug mode");
+            Toggle renderGrass = new Toggle("Enable Instanced renderer");
+            renderGrass.value = worldSettings.renderGrass;
+            renderGrass.RegisterValueChangedCallback((change) => worldSettings.renderGrass = change.newValue);
+            m_rightPanel.Add(renderGrass);
+
+            /*Toggle debugMode = new Toggle("Enable debug mode");
             debugMode.value = worldSettings.debugMode;
             debugMode.RegisterValueChangedCallback((change) => {worldSettings.debugMode = change.newValue; m_rightPanel.Clear(); DrawTerraxelSettingsWindow();});
             m_rightPanel.Add(debugMode);
@@ -140,7 +145,7 @@ public class TerraxelWindow : EditorWindow
                 drawType.value = worldSettings.drawChunkVariables.type;
                 drawType.RegisterValueChangedCallback((change) => worldSettings.drawChunkVariables.type = change.newValue);
                 m_rightPanel.Add(drawType);
-            }
+            }*/
         }
     }
     void DrawTerraxelBiomesWindow(){
