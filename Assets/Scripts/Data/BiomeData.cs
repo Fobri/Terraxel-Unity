@@ -7,6 +7,11 @@ using Terraxel.DataStructures;
 public class BiomeData : ScriptableObject
 {
     public string biomeName;
-    public GrassData[] grass;
-    public TreeData[] trees;
+    public InstancingData[] instances;
+
+    public JobInstancingData jobInstances;
+
+    public void Init(){
+        jobInstances = JobInstancingData.CreateFromInstancingData(instances);
+    }
 }

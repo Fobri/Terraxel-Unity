@@ -25,4 +25,5 @@ public class TerraxelWorldSettings : ScriptableObject
     public int seed;
     public bool renderGrass;
     public bool frustumCulling;
+    public WorldData generator;
 }

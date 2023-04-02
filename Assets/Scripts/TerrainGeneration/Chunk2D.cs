@@ -63,8 +63,7 @@ public class Chunk2D : BaseChunk
             chunkPos = (int3)WorldPosition,
             depthMultiplier = depthMultiplier / 2,
             isEmpty = isEmpty,
-            grassData = base.grassRenderer.data,
-            treeData = base.treeRenderer.data,
+            instancingData = instanceDatas,
             rng = base.rng,
             renderBounds = renderBoundsData
         };

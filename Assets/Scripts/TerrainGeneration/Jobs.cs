@@ -22,8 +22,7 @@ namespace Terraxel.WorldGeneration
         [ReadOnly] public int depthMultiplier;
         [WriteOnly] public NativeReference<bool> isEmpty;
         [WriteOnly] public NativeArray<VertexData> vertices;
-        [WriteOnly] public NativeList<InstanceData> grassData;
-        [WriteOnly] public NativeList<InstanceData> treeData;
+        public JobInstancingData instancingData;
         [WriteOnly, NativeDisableParallelForRestriction] public NativeArray<ushort> indices;
         public Unity.Mathematics.Random rng;
         public NativeReference<float3x2> renderBounds;
@@ -42,12 +41,15 @@ namespace Terraxel.WorldGeneration
             bounds.c1 = math.max(_vertPos, bounds.c1);
             renderBounds.Value = bounds;
             if(height > chunkPos.y && height < chunkPos.y + chunkSize * depthMultiplier){
-                if(angle > 0.9f){
-                    if(depthMultiplier < 8 && rng.NextFloat(0, 100) < 2){
-                        treeData.Add(new InstanceData(float4x4.TRS(_vertPos + chunkPos, Utils.AlignWithNormal(normal, rng), new float3(rng.NextFloat(1f, 2f)))));
-                    }
-                    else if(depthMultiplier < 4 && rng.NextFloat(0, 100) < 30){
-                        grassData.Add(new InstanceData(float4x4.TRS(_vertPos + chunkPos, Utils.AlignWithNormal(normal, rng), new float3(0.2f,0.2f, rng.NextFloat(0.3f, 0.5f)))));
+                var chance = 0f;
+                for(int i = 0; i < 5; i++){
+                    if(instancingData[i].density == 0) continue;
+                    if(instancingData[i].maxLod < depthMultiplier) continue;
+                    chance = rng.NextFloat(0, 100);
+                    if(angle > instancingData[i].angleLimit.x && angle < instancingData[i].angleLimit.y){
+                        if(chance > instancingData[i].density) continue;
+                        instancingData[i].renderData.Add(new InstanceData(float4x4.TRS(_vertPos + chunkPos, Utils.AlignWithNormal(normal, rng), rng.NextFloat3(instancingData[i].sizeVariation.c0, instancingData[i].sizeVariation.c1))));
+                        break;
                     }
                 }
                 if(vertPos.x > 0 && vertPos.y > 0){
@@ -258,8 +260,8 @@ namespace Terraxel.WorldGeneration
         public NativeList<TransitionVertexData> vertices;
         public NativeList<ushort> triangles;
         public MeshingHelper helper;
-        [WriteOnly] public NativeList<InstanceData> grassData;
-        [WriteOnly] public NativeList<InstanceData> treeData;
+        
+        public JobInstancingData instancingData;
         public TempBuffer vertexIndices;
         public Unity.Mathematics.Random rng;
         public NativeReference<float3x2> renderBounds;
@@ -369,11 +371,17 @@ namespace Terraxel.WorldGeneration
                 triangles.Add(cellIndices[Tables.RegularCellData[cell][i * 3 + 3]]);
                 float3 midPoint = (v1.Primary + v2.Primary + v3.Primary) * 0.333f;
                 float3 normal = (v1.normal + v2.normal + v3.normal) * 0.333f;
-                if(v1.textureIndex < 0.1f && v2.textureIndex < 0.1f && v3.textureIndex < 0.1f && rng.NextFloat(0, 100) < 0.5f){
-                    treeData.Add(new InstanceData(float4x4.TRS(midPoint + helper.chunkPos, Utils.AlignWithNormal(normal, rng), new float3(rng.NextFloat(1f, 2f)))));
-                }
-                else if(v1.textureIndex < 0.1f && v2.textureIndex < 0.1f && v3.textureIndex < 0.1f && rng.NextFloat(0, 100) < 45){
-                    grassData.Add(new InstanceData(float4x4.TRS(midPoint + helper.chunkPos, Utils.AlignWithNormal(normal, rng), new float3(0.2f,0.2f, rng.NextFloat(0.3f, 0.5f)))));
+                var angle = math.dot(normal, new float3(0,1,0));
+                var chance = 0f;
+                for(int i2 = 0; i2 < 5; i2++){
+                    if(instancingData[i2].density == 0) continue;
+                    if(instancingData[i2].maxLod < helper.depthMultiplier) continue;
+                    if(angle > instancingData[i2].angleLimit.x && angle < instancingData[i2].angleLimit.y){
+                        chance = rng.NextFloat(0, 100);
+                        if(chance > instancingData[i2].density) continue;
+                        instancingData[i2].renderData.Add(new InstanceData(float4x4.TRS(midPoint + helper.chunkPos, Utils.AlignWithNormal(normal, rng), rng.NextFloat3(instancingData[i2].sizeVariation.c0, instancingData[i2].sizeVariation.c1))));
+                        break;
+                    }
                 }
             }
         }

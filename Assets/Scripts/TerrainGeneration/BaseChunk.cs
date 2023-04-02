@@ -12,11 +12,7 @@ public abstract class BaseChunk : Octree
 {
     public const MeshUpdateFlags MESH_UPDATE_FLAGS = MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds | MeshUpdateFlags.DontResetBoneBounds;
     protected bool active = true;
-    protected static Mesh grassMesh;
-    protected static Mesh treeMesh;
-    protected static Mesh leafMesh;
     protected Unity.Mathematics.Random rng;
-    static Transform cam;
     //public Matrix4x4[] _grassPositions;
     protected NativeReference<float3x2> renderBoundsData;
     public Bounds renderBounds;
@@ -28,9 +24,8 @@ public abstract class BaseChunk : Octree
     public int idxCount;
     public bool hasMesh;
     public byte dirMask;
-    public InstancedRenderer grassRenderer;
-    public InstancedRenderer treeRenderer;
-    public InstancedRenderer leafRenderer;
+    public JobInstancingData instanceDatas;
+    public InstancedRenderer[] instanceRenderers;
     public abstract bool CanBeCreated{get;}
     protected MaterialPropertyBlock propertyBlock;
     
@@ -41,20 +36,19 @@ public abstract class BaseChunk : Octree
         desc.topology = MeshTopology.Triangles;
         chunkState = ChunkState.INVALID;
         disposeStatus = DisposeState.NOTHING;
-        grassRenderer = new InstancedRenderer((Resources.Load("Materials/GrassMaterial", typeof(Material)) as Material), grassMesh, ShadowCastingMode.Off);
-        treeRenderer = new InstancedRenderer((Resources.Load("Materials/Bark_Pine", typeof(Material)) as Material), treeMesh, ShadowCastingMode.On);
-        leafRenderer = new InstancedRenderer((Resources.Load("Materials/Leaves_Pine", typeof(Material)) as Material), leafMesh, ShadowCastingMode.On);
+        var biomeData = TerraxelWorld.GetBiomeData(0);
+        instanceDatas = biomeData.jobInstances;
+        instanceRenderers = new InstancedRenderer[5];
+        for(int i = 0; i < 5; i++){
+            if(instanceDatas[i].density > 0){
+                instanceRenderers[i] = new InstancedRenderer(biomeData.instances[i].renderData, ShadowCastingMode.On);
+            }
+        }
         propertyBlock = new MaterialPropertyBlock();
         rng = new Unity.Mathematics.Random((uint)TerraxelWorld.seed);
     }
     public BaseChunk() : base(){
 
-    }
-    static BaseChunk(){
-        grassMesh = Resources.Load("Meshes/GrassMesh", typeof(Mesh)) as Mesh;
-        treeMesh = Resources.Load("Meshes/PineTrunk", typeof(Mesh)) as Mesh;
-        leafMesh = Resources.Load("Meshes/PineLeaves", typeof(Mesh)) as Mesh;
-        cam = Camera.main.transform;
     }
     public void SetActive(bool active){
         this.active = active;
@@ -69,9 +63,11 @@ public abstract class BaseChunk : Octree
     }
     protected void RenderInstances(){
         if(!TerraxelWorld.renderGrass) return;
-        grassRenderer.Render();
-        treeRenderer.Render();
-        leafRenderer.Render();
+        for(int i = 0; i < 5; i++){
+            if(instanceDatas[i].density > 0){
+                instanceRenderers[i].Render();
+            }
+        }
     }
     internal override void OnJobsReady()
     {
@@ -85,9 +81,10 @@ public abstract class BaseChunk : Octree
         PushInstanceData();
     }
     protected void PushInstanceData(){
-        grassRenderer.PushData();
-        leafRenderer.PushData(treeRenderer.data);
-        treeRenderer.PushData();
+        for(int i = 0; i < 5; i++){
+            instanceRenderers[i]?.PushData();
+            instanceDatas[i].Dispose();
+        }
     }
     public void ScheduleMeshUpdate(){
         propertyBlock.SetVector("_WorldPos", new float4(WorldPosition, 1));
@@ -95,10 +92,14 @@ public abstract class BaseChunk : Octree
         idxCount = 0;
         chunkState = ChunkState.DIRTY;
         genTime = Time.realtimeSinceStartup;
-        grassRenderer.Dispose();
-        treeRenderer.Dispose();
-        grassRenderer.AllocateData();
-        treeRenderer.AllocateData();
+        for(int i = 0; i < 5; i++){
+            if(instanceDatas[i].density > 0){
+                var dt = instanceDatas[i];
+                dt.renderData = MemoryManager.GetInstancingData();
+                instanceDatas[i] = dt;
+                instanceRenderers[i].data = instanceDatas[i].renderData;
+            }
+        }
         //leafRenderer.AllocateData();
         renderBoundsData = new NativeReference<float3x2>(Allocator.TempJob);
         OnScheduleMeshUpdate();
@@ -109,9 +110,9 @@ public abstract class BaseChunk : Octree
     public abstract void ApplyMesh();
     protected abstract void OnFreeBuffers();
     public void FreeBuffers(){
-        grassRenderer?.Dispose();
-        treeRenderer?.Dispose();
-        leafRenderer?.Dispose();
+        for(int i = 0; i < 5; i++){
+            instanceDatas[i].Dispose();
+        }
         OnFreeBuffers();
     }
     public virtual void OnMeshReady(){

@@ -39,6 +39,100 @@ namespace Terraxel.DataStructures
             this.matrix = matrix;
         }
     }
+    [System.Serializable]
+    public class MeshMaterialPair{
+        [SerializeField]
+        public Mesh mesh;
+        [SerializeField]
+        public Material material;
+
+        public MeshMaterialPair(Mesh mesh, Material material){
+            this.mesh = mesh;
+            this.material = material;
+        }
+    }
+    public struct NativeInstanceData : IDisposable{
+        [NativeDisableContainerSafetyRestriction]
+        public NativeList<InstanceData> renderData;
+        public float2 angleLimit;
+        public float3x2 sizeVariation;
+        public float density;
+        public int maxLod;
+
+        public NativeInstanceData(InstancingData instancingData){
+            renderData = default;
+            angleLimit = instancingData.angleLimit;
+            sizeVariation = instancingData.sizeVariation;
+            density = instancingData.density;
+            maxLod = Octree.depthMultipliers[instancingData.maxLod];
+        }
+
+        public void Dispose(){
+            if(!renderData.IsCreated) return;
+            MemoryManager.ReturnInstanceData(renderData);
+        }
+    }
+    public struct JobInstancingData : IDisposable{
+        public NativeInstanceData d1;
+        public NativeInstanceData d2;
+        public NativeInstanceData d3;
+        public NativeInstanceData d4;
+        public NativeInstanceData d5;
+
+        public static JobInstancingData CreateFromInstancingData(InstancingData[] data){
+            JobInstancingData result = new JobInstancingData();
+            for(int i = 0; i < data.Length; i++){
+                if(data[i] == null) continue;
+                result[i] = new NativeInstanceData(data[i]);
+            }
+            return result;
+        }
+
+        public NativeInstanceData this[int index]{
+            get{
+                switch(index){
+                    case 0:
+                    return d1;
+                    case 1:
+                    return d2;
+                    case 2:
+                    return d3;
+                    case 3:
+                    return d4;
+                    case 4:
+                    return d5;
+                    default:
+                    throw new IndexOutOfRangeException("Biome can only have 5 different types of instanced objects");
+                }
+            }set{
+                switch(index){
+                    case 0:
+                    d1 = value;
+                    break;
+                    case 1:
+                    d2 = value;
+                    break;
+                    case 2:
+                    d3 = value;
+                    break;
+                    case 3:
+                    d4 = value;
+                    break;
+                    case 4:
+                    d5 = value;
+                    break;
+                    default:
+                    throw new IndexOutOfRangeException("Biome can only have 5 different types of instanced objects");
+                }
+            }
+        }
+
+        public void Dispose(){
+            for(int i = 0; i < 5; i++){
+                this[i].Dispose();
+            }
+        }
+    }
     public struct DensityCacheInstance{
         [NativeDisableUnsafePtrRestriction]
         public IntPtr cachedDensityMap;
@@ -103,46 +197,6 @@ namespace Terraxel.DataStructures
             indexBuffer.Dispose();
             heightMap.Dispose();
         }
-    }
-    public class InstancingData : ScriptableObject{
-        [SerializeField]
-        public Mesh mesh;
-        [SerializeField]
-        public Material material;
-        [SerializeField]
-        public float2 angleLimit;
-        
-        [SerializeField]
-        public float3x2 sizeVariation;
-    }
-    [CreateAssetMenu(fileName = "Grass Data", menuName = "Terraxel/Grass", order = 1), System.Serializable]
-    public class GrassData : InstancingData{
-        [SerializeField]
-        public float density;
-    }
-    [CreateAssetMenu(fileName = "Tree Data", menuName = "Terraxel/Tree", order = 1), System.Serializable]
-    public class TreeData : GrassData{
-        [SerializeField]
-        public GameObject colliderObject;
-    }
-    public struct JobInstancingData : IDisposable{
-        public InstanceProperties c0;
-        public InstanceProperties c1;
-        public InstanceProperties c2;
-        public InstanceProperties c3;
-        public InstanceProperties c4;
-
-        public void Dispose(){
-            MemoryManager.ReturnInstanceData(c0.matrices);
-            MemoryManager.ReturnInstanceData(c1.matrices);
-            MemoryManager.ReturnInstanceData(c2.matrices);
-            MemoryManager.ReturnInstanceData(c3.matrices);
-            MemoryManager.ReturnInstanceData(c4.matrices);
-        }
-    }
-    public struct InstanceProperties{
-        public NativeList<InstanceData> matrices;
-        public float3 lastInstancePos;
     }
     public struct DensityGenerator{
         
@@ -298,6 +352,11 @@ namespace Terraxel.DataStructures
         }
     }
     public class Utils{
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static float Angle(float3 a, float3 b){
+            return (1/math.cos(math.dot(a,b)));
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static quaternion AlignWithNormal(float3 normal, Unity.Mathematics.Random rng){

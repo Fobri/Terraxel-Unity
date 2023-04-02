@@ -12,6 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2d5e6d8e364ab8a43a117a1608dcfabe, type: 3}
   m_Name: new biome
   m_EditorClassIdentifier: 
-  grass:
-  - {fileID: 0}
-  trees: []
+  biomeName: Test Biome
+  instances:
+  - {fileID: 11400000, guid: f42391f1df53d844395d09b8c70b0ede, type: 2}
+  - {fileID: 11400000, guid: 3f607f4bf02b335458bc002bdd635d62, type: 2}
+  - {fileID: 11400000, guid: aad4671741c7f2344b0663eb44b1e6c6, type: 2}

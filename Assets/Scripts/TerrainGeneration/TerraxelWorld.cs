@@ -111,6 +111,7 @@ TextMeshProUGUI[] debugLabels;
         noiseShader = Resources.Load<ComputeShader>("Generated/TerraxelGenerated");
         renderCamera = Camera.main;
         MemoryManager.Init();
+        m_worldSettings.generator.Init();
         playerBounds = new BoundingBox(player.transform.position, new float3(ChunkManager.chunkResolution));
         DensityManager = new DensityManager();
         DensityManager.Init(noiseShader);
@@ -219,6 +220,9 @@ TextMeshProUGUI[] debugLabels;
     public static void Test(){
         Debug.Log(-1 >> 24);
         //0b1000_0000_0000_0000_0000_0000_0000_0000
+    }
+    public static BiomeData GetBiomeData(int biomeIndex){
+        return m_worldSettings.generator.GetBiomeData(biomeIndex);
     }
     public void OnDisable(){
         JobRunner.CompleteAll();
