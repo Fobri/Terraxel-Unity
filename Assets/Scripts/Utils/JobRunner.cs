@@ -56,7 +56,7 @@ public abstract class JobRunner
             jobHandle = default;
             hasCompleted = true;
             activeJobRunners.Remove(this);
-            OnJobsReady();
+            JobsReady();
         }
     }
     internal bool IsReady{
@@ -65,7 +65,7 @@ public abstract class JobRunner
             return jobHandle.IsCompleted && hasCompleted;
         }
     }
-    internal abstract void OnJobsReady();
+    internal abstract void JobsReady();
     public void CompleteJobs(){
         jobHandle.Complete();
     }

@@ -155,6 +155,7 @@ public abstract class Octree : JobRunner
         var octs = CreateOctants(region);
         for(int i = 0; i < 8; i++){
             children[i].region = octs[i];
+            (children[i] as BaseChunk).RecalculateBounds();
             var octants = CreateOctants(children[i].region);
             for(int s = 0; s < 8; s++){
                 children[i].children[s] = instanceByPosition[(int3)octants[s].center - size / 2];
