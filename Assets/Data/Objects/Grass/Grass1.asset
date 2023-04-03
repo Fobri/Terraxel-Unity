@@ -27,6 +27,6 @@ MonoBehaviour:
       x: 0.5
       y: 0.5
       z: 0.5
-  density: 6
+  density: 4
   maxLod: 2
   colliderObject: {fileID: 0}
