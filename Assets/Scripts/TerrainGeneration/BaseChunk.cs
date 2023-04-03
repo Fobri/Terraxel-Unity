@@ -16,6 +16,7 @@ public abstract class BaseChunk : Octree
     //public Matrix4x4[] _grassPositions;
     protected NativeReference<float3x2> renderBoundsData;
     public Bounds renderBounds;
+    float3x2 boundSource;
     public ChunkState chunkState = ChunkState.INVALID;
     public OnMeshReadyAction onMeshReady = OnMeshReadyAction.ALERT_PARENT;
     public DisposeState disposeStatus = DisposeState.NOTHING;
@@ -36,6 +37,7 @@ public abstract class BaseChunk : Octree
         desc.topology = MeshTopology.Triangles;
         chunkState = ChunkState.INVALID;
         disposeStatus = DisposeState.NOTHING;
+        
         var biomeData = TerraxelWorld.GetBiomeData(0);
         instanceDatas = biomeData.jobInstances;
         instanceRenderers = new InstancedRenderer[5];
@@ -69,14 +71,16 @@ public abstract class BaseChunk : Octree
             }
         }
     }
-    internal override void OnJobsReady()
+    internal override void JobsReady()
     {
         if(renderBoundsData.IsCreated){
-            renderBounds = new Bounds((renderBoundsData.Value.c1 - renderBoundsData.Value.c0) * 0.5f + WorldPosition, renderBoundsData.Value.c1 - renderBoundsData.Value.c0);
+            boundSource = renderBoundsData.Value;
             renderBoundsData.Dispose();
-        }else{
-            renderBounds = new Bounds(region.center, region.bounds);
         }
+        RecalculateBounds();
+        OnJobsReady();
+    }
+    protected virtual void OnJobsReady(){
         ApplyMesh();
         PushInstanceData();
     }
@@ -101,7 +105,8 @@ public abstract class BaseChunk : Octree
             }
         }
         //leafRenderer.AllocateData();
-        renderBoundsData = new NativeReference<float3x2>(Allocator.TempJob);
+        boundSource = new float3x2(new float3(ChunkManager.chunkResolution * depthMultiplier), 0f);
+        renderBoundsData = new NativeReference<float3x2>(boundSource, Allocator.TempJob);
         OnScheduleMeshUpdate();
         
     }
@@ -112,6 +117,7 @@ public abstract class BaseChunk : Octree
     public void FreeBuffers(){
         for(int i = 0; i < 5; i++){
             instanceDatas[i].Dispose();
+            instanceRenderers?[i]?.Dispose();
         }
         OnFreeBuffers();
     }
@@ -135,5 +141,8 @@ public abstract class BaseChunk : Octree
     public override string ToString()
     {
         return "Chunk " + WorldPosition.ToString();
+    }
+    public void RecalculateBounds(){
+        renderBounds = new Bounds((boundSource.c1 - boundSource.c0) * 0.5f + WorldPosition + boundSource.c0, boundSource.c1 - boundSource.c0);
     }
 }

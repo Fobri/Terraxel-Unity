@@ -12,17 +12,17 @@ public class MemoryManager{
     class MemoryAllocation<T> : IDisposable where T : IDisposable{
         public MemoryAllocation(){
             freeInstances = new Queue<T>();
-        }
-        public void InitArray(){
-            allInstances = freeInstances.ToArray();
+            allInstances = new List<T>();
         }
         public int Count{
             get{
                 return freeInstances.Count;
             }
         }
-        public void Enqueue(T t){
+        public void Enqueue(T t, bool newInstance){
             freeInstances.Enqueue(t);
+            if(newInstance)
+                allInstances.Add(t);
         }
         public T Dequeue(){
             return freeInstances.Dequeue();
@@ -32,20 +32,20 @@ public class MemoryManager{
                 buffer.Dispose();
             }
         }
-        public Queue<T> freeInstances;
-        public T[] allInstances;
+        Queue<T> freeInstances;
+        List<T> allInstances;
     }
-    public const int maxBufferCount = 128*4;
-    public const int simpleMeshAmount = 128*4;
-    public const int densityCount = 128*6;
+    public const int densityCount = 128*4;
     public static int maxConcurrentOperations = SystemInfo.processorCount - 2;
-    public const int maxVertexCount = 10000;
+    public const int assumedVertexCount = 7000;
     public const int densityMapLength = (ChunkManager.chunkResolution)*(ChunkManager.chunkResolution)*(ChunkManager.chunkResolution);
-    public const int grassBufferAmount = 10000;
-    static MemoryAllocation<MeshData> meshDatas;
-    static MemoryAllocation<SimpleMeshData> simpleMeshDatas;
-    static MemoryAllocation<TempBuffer> vertexIndexBuffers;
-    static MemoryAllocation<NativeList<InstanceData>> grassDatas;
+    public const int initialPoolSize = 100;
+    public const int maxChunkCount = 512;
+    static MemoryAllocation<MeshData> meshDatas = new MemoryAllocation<MeshData>();
+    static MemoryAllocation<SimpleMeshData> simpleMeshDatas = new MemoryAllocation<SimpleMeshData>();
+    static MemoryAllocation<TempBuffer> vertexIndexBuffers = new MemoryAllocation<TempBuffer>();
+    static MemoryAllocation<NativeList<InstanceData>> instancingDatas = new MemoryAllocation<NativeList<InstanceData>>();
+    static MemoryAllocation<ComputeBuffer> instancingBuffers = new MemoryAllocation<ComputeBuffer>();
     static Queue<NativeArray<sbyte>> freeDensityMaps;
     static NativeArray<sbyte> densityMap;
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
@@ -54,56 +54,36 @@ public class MemoryManager{
     static List<NativeArray<int2>> meshStarts = new List<NativeArray<int2>>();
 
     public static void Init(){
-        AllocateMeshData();
-        AllocateTempBuffers();
-        AllocateGrassData();
-    }
-    static void AllocateGrassData(){
-        grassDatas = new MemoryAllocation<NativeList<InstanceData>>();
-        for(int i = 0; i < grassBufferAmount; i++){
-            grassDatas.Enqueue(new NativeList<InstanceData>(4500, Allocator.Persistent));
+        for(int i = 0; i < initialPoolSize; i++){
+            AllocateMeshData();
+            AllocateInstancingData();
+            AllocateSimpleMeshData();
         }
-        grassDatas.InitArray();
+        AllocateDensityMaps();
+        AllocateTempBuffers();
+    }
+    static void AllocateInstancingData(){
+        instancingDatas.Enqueue(new NativeList<InstanceData>(4500, Allocator.Persistent), true);
     }
     public static void AllocateSimpleMeshData(){
-        /*var verts = source.vertices;
-        NativeArray<VertexData> vertices = new NativeArray<VertexData>(verts.Length, Allocator.Temp);
-        var tris = source.triangles;
-        NativeArray<ushort> indices = new NativeArray<ushort>(tris.Length, Allocator.Persistent);
-        for(int i = 0; i < tris.Length; i++){
-            indices[i] = (ushort)tris[i];
-        }
-        SimpleMeshData.indices = indices;
-        for(int i = 0; i < verts.Length; i++){
-            vertices[i] = new VertexData(math.round((float3)(verts[i] * 100)), 0f);
-        }*/
-        simpleMeshDatas = new MemoryAllocation<SimpleMeshData>();
-        for(int i = 0; i < simpleMeshAmount; i++){
-            var vertBuffer = new NativeArray<VertexData>(Chunk2D.vertexCount, Allocator.Persistent);
-            var indexBuffer = new NativeArray<ushort>(Chunk2D.indexCount, Allocator.Persistent);
-            var heightMap = new NativeArray<float>(4489, Allocator.Persistent);
-            //buffer.CopyFrom(vertices);
-            SimpleMeshData data = new SimpleMeshData();
-            data.vertexBuffer = vertBuffer;
-            data.indexBuffer = indexBuffer;
-            data.heightMap = heightMap;
-            simpleMeshDatas.Enqueue(data);
-        }
-        simpleMeshDatas.InitArray();
-        //vertices.Dispose();
+        var vertBuffer = new NativeArray<VertexData>(Chunk2D.vertexCount, Allocator.Persistent);
+        var indexBuffer = new NativeArray<ushort>(Chunk2D.indexCount, Allocator.Persistent);
+        var heightMap = new NativeArray<float>(4489, Allocator.Persistent);
+        SimpleMeshData data = new SimpleMeshData();
+        data.vertexBuffer = vertBuffer;
+        data.indexBuffer = indexBuffer;
+        data.heightMap = heightMap;
+        simpleMeshDatas.Enqueue(data, true);
     }
     static void AllocateTempBuffers(){
-
         vertexIndexBuffers = new MemoryAllocation<TempBuffer>();
         for(int i = 0; i < maxConcurrentOperations; i++){
             var buf1 = new NativeArray<ReuseCell>(densityMapLength, Allocator.Persistent);
             var buf2 = new NativeArray<CellIndices>((ChunkManager.chunkResolution)*(ChunkManager.chunkResolution)*6, Allocator.Persistent);
-            vertexIndexBuffers.Enqueue(new TempBuffer(buf1, buf2));
+            vertexIndexBuffers.Enqueue(new TempBuffer(buf1, buf2), true);
         }
-        vertexIndexBuffers.InitArray();
     }
-    static void AllocateMeshData(){
-        meshDatas = new MemoryAllocation<MeshData>();
+    static void AllocateDensityMaps(){
         freeDensityMaps = new Queue<NativeArray<sbyte>>();
         densityMap = new NativeArray<sbyte>(densityMapLength * densityCount, Allocator.Persistent);
         #if ENABLE_UNITY_COLLECTIONS_CHECKS
@@ -111,28 +91,32 @@ public class MemoryManager{
             densitySafetyHandle = NativeArrayUnsafeUtility.GetAtomicSafetyHandle(densityMap);
         }
         #endif
-        for(int i = 0; i < maxBufferCount; i++){
-            var verts = new NativeList<TransitionVertexData>(maxVertexCount, Allocator.Persistent);
-            var indices = new NativeList<ushort>(maxVertexCount, Allocator.Persistent);
-            //var grassPositions = new NativeList<Matrix4x4>(grassAmount, Allocator.Persistent);
-            meshDatas.freeInstances.Enqueue(new MeshData(verts, indices));
-        }
         for(int i = 0; i < densityCount; i++){
             var densities = densityMap.GetSubArray(i*densityMapLength, densityMapLength);
             freeDensityMaps.Enqueue(densities);
         }
-        meshDatas.InitArray();
+    }
+    public static ComputeBuffer GetInstancingBuffer(int dataLength){
+        var buf = new ComputeBuffer(dataLength, sizeof(float) * 16);
+        instancingBuffers.Enqueue(buf, true);
+        return buf;
+    }
+    static void AllocateMeshData(){
+        var verts = new NativeList<TransitionVertexData>(assumedVertexCount, Allocator.Persistent);
+        var indices = new NativeList<ushort>(assumedVertexCount, Allocator.Persistent);
+        //var grassPositions = new NativeList<Matrix4x4>(grassAmount, Allocator.Persistent);
+        meshDatas.Enqueue(new MeshData(verts, indices), true);
     }
     public static MeshData GetMeshData(){
-        if(meshDatas.Count == 0) throw new Exception("No free mesh data available", new InvalidOperationException());
+        if(meshDatas.Count == 0) AllocateMeshData();
         return meshDatas.Dequeue();
     }
     public static NativeList<InstanceData> GetInstancingData(){
-        if(grassDatas.Count == 0) throw new Exception("No free mesh data available", new InvalidOperationException());
-        return grassDatas.Dequeue();
+        if(instancingDatas.Count == 0) AllocateInstancingData();
+        return instancingDatas.Dequeue();
     }
     public static SimpleMeshData GetSimpleMeshData(){
-        if(simpleMeshDatas.Count == 0) throw new Exception("No free mesh data available", new InvalidOperationException());
+        if(simpleMeshDatas.Count == 0) AllocateSimpleMeshData();
         return simpleMeshDatas.Dequeue();
     }
     public static TempBuffer GetVertexIndexBuffer(){
@@ -153,21 +137,21 @@ public class MemoryManager{
     public static void ReturnMeshData(MeshData data){
         ClearArray(data.indexBuffer.AsArray(), data.indexBuffer.Length);
         data.indexBuffer.Length = 0;
-        data.indexBuffer.Capacity = maxVertexCount;
+        data.indexBuffer.Capacity = assumedVertexCount;
         ClearArray(data.vertexBuffer.AsArray(), data.vertexBuffer.Length);
         data.vertexBuffer.Length = 0;
-        data.vertexBuffer.Capacity = maxVertexCount;
-        meshDatas.Enqueue(data);
+        data.vertexBuffer.Capacity = assumedVertexCount;
+        meshDatas.Enqueue(data, false);
     }
     public static void ReturnSimpleMeshData(SimpleMeshData data){
         ClearArray(data.indexBuffer, data.indexBuffer.Length);
-        simpleMeshDatas.Enqueue(data);
+        simpleMeshDatas.Enqueue(data, false);
     }
     public static void ReturnInstanceData(NativeList<InstanceData> data){
         ClearArray(data.AsArray(), data.Length);
         data.Length = 0;
         data.Capacity = 4500;
-        grassDatas.Enqueue(data);
+        instancingDatas.Enqueue(data, false);
     }
     public static void ReturnDensityMap(NativeArray<sbyte> map, bool assignSafetyHandle = false){
         #if ENABLE_UNITY_COLLECTIONS_CHECKS
@@ -183,7 +167,7 @@ public class MemoryManager{
         if(buffer.vertexIndices == default) throw new Exception("Tried to return invalid buffer", new InvalidCastException());
         ClearArray(buffer.transitionVertexIndices, buffer.transitionVertexIndices.Length);
         ClearArray(buffer.vertexIndices, buffer.vertexIndices.Length);
-        vertexIndexBuffers.Enqueue(buffer);
+        vertexIndexBuffers.Enqueue(buffer, false);
     }
 
     public static int GetFreeVertexIndexBufferCount(){
@@ -199,13 +183,14 @@ public class MemoryManager{
     public static void Dispose(){
         meshDatas.Dispose();
         vertexIndexBuffers.Dispose();
-        grassDatas.Dispose();
+        instancingDatas.Dispose();
         foreach(var buffer in meshStarts){
             buffer.Dispose();
         }
         simpleMeshDatas.Dispose();
         //SimpleMeshData.indices.Dispose();
         densityMap.Dispose();
+        instancingBuffers.Dispose();
     }
     public static unsafe void ClearArray<T>(NativeArray<T> to_clear, int length) where T : struct
         {

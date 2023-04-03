@@ -161,7 +161,7 @@ public class ChunkManager
         if(chunk == null) chunk = chunkTree;
     }
     public void RegenerateChunk(BaseChunk chunk){
-        if(activeChunks.Count >= MemoryManager.maxBufferCount){ 
+        if(activeChunks.Count >= MemoryManager.maxChunkCount){ 
             shouldUpdateTree = true;
             return;
         }
@@ -193,7 +193,7 @@ public class ChunkManager
         return newChunk as Chunk3D;
     }
     public BaseChunk GenerateChunk(float3 pos, int depth, BoundingBox bounds){
-        if(activeChunks.Count >= MemoryManager.maxBufferCount){ 
+        if(activeChunks.Count >= MemoryManager.maxChunkCount){ 
             shouldUpdateTree = true;
             return null;
         }

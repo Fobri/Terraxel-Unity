@@ -70,11 +70,7 @@ public class Chunk3D : BaseChunk{
                 transitionMeshes[i].Clear();
             }
         }
-        internal override void OnJobsReady(){
-            if(renderBoundsData.IsCreated){
-                renderBounds = new Bounds((renderBoundsData.Value.c1 - renderBoundsData.Value.c0) * 0.5f + WorldPosition, renderBoundsData.Value.c1 - renderBoundsData.Value.c0);
-                renderBoundsData.Dispose();
-            }
+        protected override void OnJobsReady(){
             if(colliderBaking){
                 if(worldObject == null) return;
                 worldObject.GetComponent<MeshCollider>().sharedMesh = null;

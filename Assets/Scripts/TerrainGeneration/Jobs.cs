@@ -440,6 +440,7 @@ namespace Terraxel.WorldGeneration
                 secondaryPos.z += ((-vertNormal.x*vertNormal.z) * offsetVector.x + (-vertNormal.y*vertNormal.z) * offsetVector.y + (1-math.pow(vertNormal.z, 2)) * offsetVector.z);
             }
             //int vertexIndex = vertexCounter.Increment();
+            //Debug.Assert(math.all(vertPos > 0f));
             var bounds = renderBounds.Value;
             bounds.c0 = math.min(vertPos, bounds.c0);
             bounds.c1 = math.max(vertPos, bounds.c1);

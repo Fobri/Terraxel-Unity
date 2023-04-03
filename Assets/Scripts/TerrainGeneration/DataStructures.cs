@@ -289,10 +289,10 @@ namespace Terraxel.DataStructures
         public void ClearBuffers(){
             MemoryManager.ClearArray(vertexBuffer.AsArray(), vertexBuffer.Length);
             vertexBuffer.Length = 0;
-            vertexBuffer.Capacity = MemoryManager.maxVertexCount;
+            vertexBuffer.Capacity = MemoryManager.assumedVertexCount;
             MemoryManager.ClearArray(indexBuffer.AsArray(), indexBuffer.Length);
             indexBuffer.Length = 0;
-            indexBuffer.Capacity = MemoryManager.maxVertexCount;
+            indexBuffer.Capacity = MemoryManager.assumedVertexCount;
         }
         public bool IsCreated{
             get{

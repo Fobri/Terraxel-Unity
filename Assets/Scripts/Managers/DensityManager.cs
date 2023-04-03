@@ -265,6 +265,7 @@ public class DensityManager : IDisposable {
         AsyncGPUReadback.WaitAllRequests();
         foreach(var data in currentlyGenerating){
             data.gpuBuffer.Release();
+            data.isFullOrEmpty.Release();
         }
         commandBuffer.Release();
     }

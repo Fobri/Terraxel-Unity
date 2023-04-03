@@ -39,7 +39,12 @@ public class TerraxelWorld : MonoBehaviour
     public static bool worldUpdatePending {get; private set;}
     public static bool frustumCulling{
         get{
+            #if !UNITY_EDITOR
+            return true;
+            #endif
+            #if UNITY_EDITOR
             return m_worldSettings.frustumCulling;
+            #endif
         }
     }
     public static bool renderGrass{
@@ -92,9 +97,6 @@ float totalChunkGenTime;
 float totalDensityGenTime;
 TextMeshProUGUI[] debugLabels;
     public void Start(){
-#if !UNITY_EDITOR
-        frustumCulling = true;
-#endif
         m_worldSettings = worldSettings;
         seed = worldSettings.seed == 0 ? UnityEngine.Random.Range(Int16.MinValue, Int16.MaxValue) : worldSettings.seed;
         debugCanvas = Resources.Load<GameObject>("Prefabs/TerraxelDebug");
@@ -136,7 +138,7 @@ TextMeshProUGUI[] debugLabels;
             freeBufferCount = MemoryManager.GetFreeMeshDataCount();
             //debugLabels[0].text = $"Memory used: {memoryUsed} Mb";
             debugLabels[1].text = $"Currently processing {MemoryManager.maxConcurrentOperations - MemoryManager.GetFreeVertexIndexBufferCount()}/{MemoryManager.maxConcurrentOperations}";
-            debugLabels[2].text = $"Chunk count: {chunkCount}/{MemoryManager.maxBufferCount}";
+            debugLabels[2].text = $"Chunk count: {chunkCount}";
             debugLabels[3].text = $"Free vertex buffers: {freeBufferCount}";
             debugLabels[4].text = $"Last chunk generation time: {totalChunkGenTime}";
             debugLabels[5].text = $"Last density generation time: {totalDensityGenTime}";
@@ -238,9 +240,6 @@ TextMeshProUGUI[] debugLabels;
         
         if(drawPlayerBounds){
             Gizmos.DrawWireCube(playerBounds.center, playerBounds.bounds);
-        }
-        if(drawChunkBounds){
-            Gizmos.DrawWireCube((float3)worldOffset, new float3(ChunkManager.chunkResolution * math.pow(2, ChunkManager.lodLevels)));
         }
         if(drawDensityMaps){
             var maps = DensityManager.GetDebugArray();
