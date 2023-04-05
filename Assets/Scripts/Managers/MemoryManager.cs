@@ -97,7 +97,7 @@ public class MemoryManager{
         }
     }
     public static ComputeBuffer GetInstancingBuffer(int dataLength){
-        var buf = new ComputeBuffer(dataLength, sizeof(float) * 16);
+        var buf = new ComputeBuffer(dataLength, sizeof(float) * 16, ComputeBufferType.Structured);
         instancingBuffers.Enqueue(buf, true);
         return buf;
     }

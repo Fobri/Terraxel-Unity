@@ -39,9 +39,10 @@ public class InstancedRenderer : IDisposable{
         public void PushData(){
             if(!data.IsCreated || data.Length == 0) return;
             if(gpuBuffer != null) gpuBuffer.Release();
-            gpuBuffer = MemoryManager.GetInstancingBuffer(data.Length);
-            gpuBuffer.SetData(data.AsArray(), 0, 0, data.Length);
-            //grassMaterial.SetBuffer("positionBuffer", grassBuffer);
+            int len = data.Length;
+            gpuBuffer = MemoryManager.GetInstancingBuffer(len);
+            //Debug.Log(gpuBuffer.count + " " + data.Length + " " + data.AsArray().Length);
+            gpuBuffer.SetData(data.AsArray(), 0, 0, len);
             propertyBlock.SetBuffer("Matrices", gpuBuffer);
         }
         public void AllocateData(){
