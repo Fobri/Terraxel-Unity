@@ -11,10 +11,11 @@ public class TextureData : ScriptableObject
     [SerializeField]
     public Texture2D[] textures;
     public TextureFormat textureFormat = TextureFormat.RGBA32;
-    public GraphicsFormat graphicsFormat;
+    public bool useSourceFormat;
+    //public GraphicsFormat graphicsFormat;
     public bool normal;
     public void GenerateTextureArray(){
-        Texture2DArray ar = new Texture2DArray(textures[0].width, textures[0].height, textures.Length, textureFormat, true);
+        Texture2DArray ar = new Texture2DArray(textures[0].width, textures[0].height, textures.Length, useSourceFormat ? textures[0].format : textureFormat, true);
         for(int i = 0; i < textures.Length; i++){
             var tex = normal ? ConvertDTXnmToRGBA(textures[i]) : textures[i];
             for(int s = 0; s < tex.mipmapCount; s++){
