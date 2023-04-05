@@ -1,9 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-#if ODIN_INSPECTOR  
-using Sirenix.OdinInspector;
-#endif
 using UnityEditor;
 using Unity.Mathematics;
 using UnityEngine.Experimental.Rendering;
@@ -16,9 +13,6 @@ public class TextureData : ScriptableObject
     public TextureFormat textureFormat = TextureFormat.RGBA32;
     public GraphicsFormat graphicsFormat;
     public bool normal;
-#if ODIN_INSPECTOR
-    [Button]
-#endif
     public void GenerateTextureArray(){
         Texture2DArray ar = new Texture2DArray(textures[0].width, textures[0].height, textures.Length, textureFormat, true);
         for(int i = 0; i < textures.Length; i++){

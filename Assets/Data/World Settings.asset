@@ -9,11 +9,11 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 08267b2292a4d6b48baedf2b586d3e47, type: 3}
+  m_Script: {fileID: 11500000, guid: ef7dc9763247972448b2f32fa20c188f, type: 3}
   m_Name: World Settings
   m_EditorClassIdentifier: 
   placePlayerOnSurface: 1
   seed: 0
-  renderGrass: 1
+  renderGrass: 0
   frustumCulling: 0
   generator: {fileID: 11400000, guid: 9f2d41799eafcf74f9944899bf6e2b03, type: 2}

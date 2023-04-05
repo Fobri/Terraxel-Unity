@@ -18,7 +18,6 @@ Shader "Custom/Grass" {
         #pragma instancing_options procedural:setup
 
         sampler2D _MainTex;
-        float4 _WorldPos;
         fixed4 _Color;
         float _Cutoff;
 
