@@ -13,20 +13,20 @@ MonoBehaviour:
   m_Name: Grass2
   m_EditorClassIdentifier: 
   renderData:
-  - mesh: {fileID: -462981019419857548, guid: f06820200e9d6834c816ebc99678980d, type: 3}
+  - mesh: {fileID: 1568016432510859342, guid: 98678cf3711e4a944a9fb851c4b3df34, type: 3}
     material: {fileID: 2100000, guid: 9b6771ac5c3290e4baea58661bfa821d, type: 2}
   angleLimit:
     x: 0.85
     y: 1
   sizeVariation:
     c0:
-      x: 1
-      y: 1
-      z: 1
+      x: 0.8
+      y: 0.8
+      z: 0.8
     c1:
-      x: 1.5
-      y: 1.5
-      z: 1.5
+      x: 1.2
+      y: 1.2
+      z: 1.2
   density: 5.9
   maxLod: 2
   colliderObject: {fileID: 0}

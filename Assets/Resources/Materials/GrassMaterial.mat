@@ -76,7 +76,7 @@ Material:
     - _DetailNormalMapScale: 1
     - _DstBlend: 5
     - _GlossMapScale: 1
-    - _Glossiness: 0
+    - _Glossiness: 0.378
     - _GlossyReflections: 1
     - _HeightCutoff: 1.2
     - _HeightFactor: 1

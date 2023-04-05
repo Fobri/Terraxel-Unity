@@ -16,4 +16,5 @@ MonoBehaviour:
   - {fileID: 2800000, guid: c14029f663d88a545bea8bc3f6ea577e, type: 3}
   - {fileID: 2800000, guid: d7b9ca5f8256ba04eb112b636f09f339, type: 3}
   textureFormat: 4
+  graphicsFormat: 0
   normal: 0

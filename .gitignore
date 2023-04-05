@@ -14,6 +14,7 @@
 /[Aa]ssets/TextMesh Pro/
 /[Aa]ssets/Character Controller Pro/
 /[Aa]ssets/Examples/
+/[Aa]ssets/Character Movement Fundamentals/
 
 # MemoryCaptures can get excessive in size.
 # They also could contain extremely sensitive data
@@ -77,3 +78,7 @@ crashlytics-build.properties
 /[Aa]ssets/[Ss]treamingAssets/aa.meta
 /[Aa]ssets/[Ss]treamingAssets/aa/*
 Assets/TextMesh Pro.meta
+Assets/Scenes/JusonTesti.unity
+Assets/Scenes/JusonTesti.unity.meta
+Assets/Scenes/SampleScene.unity
+Assets/Scenes/SampleScene.unity
