@@ -104,7 +104,6 @@ public abstract class BaseChunk : Octree
                 instanceRenderers[i].data = instanceDatas[i].renderData;
             }
         }
-        //leafRenderer.AllocateData();
         boundSource = new float3x2(new float3(ChunkManager.chunkResolution * depthMultiplier), 0f);
         renderBoundsData = new NativeReference<float3x2>(boundSource, Allocator.TempJob);
         OnScheduleMeshUpdate();

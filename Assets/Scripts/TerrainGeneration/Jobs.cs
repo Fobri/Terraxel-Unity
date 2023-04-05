@@ -27,7 +27,7 @@ namespace Terraxel.WorldGeneration
         public Unity.Mathematics.Random rng;
         public NativeReference<float3x2> renderBounds;
         int triIndex;
-
+        //TODO: use nativelist instead of array
         public void Execute(int index)
         {
             int2 vertPos = Utils.IndexToXz(index, chunkSize);
