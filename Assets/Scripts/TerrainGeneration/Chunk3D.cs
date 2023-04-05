@@ -21,7 +21,7 @@ public class Chunk3D : BaseChunk{
         private Mesh[] transitionMeshes = new Mesh[6];
         public override bool CanBeCreated{
             get{
-                return MemoryManager.GetFreeMeshDataCount() > 0;
+                return IsReady;
             }
         }
         static VertexAttributeDescriptor[] layout = new[]

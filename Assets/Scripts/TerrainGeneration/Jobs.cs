@@ -36,11 +36,11 @@ namespace Terraxel.WorldGeneration
             var normal = GetVertexNormal(vertPos);
             var angle = math.dot(normal, new float3(0,1,0));
             vertices[index] = new VertexData(_vertPos, normal, math.clamp((1-angle),0,1));
-            var bounds = renderBounds.Value;
-            bounds.c0 = math.min(_vertPos, bounds.c0);
-            bounds.c1 = math.max(_vertPos, bounds.c1);
-            renderBounds.Value = bounds;
             if(height > chunkPos.y && height < chunkPos.y + chunkSize * depthMultiplier){
+                var bounds = renderBounds.Value;
+                bounds.c0 = math.min(_vertPos, bounds.c0);
+                bounds.c1 = math.max(_vertPos, bounds.c1);
+                renderBounds.Value = bounds;
                 var chance = 0f;
                 for(int i = 0; i < 5; i++){
                     if(instancingData[i].density == 0) continue;

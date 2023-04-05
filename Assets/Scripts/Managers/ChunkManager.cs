@@ -8,10 +8,6 @@ using Terraxel.DataStructures;
 using Unity.Jobs;
 using UnityEngine.Rendering;
 using System;
-#if ODIN_INSPECTOR    
-using Sirenix.OdinInspector;
-using ReadOnly = Sirenix.OdinInspector.ReadOnlyAttribute;
-#endif
 using System.Linq;
 using UnityEditor;
 using TMPro;
@@ -25,9 +21,6 @@ public class ChunkManager
     public const int simpleChunkTreshold = 1;
     Transform poolParent;
     Transform activeParent;
-#if ODIN_INSPECTOR
-    [ShowInInspector]
-#endif
     List<BaseChunk> activeChunks;
     Queue<BaseChunk> disposeQueue;
     PriorityQueue<BaseChunk> meshQueue;
@@ -55,6 +48,7 @@ public class ChunkManager
         chunkTree.chunkState = ChunkState.ROOT;
     }
     void AddToMeshQueue(BaseChunk chunk){
+        chunk.chunkState = ChunkState.QUEUED;
         int depth = chunk.depth;
         meshQueue.Enqueue(chunk, depth);
     }
@@ -81,13 +75,14 @@ public class ChunkManager
                 if(currentMeshQueueIndex != nextMeshQueueIndex){
                     if(TerraxelWorld.worldUpdatePending){
                         while(meshQueue.Count > 0){
-                            DisposeChunk(meshQueue.Dequeue());
+                            PoolChunk(meshQueue.Dequeue());
                             return false;
                         }
                     }
                     currentMeshQueueIndex = nextMeshQueueIndex;
                 }
                 if(meshQueue.TryDequeue(currentMeshQueueIndex, out var toBeProcessed)){
+                    toBeProcessed.chunkState = ChunkState.INVALID;
                     if(!toBeProcessed.CanBeCreated) {
                         AddToMeshQueue(toBeProcessed);
                         break;

@@ -176,9 +176,6 @@ public class MemoryManager{
     public static int GetFreeDensityMapCount(){
         return freeDensityMaps.Count;
     }
-    public static int GetFreeMeshDataCount(){
-        return meshDatas.Count;
-    }
 
     public static void Dispose(){
         meshDatas.Dispose();
