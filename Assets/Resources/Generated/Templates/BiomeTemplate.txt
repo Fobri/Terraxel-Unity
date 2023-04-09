@@ -1,0 +1,18 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using Terraxel.DataStructures;
+using Unity.Mathematics;
+
+public struct BiomesGenerated
+{
+    MEMBERS_HERE
+
+     public static NativeInstanceData Get(int idx){
+        switch(idx){
+            GETTER_HERE
+            default:
+            return default;
+        }
+    }
+}

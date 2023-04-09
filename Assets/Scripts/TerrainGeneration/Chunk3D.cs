@@ -123,6 +123,7 @@ public class Chunk3D : BaseChunk{
             MemoryManager.ClearArray(meshStarts, 7);
             var densityData = TerraxelWorld.DensityManager.GetJobDensityData();
             var cache = new DensityCacheInstance(new int3(int.MaxValue));
+            Debug.Assert(instanceDatas.IsEmpty);
             var marchingJob = new MeshJob()
             {
                 vertices = meshData.vertexBuffer,

@@ -38,6 +38,7 @@ public class MemoryManager{
     public const int densityCount = 128*4;
     public static int maxConcurrentOperations = SystemInfo.processorCount - 2;
     public const int assumedVertexCount = 7000;
+    public const int assumedInstanceCount = 200;
     public const int densityMapLength = (ChunkManager.chunkResolution)*(ChunkManager.chunkResolution)*(ChunkManager.chunkResolution);
     public const int initialPoolSize = 100;
     public const int maxChunkCount = 512;

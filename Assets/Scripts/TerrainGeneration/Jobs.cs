@@ -43,12 +43,12 @@ namespace Terraxel.WorldGeneration
                 renderBounds.Value = bounds;
                 var chance = 0f;
                 for(int i = 0; i < 5; i++){
-                    if(instancingData[i].density == 0) continue;
-                    if(instancingData[i].maxLod < depthMultiplier) continue;
+                    if(BiomesGenerated.Get(i).density == 0) continue;
+                    if(BiomesGenerated.Get(i).maxLod < depthMultiplier) continue;
                     chance = rng.NextFloat(0, 100);
-                    if(angle > instancingData[i].angleLimit.x && angle < instancingData[i].angleLimit.y){
-                        if(chance > instancingData[i].density) continue;
-                        instancingData[i].renderData.Add(new InstanceData(float4x4.TRS(_vertPos + chunkPos, Utils.AlignWithNormal(normal, rng), rng.NextFloat3(instancingData[i].sizeVariation.c0, instancingData[i].sizeVariation.c1))));
+                    if(angle > BiomesGenerated.Get(i).angleLimit.x && angle < BiomesGenerated.Get(i).angleLimit.y){
+                        if(chance > BiomesGenerated.Get(i).density) continue;
+                        instancingData[i].Add(new InstanceData(float4x4.TRS(_vertPos + chunkPos, Utils.AlignWithNormal(normal, rng), rng.NextFloat3(BiomesGenerated.Get(i).sizeVariation.c0, BiomesGenerated.Get(i).sizeVariation.c1))));
                         break;
                     }
                 }
@@ -374,12 +374,12 @@ namespace Terraxel.WorldGeneration
                 var angle = math.dot(normal, new float3(0,1,0));
                 var chance = 0f;
                 for(int i2 = 0; i2 < 5; i2++){
-                    if(instancingData[i2].density == 0) continue;
-                    if(instancingData[i2].maxLod < helper.depthMultiplier) continue;
-                    if(angle > instancingData[i2].angleLimit.x && angle < instancingData[i2].angleLimit.y){
+                    if(BiomesGenerated.Get(i2).density == 0) continue;
+                    if(BiomesGenerated.Get(i2).maxLod < helper.depthMultiplier) continue;
+                    if(angle > BiomesGenerated.Get(i2).angleLimit.x && angle < BiomesGenerated.Get(i2).angleLimit.y){
                         chance = rng.NextFloat(0, 100);
-                        if(chance > instancingData[i2].density) continue;
-                        instancingData[i2].renderData.Add(new InstanceData(float4x4.TRS(midPoint + helper.chunkPos, Utils.AlignWithNormal(normal, rng), rng.NextFloat3(instancingData[i2].sizeVariation.c0, instancingData[i2].sizeVariation.c1))));
+                        if(chance > BiomesGenerated.Get(i2).density) continue;
+                        instancingData[i2].Add(new InstanceData(float4x4.TRS(midPoint + helper.chunkPos, Utils.AlignWithNormal(normal, rng), rng.NextFloat3(BiomesGenerated.Get(i2).sizeVariation.c0, BiomesGenerated.Get(i2).sizeVariation.c1))));
                         break;
                     }
                 }

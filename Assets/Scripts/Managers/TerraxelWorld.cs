@@ -113,7 +113,6 @@ TextMeshProUGUI[] debugLabels;
         noiseShader = Resources.Load<ComputeShader>("Generated/TerraxelGenerated");
         renderCamera = Camera.main;
         MemoryManager.Init();
-        m_worldSettings.generator.Init();
         playerBounds = new BoundingBox(player.transform.position, new float3(ChunkManager.chunkResolution));
         DensityManager = new DensityManager();
         DensityManager.Init(noiseShader);

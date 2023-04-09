@@ -51,44 +51,38 @@ namespace Terraxel.DataStructures
             this.material = material;
         }
     }
-    public struct NativeInstanceData : IDisposable{
-        [NativeDisableContainerSafetyRestriction]
-        public NativeList<InstanceData> renderData;
+    public struct NativeInstanceData{
         public float2 angleLimit;
         public float3x2 sizeVariation;
         public float density;
         public int maxLod;
 
-        public NativeInstanceData(InstancingData instancingData){
-            renderData = default;
-            angleLimit = instancingData.angleLimit;
-            sizeVariation = instancingData.sizeVariation;
-            density = instancingData.density;
-            maxLod = Octree.depthMultipliers[instancingData.maxLod];
-        }
-
-        public void Dispose(){
-            if(!renderData.IsCreated) return;
-            MemoryManager.ReturnInstanceData(renderData);
+        public NativeInstanceData(float2 angleLimit, float3x2 sizeVariation, float density, int maxLod){
+            this.angleLimit = angleLimit;
+            this.sizeVariation = sizeVariation;
+            this.density = density;
+            this.maxLod = Octree.depthMultipliers[maxLod];
         }
     }
     public struct JobInstancingData : IDisposable{
-        public NativeInstanceData d1;
-        public NativeInstanceData d2;
-        public NativeInstanceData d3;
-        public NativeInstanceData d4;
-        public NativeInstanceData d5;
+        [NativeDisableContainerSafetyRestriction]
+        public NativeList<InstanceData> d1;
+        [NativeDisableContainerSafetyRestriction]
+        public NativeList<InstanceData> d2;
+        [NativeDisableContainerSafetyRestriction]
+        public NativeList<InstanceData> d3;
+        [NativeDisableContainerSafetyRestriction]
+        public NativeList<InstanceData> d4;
+        [NativeDisableContainerSafetyRestriction]
+        public NativeList<InstanceData> d5;
 
-        public static JobInstancingData CreateFromInstancingData(InstancingData[] data){
-            JobInstancingData result = new JobInstancingData();
-            for(int i = 0; i < data.Length; i++){
-                if(data[i] == null) continue;
-                result[i] = new NativeInstanceData(data[i]);
+        public bool IsEmpty{
+            get{
+                return d1.IsEmpty && d2.IsEmpty && d3.IsEmpty && d4.IsEmpty && d5.IsEmpty;
             }
-            return result;
         }
 
-        public NativeInstanceData this[int index]{
+        public NativeList<InstanceData> this[int index]{
             get{
                 switch(index){
                     case 0:
@@ -129,7 +123,9 @@ namespace Terraxel.DataStructures
 
         public void Dispose(){
             for(int i = 0; i < 5; i++){
-                this[i].Dispose();
+                if(this[i].IsCreated){
+                    MemoryManager.ReturnInstanceData(this[i]);
+                }
             }
         }
     }
@@ -370,6 +366,15 @@ namespace Terraxel.DataStructures
         }
         public static string floatToString(float value){
             return value.ToString("F4", new CultureInfo("en-US"))+"f";
+        }
+        public static string float2ToString(float2 value){
+            return "new float2("+Utils.floatToString(value.x)+", "+Utils.floatToString(value.y)+")";
+        }
+        public static string float3ToString(float3 value){
+            return "new float3("+Utils.floatToString(value.x)+", "+Utils.floatToString(value.y)+", "+Utils.floatToString(value.z)+")";
+        }
+        public static string float3x2ToString(float3x2 value){
+            return "new float3x2("+float3ToString(value.c0)+", "+float3ToString(value.c1)+")";
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int XyzToIndex(int x, int y, int z, int size)

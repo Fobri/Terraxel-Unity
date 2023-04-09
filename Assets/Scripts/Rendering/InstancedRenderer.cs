@@ -7,7 +7,6 @@ using Terraxel.DataStructures;
 using Unity.Mathematics;
 using UnityEngine.Rendering;
 public class InstancedRenderer : IDisposable{
-        public NativeList<InstanceData> data;
         public ComputeBuffer gpuBuffer;
         public RenderParams[] renderParams;
         public MaterialPropertyBlock propertyBlock;
@@ -36,7 +35,7 @@ public class InstancedRenderer : IDisposable{
                 }
             }
         }
-        public void PushData(){
+        public void PushData(NativeList<InstanceData> data){
             if(!data.IsCreated || data.Length == 0) return;
             if(gpuBuffer != null) gpuBuffer.Release();
             int len = data.Length;
@@ -45,17 +44,10 @@ public class InstancedRenderer : IDisposable{
             gpuBuffer.SetData(data.AsArray(), 0, 0, len);
             propertyBlock.SetBuffer("Matrices", gpuBuffer);
         }
-        public void AllocateData(){
-            data = MemoryManager.GetInstancingData();
-        }
 
         public void Dispose(){
             gpuBuffer?.Release();
             gpuBuffer = null;
             propertyBlock?.Clear();
-            if(data.IsCreated){
-                MemoryManager.ReturnInstanceData(data);
-                data = default;
-            }
         }
     }

@@ -39,10 +39,9 @@ public abstract class BaseChunk : Octree
         disposeStatus = DisposeState.NOTHING;
         
         var biomeData = TerraxelWorld.GetBiomeData(0);
-        instanceDatas = biomeData.jobInstances;
         instanceRenderers = new InstancedRenderer[5];
         for(int i = 0; i < 5; i++){
-            if(instanceDatas[i].density > 0){
+            if(BiomesGenerated.Get(i).density > 0){
                 instanceRenderers[i] = new InstancedRenderer(biomeData.instances[i].renderData, ShadowCastingMode.On);
             }
         }
@@ -66,9 +65,7 @@ public abstract class BaseChunk : Octree
     protected void RenderInstances(){
         if(!TerraxelWorld.renderGrass) return;
         for(int i = 0; i < 5; i++){
-            if(instanceDatas[i].density > 0){
-                instanceRenderers[i].Render();
-            }
+            instanceRenderers[i]?.Render();
         }
     }
     internal override void JobsReady()
@@ -86,9 +83,10 @@ public abstract class BaseChunk : Octree
     }
     protected void PushInstanceData(){
         for(int i = 0; i < 5; i++){
-            instanceRenderers[i]?.PushData();
-            instanceDatas[i].Dispose();
+            instanceRenderers[i]?.PushData(instanceDatas[i]);
         }
+        instanceDatas.Dispose();
+        instanceDatas = default;
     }
     public void ScheduleMeshUpdate(){
         propertyBlock.SetVector("_WorldPos", new float4(WorldPosition, 1));
@@ -97,11 +95,8 @@ public abstract class BaseChunk : Octree
         chunkState = ChunkState.DIRTY;
         genTime = Time.realtimeSinceStartup;
         for(int i = 0; i < 5; i++){
-            if(instanceDatas[i].density > 0){
-                var dt = instanceDatas[i];
-                dt.renderData = MemoryManager.GetInstancingData();
-                instanceDatas[i] = dt;
-                instanceRenderers[i].data = instanceDatas[i].renderData;
+            if(BiomesGenerated.Get(i).density > 0){
+                instanceDatas[i] = MemoryManager.GetInstancingData();
             }
         }
         boundSource = new float3x2(new float3(ChunkManager.chunkResolution * depthMultiplier), 0f);
@@ -115,7 +110,6 @@ public abstract class BaseChunk : Octree
     protected abstract void OnFreeBuffers();
     public void FreeBuffers(){
         for(int i = 0; i < 5; i++){
-            instanceDatas[i].Dispose();
             instanceRenderers?[i]?.Dispose();
         }
         OnFreeBuffers();
