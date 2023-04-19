@@ -19,17 +19,18 @@ public class DensityManager : IDisposable {
     //Queue<NoiseJob> operationQueue = new Queue<NoiseJob>();
     //Queue<KeyValuePair<int3, IntPtr>> operationQueue = new Queue<KeyValuePair<int3, IntPtr>>();
     Queue<int3> operationQueue = new Queue<int3>();
-    ComputeShader[] computes = new ComputeShader[maxConcurrentOperations];
+    ComputeShader[] computes = new ComputeShader[TerraxelConstants.maxConcurrentGPUOperations];
     ComputeShader cs;
-    DensityResultData[] currentlyGenerating = new DensityResultData[maxConcurrentOperations];
+    DensityResultData[] currentlyGenerating = new DensityResultData[TerraxelConstants.maxConcurrentGPUOperations];
     int kernel;
     CommandBuffer commandBuffer;
-    const int maxConcurrentOperations = 32;
     Queue<KeyValuePair<int3, sbyte>> modifications = new Queue<KeyValuePair<int3, sbyte>>();
     //DensityResultData currentlyProcessedPosition;
     //Queue<DensityResultData> requestQueue = new Queue<DensityResultData>();
     //DensityResultData currentRequest;
     bool gpuProgramRunning;
+    float3 currentOrigin;
+    int currentRadius;
 
     public void Init(ComputeShader noiseShader){
         densityData = new DensityData();
@@ -40,7 +41,7 @@ public class DensityManager : IDisposable {
         commandBuffer = new CommandBuffer();
         commandBuffer.SetExecutionFlags(CommandBufferExecutionFlags.AsyncCompute);
         kernel = noiseShader.FindKernel("CSMain");
-        for(int i = 0; i < maxConcurrentOperations; i++){
+        for(int i = 0; i < TerraxelConstants.maxConcurrentGPUOperations; i++){
             computes[i] = UnityEngine.Object.Instantiate(cs);
             currentlyGenerating[i].gpuBuffer = new ComputeBuffer(8192, 4, ComputeBufferType.Structured);
             currentlyGenerating[i].gpuBuffer.name = "DensityBuffer" + i.ToString();
@@ -112,7 +113,7 @@ public class DensityManager : IDisposable {
     }*/
     void UpdateInternal(){
         bool allJobsReady = true;
-        for(int i = 0; i < maxConcurrentOperations; i++){
+        for(int i = 0; i < TerraxelConstants.maxConcurrentGPUOperations; i++){
             if(currentlyGenerating[i].isReady) continue;
             allJobsReady = false;
             if(!currentlyGenerating[i].hasRequest){
@@ -136,10 +137,12 @@ public class DensityManager : IDisposable {
                         densityData.emptyChunks.Add(currentlyGenerating[i].pos);
                     }
                 }else{
-                    currentlyGenerating[i].densityMap = MemoryManager.GetDensityMap();
-                    currentlyGenerating[i].densityMap.CopyFrom(currentlyGenerating[i].readbackRequest.GetData<sbyte>());
-                    unsafe{
-                    densityData.densities.Add(currentlyGenerating[i].pos, (IntPtr)NativeArrayUnsafeUtility.GetUnsafePtr(currentlyGenerating[i].densityMap));
+                    if(MemoryManager.GetFreeDensityMapCount() > 0) {
+                        currentlyGenerating[i].densityMap = MemoryManager.GetDensityMap();
+                        currentlyGenerating[i].densityMap.CopyFrom(currentlyGenerating[i].readbackRequest.GetData<sbyte>());
+                        unsafe{
+                        densityData.densities.Add(currentlyGenerating[i].pos, (IntPtr)NativeArrayUnsafeUtility.GetUnsafePtr(currentlyGenerating[i].densityMap));
+                        }
                     }
                 }
                 currentlyGenerating[i].isReady = true;
@@ -152,9 +155,12 @@ public class DensityManager : IDisposable {
     void ScheduleBatch(){
         //commandBuffer.Clear();
         //commandBuffer.SetExecutionFlags(CommandBufferExecutionFlags.AsyncCompute);
-        for(int i = 0; i < maxConcurrentOperations; i++){
+        for(int i = 0; i < TerraxelConstants.maxConcurrentGPUOperations; i++){
             if(operationQueue.Count == 0){
                 gpuProgramRunning = false;
+                if(MemoryManager.GetFreeDensityMapCount() > 10){
+                    LoadDensityData(currentOrigin, ++currentRadius);
+                }
                 return;
             }
             var job = operationQueue.Dequeue();
@@ -213,11 +219,13 @@ public class DensityManager : IDisposable {
         operationQueue.Enqueue(pos);
     }
     public void LoadDensityData(float3 center, int radius){
+        this.currentOrigin = center;
+        this.currentRadius = radius;
         HashSet<int3> alreadyDataExists = new HashSet<int3>();
-        int3 startPos = (int3)center - ChunkManager.chunkResolution * Octree.depthMultipliers[radius] - ChunkManager.chunkResolution;
-        for(int x = 0; x < Octree.depthMultipliers[radius] * 2 + 2; x++){
-            for(int y = 0; y < Octree.depthMultipliers[radius] * 2 + 2; y++){
-                for(int z = 0; z < Octree.depthMultipliers[radius] * 2 + 2; z++){
+        int3 startPos = (int3)center - ChunkManager.chunkResolution * radius - ChunkManager.chunkResolution;
+        for(int x = 0; x < radius * 2 + 2; x++){
+            for(int y = 0; y < radius * 2 + 2; y++){
+                for(int z = 0; z < radius * 2 + 2; z++){
                     int3 pos = new int3(x,y,z) * ChunkManager.chunkResolution + startPos;
                     if(densityData.ContainsPos(pos) ||densityData.emptyChunks.Contains(pos) ||densityData.fullChunks.Contains(pos)){
                         alreadyDataExists.Add(pos);

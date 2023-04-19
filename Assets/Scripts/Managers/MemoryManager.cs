@@ -35,7 +35,6 @@ public class MemoryManager{
         Queue<T> freeInstances;
         List<T> allInstances;
     }
-    public const int densityCount = 128*4;
     public static int maxConcurrentOperations = SystemInfo.processorCount - 2;
     public const int assumedVertexCount = 7000;
     public const int assumedInstanceCount = 200;
@@ -86,13 +85,13 @@ public class MemoryManager{
     }
     static void AllocateDensityMaps(){
         freeDensityMaps = new Queue<NativeArray<sbyte>>();
-        densityMap = new NativeArray<sbyte>(densityMapLength * densityCount, Allocator.Persistent);
+        densityMap = new NativeArray<sbyte>(densityMapLength * TerraxelConstants.densityMapCount, Allocator.Persistent);
         #if ENABLE_UNITY_COLLECTIONS_CHECKS
         unsafe{
             densitySafetyHandle = NativeArrayUnsafeUtility.GetAtomicSafetyHandle(densityMap);
         }
         #endif
-        for(int i = 0; i < densityCount; i++){
+        for(int i = 0; i < TerraxelConstants.densityMapCount; i++){
             var densities = densityMap.GetSubArray(i*densityMapLength, densityMapLength);
             freeDensityMaps.Enqueue(densities);
         }

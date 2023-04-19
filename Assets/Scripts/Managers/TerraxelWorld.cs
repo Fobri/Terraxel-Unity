@@ -31,7 +31,7 @@ public class TerraxelWorld : MonoBehaviour
 
     ComputeShader noiseShader;
     GameObject chunkPrefab;
-    int baseChunkSize = ChunkManager.chunkResolution * Octree.depthMultipliers[ChunkManager.lodLevels - 2];
+    int baseChunkSize = ChunkManager.chunkResolution * Octree.depthMultipliers[TerraxelConstants.lodLevels - 2];
     
     //STATIC VARS
     public static DensityManager DensityManager {get; private set;}
@@ -68,6 +68,8 @@ public class TerraxelWorld : MonoBehaviour
     private int indexCount;
     private float totalGenTime;
 #if UNITY_EDITOR
+    [SerializeField]
+    private int densityMapCount;
     [SerializeField]
     private bool drawPlayerBounds;
     [SerializeField]
@@ -128,6 +130,7 @@ TextMeshProUGUI[] debugLabels;
         JobRunner.Update();
         if(debugMode){
             var chunkDatas = ChunkManager.GetDebugArray();
+            densityMapCount = TerraxelConstants.densityMapCount - MemoryManager.GetFreeDensityMapCount();
             memoryUsed = vertCount * sizeof(float) * 9 + vertCount * sizeof(int) + 
                         indexCount * sizeof(ushort) + 
                         (ChunkManager.chunkResolution) * (ChunkManager.chunkResolution) * (ChunkManager.chunkResolution) * sizeof(sbyte) * Octree.depthMultipliers[2] * Octree.depthMultipliers[2] * Octree.depthMultipliers[2];
@@ -180,7 +183,7 @@ TextMeshProUGUI[] debugLabels;
                 playerOffset = playerChunkPos;
                 playerBounds.center = playerOffset;
                 ChunkManager.shouldUpdateTree = true;
-                DensityManager.LoadDensityData(playerOffset, 2);
+                DensityManager.LoadDensityData(playerOffset, Octree.depthMultipliers[2]);
             }
             else if(worldUpdatePending){
                 worldOffset = lodChunkPos;

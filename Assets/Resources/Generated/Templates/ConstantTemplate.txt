@@ -1,0 +1,12 @@
+using Unity.Collections;
+using Unity.Mathematics;
+using Terraxel.DataStructures;
+using System.Runtime.CompilerServices;
+
+
+public class TerraxelConstants
+{
+    public const int lodLevels = LOD_LEVELS;
+    public const int maxConcurrentGPUOperations = MAX_GPU;
+    public const int densityMapCount = DENSITY_COUNT;
+}

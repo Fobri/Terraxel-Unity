@@ -17,7 +17,6 @@ public class ChunkManager
     GameObject chunkPrefab;
     public bool shouldUpdateTree = false;
     public const int chunkResolution = 32;
-    public const int lodLevels = 5;
     public const int simpleChunkTreshold = 1;
     Transform poolParent;
     Transform activeParent;
@@ -34,7 +33,7 @@ public class ChunkManager
     }
     public void Init(Transform poolParent, Transform activeParent, GameObject chunkPrefab){
         this.chunkPrefab = chunkPrefab;
-        meshQueue = new PriorityQueue<BaseChunk>(lodLevels);
+        meshQueue = new PriorityQueue<BaseChunk>(TerraxelConstants.lodLevels);
         chunkPool3D = new Queue<BaseChunk>();
         chunkPool2D = new Queue<BaseChunk>();
         disposeQueue = new Queue<BaseChunk>();
@@ -66,7 +65,7 @@ public class ChunkManager
             var chunk = disposeQueue.Dequeue();
             DisposeChunk(chunk);
         }
-        for(int i = 0; i < lodLevels; i++){
+        for(int i = 0; i < TerraxelConstants.lodLevels; i++){
             meshQueue[i] = new Queue<BaseChunk>(meshQueue[i].Where(x => x.disposeStatus == DisposeState.NOTHING));
         }
         if(meshQueue.Count > 0){

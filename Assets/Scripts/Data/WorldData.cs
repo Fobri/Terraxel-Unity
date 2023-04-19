@@ -15,6 +15,7 @@ public class WorldData : ScriptableObject
     }
 
     public void Generate(){
+        #if UNITY_EDITOR
         TextAsset templateTextFile = AssetDatabase.LoadAssetAtPath("Assets/Resources/Generated/Templates/BiomeTemplate.txt", typeof(TextAsset)) as TextAsset;
 		if(templateTextFile == null){
 			throw new System.Exception("Template text file for code generation missing");
@@ -35,5 +36,6 @@ public class WorldData : ScriptableObject
         using(StreamWriter sw = new StreamWriter(string.Format(Application.dataPath + "/Resources/Generated/BiomesGenerated.cs"))) {
             sw.Write(fullGeneratorString);
         }
+        #endif
     }
 }

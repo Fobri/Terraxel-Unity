@@ -36,22 +36,28 @@ namespace Terraxel.WorldGeneration
             var normal = GetVertexNormal(vertPos);
             var angle = math.dot(normal, new float3(0,1,0));
             vertices[index] = new VertexData(_vertPos, normal, math.clamp((1-angle),0,1));
-            if(height > chunkPos.y && height < chunkPos.y + chunkSize * depthMultiplier){
+            var midPoint = _vertPos;
+            if(height >= chunkPos.y && height <= chunkPos.y + chunkSize * depthMultiplier){
                 var bounds = renderBounds.Value;
                 bounds.c0 = math.min(_vertPos, bounds.c0);
                 bounds.c1 = math.max(_vertPos, bounds.c1);
                 renderBounds.Value = bounds;
-                var chance = 0f;
-                for(int i = 0; i < 5; i++){
-                    if(BiomesGenerated.Get(i).density == 0) continue;
-                    if(BiomesGenerated.Get(i).maxLod < depthMultiplier) continue;
-                    chance = rng.NextFloat(0, 100);
-                    if(angle > BiomesGenerated.Get(i).angleLimit.x && angle < BiomesGenerated.Get(i).angleLimit.y){
-                        if(chance > BiomesGenerated.Get(i).density) continue;
-                        instancingData[i].Add(new InstanceData(float4x4.TRS(_vertPos + chunkPos, Utils.AlignWithNormal(normal, rng), rng.NextFloat3(BiomesGenerated.Get(i).sizeVariation.c0, BiomesGenerated.Get(i).sizeVariation.c1))));
-                        break;
+                for(int i2 = 0; i2 < 5; i2++){
+                        var biome = BiomesGenerated.Get(i2);
+                        if(biome.density == 0) continue;
+                        if(biome.maxLod <= depthMultiplier) continue;
+                        if(angle > biome.angleLimit.x && angle < biome.angleLimit.y){
+                            var chance = Utils.RandomValue(midPoint) * 100f;
+                            if(biome.uniformDensity){
+                                if(math.any((int3)midPoint % Octree.depthMultipliers[TerraxelConstants.lodLevels-2] != 0)) continue;
+                            }
+                            if(chance < biome.density){
+                                instancingData[i2].Add(new InstanceData(float4x4.TRS(midPoint + chunkPos, Utils.AlignWithNormal(normal, chance), math.lerp(biome.sizeVariation.c0, biome.sizeVariation.c1, chance*0.01f))));
+                                //currentCell.hasInstancingPosition = true;
+                                break;
+                            }
+                        }
                     }
-                }
                 if(vertPos.x > 0 && vertPos.y > 0){
                     isEmpty.Value = false;
                     indices[triIndex * 6 + 0] = (ushort)Utils.XzToIndex(vertPos + new int2(-1, -1), chunkSize);
@@ -292,7 +298,6 @@ namespace Terraxel.WorldGeneration
             
             CellIndices cellIndices = new CellIndices();
             var currentCell = new ReuseCell(0);
-            currentCell.caseIdx = (byte)caseCode;
             for (int i = 0; i < vertexCount; i++)
             {
                 ushort edge = (ushort)(Tables.RegularVertexData[caseCode][i]);
@@ -350,7 +355,6 @@ namespace Terraxel.WorldGeneration
             //var firstVert = vertices[cellIndices[0]];
             
 
-            vertexIndices.vertexIndices[index] = currentCell;
             for(int i = 0; i < triangleCount; i++){
                 //var idx = indexCounter.Increment() * 3;
                 /*if(cellIndices[Tables.RegularCellData[cell][i * 3 + 1]].Equals(cellIndices[Tables.RegularCellData[cell][i * 3 + 2]]) ||
@@ -369,21 +373,74 @@ namespace Terraxel.WorldGeneration
                 triangles.Add(cellIndices[Tables.RegularCellData[cell][i * 3 + 1]]);
                 triangles.Add(cellIndices[Tables.RegularCellData[cell][i * 3 + 2]]);
                 triangles.Add(cellIndices[Tables.RegularCellData[cell][i * 3 + 3]]);
-                float3 midPoint = (v1.Primary + v2.Primary + v3.Primary) * 0.333f;
-                float3 normal = (v1.normal + v2.normal + v3.normal) * 0.333f;
-                var angle = math.dot(normal, new float3(0,1,0));
-                var chance = 0f;
-                for(int i2 = 0; i2 < 5; i2++){
-                    if(BiomesGenerated.Get(i2).density == 0) continue;
-                    if(BiomesGenerated.Get(i2).maxLod < helper.depthMultiplier) continue;
-                    if(angle > BiomesGenerated.Get(i2).angleLimit.x && angle < BiomesGenerated.Get(i2).angleLimit.y){
-                        chance = rng.NextFloat(0, 100);
-                        if(chance > BiomesGenerated.Get(i2).density) continue;
-                        instancingData[i2].Add(new InstanceData(float4x4.TRS(midPoint + helper.chunkPos, Utils.AlignWithNormal(normal, rng), rng.NextFloat3(BiomesGenerated.Get(i2).sizeVariation.c0, BiomesGenerated.Get(i2).sizeVariation.c1))));
-                        break;
+                for(int v = 0; v < 2; v++){
+                    if(!currentCell.hasInstancingPosition){
+                        if(!CanCreateInstancedData(voxelLocalPosition)) continue;
+                        float3 midPoint;
+                        float3 normal;
+                        if(v==0){
+                            midPoint = v1.Primary;
+                            normal = v1.normal;
+                        }else if(v==1){
+                            midPoint = v2.Primary;
+                            normal = v2.normal;
+                        }else{
+                            midPoint = v3.Primary;
+                            normal = v3.normal;
+                        }
+                        var angle = math.dot(normal, new float3(0,1,0));
+                        for(int i2 = 0; i2 < 5; i2++){
+                            var biome = BiomesGenerated.Get(i2);
+                            if(!biome.uniformDensity || biome.density == 0 || biome.maxLod < helper.depthMultiplier) continue;
+                            if(angle > biome.angleLimit.x && angle < biome.angleLimit.y){
+                                var chance = Utils.RandomValue((int3)math.round(midPoint / helper.depthMultiplier))* 100f;
+                                if(biome.uniformDensity){
+                                    if(math.any((int3)math.round(midPoint) % Octree.depthMultipliers[TerraxelConstants.lodLevels-2] != 0)) continue;
+                                }
+                                if(chance < biome.density){
+                                    instancingData[i2].Add(new InstanceData(float4x4.TRS(midPoint + helper.chunkPos, Utils.AlignWithNormal(normal, chance), math.lerp(biome.sizeVariation.c0, biome.sizeVariation.c1, chance*0.01f))));
+                                    currentCell.hasInstancingPosition = true;
+                                    break;
+                                }
+                            }
+                        }
+                        for(int i2 = 0; i2 < 5; i2++){
+                            var biome = BiomesGenerated.Get(i2);
+                            if(biome.uniformDensity || biome.density == 0 || biome.maxLod < helper.depthMultiplier) continue;
+                            if(angle > biome.angleLimit.x && angle < biome.angleLimit.y){
+                                var chance = Utils.RandomValue(midPoint) * 100f;
+                                if(biome.uniformDensity){
+                                    if(math.any((int3)math.round(midPoint) % Octree.depthMultipliers[TerraxelConstants.lodLevels-2] != 0)) continue;
+                                }
+                                if(chance < biome.density){
+                                    instancingData[i2].Add(new InstanceData(float4x4.TRS(midPoint + helper.chunkPos, Utils.AlignWithNormal(normal, chance), math.lerp(biome.sizeVariation.c0, biome.sizeVariation.c1, chance*0.01f))));
+                                    currentCell.hasInstancingPosition = true;
+                                    break;
+                                }
+                            }
+                        }
                     }
                 }
             }
+            vertexIndices.vertexIndices[index] = currentCell;
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        bool CanCreateInstancedData(int3 voxelLocalPosition, int radius = 1){
+            for(int x = -radius; x <= radius; x++){
+                if(x == 0) continue;
+                for(int y = -radius; y <= radius; y++){
+                    if(y == 0) continue;
+                    for(int z = -radius; z <= radius; z++){
+                        if(z == 0) continue;
+                        var pos = voxelLocalPosition + new int3(x,y,z);
+                        if(math.any(pos < 0) || math.any(pos > ChunkManager.chunkResolution-1)) continue;
+                        if(GetCell(pos).hasInstancingPosition){
+                            return false;
+                        }
+                    }
+                }
+            }
+            return true;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         int3 DecodeCellIndices(byte idx){

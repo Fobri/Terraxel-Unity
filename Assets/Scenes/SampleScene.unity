@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 705507994}
-  m_IndirectSpecularColor: {r: 0.5649007, g: 0.6356403, b: 0.72393775, a: 1}
+  m_IndirectSpecularColor: {r: 0.2846214, g: 0.37120992, b: 0.498806, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -493,6 +493,7 @@ MonoBehaviour:
   worldSettings: {fileID: 11400000, guid: 8b04c464dba9af04db856e93c68e9efb, type: 2}
   player: {fileID: 3619144264466016598}
   debugMode: 0
+  densityMapCount: 0
   drawPlayerBounds: 0
   drawChunkBounds: 0
   drawDensityMaps: 0
@@ -2453,7 +2454,7 @@ MonoBehaviour:
   maxZoom: 12
   collisionDetection: 1
   collisionAffectsZoom: 0
-  detectionRadius: 1
+  detectionRadius: 0.2
   layerMask:
     serializedVersion: 2
     m_Bits: 64

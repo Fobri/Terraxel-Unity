@@ -18,7 +18,7 @@ public class BiomeData : ScriptableObject
             } 
             if(instances[i] != null){
                 result += "public static readonly NativeInstanceData data" + i.ToString() + " = new NativeInstanceData("+Utils.float2ToString(instances[i].angleLimit)+", "+
-                        Utils.float3x2ToString(instances[i].sizeVariation)+", "+Utils.floatToString(instances[i].density)+", "+instances[i].maxLod+");" + System.Environment.NewLine + "\t";
+                        Utils.float3x2ToString(instances[i].sizeVariation)+", "+Utils.floatToString(instances[i].density)+", "+instances[i].maxLod+", "+instances[i].uniformDensity.ToString().ToLower()+");" + System.Environment.NewLine + "\t";
             }
         }
         return result;

@@ -14,7 +14,7 @@ public abstract class Octree : JobRunner
 
     public Octree parent { get; set; }
 
-    public int depth = ChunkManager.lodLevels;
+    public int depth = TerraxelConstants.lodLevels;
     
     public int depthMultiplier{
         get{
@@ -210,7 +210,7 @@ public abstract class Octree : JobRunner
         var minCoord = TerraxelWorld.playerBounds.center - ChunkManager.chunkResolution * depthMultiplier * 0.8f;(math.any(region.center < minCoord) || math.any(region.center > maxCoord))*/
         float dst = math.distance(TerraxelWorld.playerBounds.center, region.center);
         float dst2D = math.distance(new float2(TerraxelWorld.playerBounds.center.x, TerraxelWorld.playerBounds.center.z), new float2(region.center.x, region.center.z));
-        if(dst > maxDistances[depth] && depth < ChunkManager.lodLevels - 1){
+        if(dst > maxDistances[depth] && depth < TerraxelConstants.lodLevels - 1){
             if(HasSubChunks){
                 if(!thisChunk.hasMesh){
                     /*if(depth > ChunkManager.simpleChunkTreshold && dst2D > maxDistances[ChunkManager.simpleChunkTreshold+1]){

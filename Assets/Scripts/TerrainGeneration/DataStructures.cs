@@ -55,12 +55,14 @@ namespace Terraxel.DataStructures
         public float2 angleLimit;
         public float3x2 sizeVariation;
         public float density;
+        public bool uniformDensity;
         public int maxLod;
 
-        public NativeInstanceData(float2 angleLimit, float3x2 sizeVariation, float density, int maxLod){
+        public NativeInstanceData(float2 angleLimit, float3x2 sizeVariation, float density, int maxLod, bool uniformDensity){
             this.angleLimit = angleLimit;
             this.sizeVariation = sizeVariation;
             this.density = density;
+            this.uniformDensity = uniformDensity;
             this.maxLod = Octree.depthMultipliers[maxLod];
         }
     }
@@ -304,12 +306,12 @@ namespace Terraxel.DataStructures
         ushort x;
         ushort y;
         ushort z;
-        public byte caseIdx;
+        public bool hasInstancingPosition;
         public ReuseCell(ushort value){
             x = value;
             y = value;
             z = value;
-            caseIdx = 0;
+            hasInstancingPosition = false;
         }
         public ushort this[int index]{
             get{
@@ -355,14 +357,22 @@ namespace Terraxel.DataStructures
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static quaternion AlignWithNormal(float3 normal, Unity.Mathematics.Random rng){
+        public static quaternion AlignWithNormal(float3 normal, float yRot){
             float4 q = 0;
             var axis = new float3(0,1,0);
             float3 a = math.cross(axis, normal);
             q.xyz = a;
             q.w = 1 + math.dot(axis, normal);
-            quaternion randomRotation = quaternion.RotateY(rng.NextFloat(0, 360));
+            quaternion randomRotation = quaternion.RotateY(yRot * 3.6f);
             return (quaternion)math.normalize(math.mul((quaternion)q, randomRotation));
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static float CalculateAreaOfTrinagle(float3 n1, float3 n2 , float3 n3)
+        {
+            float res  = math.pow(((n2.x * n1.y) - (n3.x * n1.y) - (n1.x * n2.y) + (n3.x * n2.y) + (n1.x * n3.y) - (n2.x * n3.y)), 2.0f);
+            res += math.pow(((n2.x * n1.z) - (n3.x * n1.z) - (n1.x * n2.z) + (n3.x * n2.z) + (n1.x * n3.z) - (n2.x * n3.z)), 2.0f);
+            res += math.pow(((n2.y * n1.z) - (n3.y * n1.z) - (n1.y * n2.z) + (n3.y * n2.z) + (n1.y * n3.z) - (n2.y * n3.z)), 2.0f);
+            return math.sqrt(res) * 0.5f;
         }
         public static string floatToString(float value){
             return value.ToString("F4", new CultureInfo("en-US"))+"f";
@@ -375,6 +385,14 @@ namespace Terraxel.DataStructures
         }
         public static string float3x2ToString(float3x2 value){
             return "new float3x2("+float3ToString(value.c0)+", "+float3ToString(value.c1)+")";
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static float RandomValue(float3 pos){
+            int state = (int)(pos.x * 53 * pos.y * 532 * pos.z+ 124123);
+            state = (int)(state * 747796405 + 2891336453);
+            int result = ((state >> ((state >> 28) + 4)) ^ state) * 277803737;
+            result = (result >> 22) ^ result;
+            return result / 4294967295f;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int XyzToIndex(int x, int y, int z, int size)

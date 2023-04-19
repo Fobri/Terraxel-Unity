@@ -85,6 +85,31 @@ public class TerraxelWindow : EditorWindow
         renderGrass.value = worldSettings.renderGrass;
         renderGrass.RegisterValueChangedCallback((change) => worldSettings.renderGrass = change.newValue);
         m_rightPanel.Add(renderGrass);
+
+        DrawHeader("Constants", 25);
+        HelpBox constantsHelp = new HelpBox("These settings are compiled into constants", HelpBoxMessageType.Info);
+        m_rightPanel.Add(constantsHelp);
+        IntegerField lodLevelsField = new IntegerField("World Size");
+        lodLevelsField.value = worldSettings.lodLevels;
+        lodLevelsField.RegisterValueChangedCallback((change) => worldSettings.lodLevels = change.newValue);
+        m_rightPanel.Add(lodLevelsField);
+
+        IntegerField densityCount = new IntegerField("Max active density map count");
+        densityCount.value = worldSettings.densityCount;
+        densityCount.RegisterValueChangedCallback((change) => worldSettings.densityCount = change.newValue);
+        m_rightPanel.Add(densityCount);
+        HelpBox densityHelp = new HelpBox("Memory consumption: " + worldSettings.densityCount * MemoryManager.densityMapLength * 8 / 1_000_000 + "Mb", HelpBoxMessageType.Info);
+        m_rightPanel.Add(densityHelp);
+
+        IntegerField maxGpuOperations = new IntegerField("Max Concurrent GPU operations (density map generation)");
+        maxGpuOperations.value = worldSettings.maxGpuOperations;
+        maxGpuOperations.RegisterValueChangedCallback((change) => worldSettings.maxGpuOperations = change.newValue);
+        m_rightPanel.Add(maxGpuOperations);
+
+        Button compileButton = new Button();
+        compileButton.text = "Compile";
+        compileButton.clicked += worldSettings.CompileConstants;
+        m_rightPanel.Add(compileButton);
     }
     void DrawTerraxelBiomesWindow(TerraxelWorldSettings worldSettings){
         DrawHeader("Biomes");
@@ -98,10 +123,10 @@ public class TerraxelWindow : EditorWindow
     void DrawTerraxelObjectsWindow(TerraxelWorldSettings worldSettings){
 
     }
-    void DrawHeader(string text){
+    void DrawHeader(string text, int size = 35){
         Label header = new Label(text);
         var style = header.style;
-        style.fontSize = 35;
+        style.fontSize = size;
         style.alignSelf = Align.Center;
         m_rightPanel.Add(header);
     }
