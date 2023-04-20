@@ -11,7 +11,7 @@
          base.OnInspectorGUI();
          var script = (WorldData)target;
  
-             if(GUILayout.Button("Save", GUILayout.Height(40)))
+             if(GUILayout.Button("Compile", GUILayout.Height(40)))
              {
                  script.Generate();
              }

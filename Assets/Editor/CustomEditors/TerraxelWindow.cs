@@ -119,6 +119,13 @@ public class TerraxelWindow : EditorWindow
         activeBiomes.value = worldSettings.generator;
         activeBiomes.RegisterValueChangedCallback((change) => worldSettings.generator = change.newValue as WorldData);
         m_rightPanel.Add(activeBiomes);
+
+        HelpBox constantsHelp = new HelpBox("After changing biome and instance properties they must be compiled", HelpBoxMessageType.Info);
+        m_rightPanel.Add(constantsHelp);
+        Button compileButton = new Button();
+        compileButton.text = "Compile";
+        compileButton.clicked += worldSettings.CompileConstants;
+        m_rightPanel.Add(compileButton);
     }
     void DrawTerraxelObjectsWindow(TerraxelWorldSettings worldSettings){
 
