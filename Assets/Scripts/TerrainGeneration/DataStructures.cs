@@ -388,7 +388,7 @@ namespace Terraxel.DataStructures
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float RandomValue(float3 pos){
-            int state = (int)(pos.x * 53 * pos.y * 532 * pos.z+ 124123);
+            int state = (int)(pos.x * 53 * pos.y * pos.z+ 124123);
             state = (int)(state * 747796405 + 2891336453);
             int result = ((state >> ((state >> 28) + 4)) ^ state) * 277803737;
             result = (result >> 22) ^ result;

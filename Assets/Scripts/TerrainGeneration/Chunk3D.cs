@@ -124,13 +124,13 @@ public class Chunk3D : BaseChunk{
             var densityData = TerraxelWorld.DensityManager.GetJobDensityData();
             var cache = new DensityCacheInstance(new int3(int.MaxValue));
             Debug.Assert(instanceDatas.IsEmpty);
+            var helper = new MeshingHelper(densityData, cache, (int3)WorldPosition, negativeDepthMultiplier, depthMultiplier, TerraxelWorld.seed);
             var marchingJob = new MeshJob()
             {
                 vertices = meshData.vertexBuffer,
                 vertexIndices = vertexIndexBuffer,
                 triangles = meshData.indexBuffer,
-                helper = new MeshingHelper(densityData, cache, (int3)WorldPosition, negativeDepthMultiplier, depthMultiplier, TerraxelWorld.seed),
-                instancingData = instanceDatas,
+                helper = helper,
                 rng = base.rng,
                 renderBounds = renderBoundsData
             };
@@ -141,10 +141,18 @@ public class Chunk3D : BaseChunk{
                 vertexIndices = vertexIndexBuffer,
                 triangles = meshData.indexBuffer,
                 indexTracker = -1,
-                helper = new MeshingHelper(densityData, cache, (int3)WorldPosition, negativeDepthMultiplier, depthMultiplier, TerraxelWorld.seed),
+                helper = helper,
                 meshStarts = meshStarts,
             };
             base.ScheduleJobFor(transitionJob, 6 * (ChunkManager.chunkResolution) * (ChunkManager.chunkResolution), true);
+            helper.depthMultiplier = 1;
+            helper.negativeDepthMultiplier = depthMultiplier;
+            var instancingJob = new InstancingJob(){
+                helper = helper,
+                rng = base.rng,
+                instancingData = instanceDatas
+            };
+            base.ScheduleJobFor(instancingJob, (ChunkManager.chunkResolution*depthMultiplier) * (ChunkManager.chunkResolution*depthMultiplier) * (ChunkManager.chunkResolution*depthMultiplier), false);
         }
         bool CheckNeighbour(int3 relativeOffset, bool refreshNeighbours = false){
             float3 pos = ChunkManager.chunkResolution * depthMultiplier * relativeOffset;

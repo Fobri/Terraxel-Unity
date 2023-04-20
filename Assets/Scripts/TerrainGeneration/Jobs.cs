@@ -22,6 +22,7 @@ namespace Terraxel.WorldGeneration
         [ReadOnly] public int depthMultiplier;
         [WriteOnly] public NativeReference<bool> isEmpty;
         [WriteOnly] public NativeArray<VertexData> vertices;
+        [ReadOnly] public bool generateInstances;
         public JobInstancingData instancingData;
         [WriteOnly, NativeDisableParallelForRestriction] public NativeArray<ushort> indices;
         public Unity.Mathematics.Random rng;
@@ -42,22 +43,23 @@ namespace Terraxel.WorldGeneration
                 bounds.c0 = math.min(_vertPos, bounds.c0);
                 bounds.c1 = math.max(_vertPos, bounds.c1);
                 renderBounds.Value = bounds;
-                for(int i2 = 0; i2 < 5; i2++){
-                        var biome = BiomesGenerated.Get(i2);
-                        if(biome.density == 0) continue;
-                        if(biome.maxLod <= depthMultiplier) continue;
-                        if(angle > biome.angleLimit.x && angle < biome.angleLimit.y){
-                            var chance = Utils.RandomValue(midPoint) * 100f;
-                            if(biome.uniformDensity){
-                                if(math.any((int3)midPoint % Octree.depthMultipliers[TerraxelConstants.lodLevels-2] != 0)) continue;
-                            }
-                            if(chance < biome.density){
-                                instancingData[i2].Add(new InstanceData(float4x4.TRS(midPoint + chunkPos, Utils.AlignWithNormal(normal, chance), math.lerp(biome.sizeVariation.c0, biome.sizeVariation.c1, chance*0.01f))));
-                                //currentCell.hasInstancingPosition = true;
-                                break;
+                if(generateInstances){
+                    for(int i2 = 0; i2 < 5; i2++){
+                            var biome = BiomesGenerated.Get(i2);
+                            if(!biome.uniformDensity || biome.density == 0 || biome.maxLod <= depthMultiplier) continue;
+                            if(angle > biome.angleLimit.x && angle < biome.angleLimit.y){
+                                var chance = Utils.RandomValue(midPoint) * 100f;
+                                if(biome.uniformDensity){
+                                    if(math.any((int3)midPoint % Octree.depthMultipliers[TerraxelConstants.lodLevels-2] != 0)) continue;
+                                }
+                                if(chance < biome.density){
+                                    instancingData[i2].Add(new InstanceData(float4x4.TRS(midPoint + chunkPos, Utils.AlignWithNormal(normal, chance), math.lerp(biome.sizeVariation.c0, biome.sizeVariation.c1, chance*0.01f))));
+                                    //currentCell.hasInstancingPosition = true;
+                                    break;
+                                }
                             }
                         }
-                    }
+                }
                 if(vertPos.x > 0 && vertPos.y > 0){
                     isEmpty.Value = false;
                     indices[triIndex * 6 + 0] = (ushort)Utils.XzToIndex(vertPos + new int2(-1, -1), chunkSize);
@@ -266,8 +268,6 @@ namespace Terraxel.WorldGeneration
         public NativeList<TransitionVertexData> vertices;
         public NativeList<ushort> triangles;
         public MeshingHelper helper;
-        
-        public JobInstancingData instancingData;
         public TempBuffer vertexIndices;
         public Unity.Mathematics.Random rng;
         public NativeReference<float3x2> renderBounds;
@@ -373,54 +373,6 @@ namespace Terraxel.WorldGeneration
                 triangles.Add(cellIndices[Tables.RegularCellData[cell][i * 3 + 1]]);
                 triangles.Add(cellIndices[Tables.RegularCellData[cell][i * 3 + 2]]);
                 triangles.Add(cellIndices[Tables.RegularCellData[cell][i * 3 + 3]]);
-                for(int v = 0; v < 2; v++){
-                    if(!currentCell.hasInstancingPosition){
-                        if(!CanCreateInstancedData(voxelLocalPosition)) continue;
-                        float3 midPoint;
-                        float3 normal;
-                        if(v==0){
-                            midPoint = v1.Primary;
-                            normal = v1.normal;
-                        }else if(v==1){
-                            midPoint = v2.Primary;
-                            normal = v2.normal;
-                        }else{
-                            midPoint = v3.Primary;
-                            normal = v3.normal;
-                        }
-                        var angle = math.dot(normal, new float3(0,1,0));
-                        for(int i2 = 0; i2 < 5; i2++){
-                            var biome = BiomesGenerated.Get(i2);
-                            if(!biome.uniformDensity || biome.density == 0 || biome.maxLod < helper.depthMultiplier) continue;
-                            if(angle > biome.angleLimit.x && angle < biome.angleLimit.y){
-                                var chance = Utils.RandomValue((int3)math.round(midPoint / helper.depthMultiplier))* 100f;
-                                if(biome.uniformDensity){
-                                    if(math.any((int3)math.round(midPoint) % Octree.depthMultipliers[TerraxelConstants.lodLevels-2] != 0)) continue;
-                                }
-                                if(chance < biome.density){
-                                    instancingData[i2].Add(new InstanceData(float4x4.TRS(midPoint + helper.chunkPos, Utils.AlignWithNormal(normal, chance), math.lerp(biome.sizeVariation.c0, biome.sizeVariation.c1, chance*0.01f))));
-                                    currentCell.hasInstancingPosition = true;
-                                    break;
-                                }
-                            }
-                        }
-                        for(int i2 = 0; i2 < 5; i2++){
-                            var biome = BiomesGenerated.Get(i2);
-                            if(biome.uniformDensity || biome.density == 0 || biome.maxLod < helper.depthMultiplier) continue;
-                            if(angle > biome.angleLimit.x && angle < biome.angleLimit.y){
-                                var chance = Utils.RandomValue(midPoint) * 100f;
-                                if(biome.uniformDensity){
-                                    if(math.any((int3)math.round(midPoint) % Octree.depthMultipliers[TerraxelConstants.lodLevels-2] != 0)) continue;
-                                }
-                                if(chance < biome.density){
-                                    instancingData[i2].Add(new InstanceData(float4x4.TRS(midPoint + helper.chunkPos, Utils.AlignWithNormal(normal, chance), math.lerp(biome.sizeVariation.c0, biome.sizeVariation.c1, chance*0.01f))));
-                                    currentCell.hasInstancingPosition = true;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
             }
             vertexIndices.vertexIndices[index] = currentCell;
         }
@@ -653,24 +605,70 @@ namespace Terraxel.WorldGeneration
         }
         
     }
-    /*[BurstCompile]
-    public struct GrassJob : IJobFor
+    [BurstCompile(FloatPrecision.Low, FloatMode.Fast)]
+    public struct InstancingJob : IJobFor
     {
-        [ReadOnly] public float2 offset;
-        [ReadOnly] public int depthMultiplier;
-        [ReadOnly] public int size;
-        [ReadOnly] public NoiseProperties noiseProperties;
+        public MeshingHelper helper;
         public Unity.Mathematics.Random rng;
-        [WriteOnly] public NativeList<GrassInstanceData> data;
+        [WriteOnly] 
+        public JobInstancingData instancingData;
         public void Execute(int index){
-            var pos = Utils.IndexToXz(index, size) * depthMultiplier + offset;
-            var value = TerraxelGenerated.GenerateDensity(pos);
-            var chance = rng.NextFloat(0f, 100f);
-            if(value > chance){
-                data.Add(Matrix4x4.TRS(new float3(pos.x, value, pos.y), math.quaternion(0,0,0,1), (float3)1f));
+            int3 voxelLocalPosition = Utils.IndexToXyz(index, ChunkManager.chunkResolution*(int)helper.negativeDepthMultiplier).xyz;
+
+
+            VoxelCorners density = helper.GetDensities(voxelLocalPosition);
+
+            int caseCode = ((density[0] >> 7) & 0x01)
+                                    | ((density[1] >> 6) & 0x02)
+                                    | ((density[2] >> 5) & 0x04)
+                                    | ((density[3] >> 4) & 0x08)
+                                    | ((density[4] >> 3) & 0x10)
+                                    | ((density[5] >> 2) & 0x20)
+                                    | ((density[6] >> 1) & 0x40)
+                                    | (density[7] & 0x80);
+            if ((caseCode ^ ((density[7] >> 7) & 0xFF)) == 0)
+            {
+                return;
+            }
+            ushort edge = (ushort)(Tables.RegularVertexData[caseCode][0]);
+
+            byte v0 = (byte)((edge >> 4) & 0x0F); //First Corner Index
+            byte v1 = (byte)(edge & 0x0F); //Second Corner Index
+            float chance = Utils.RandomValue(voxelLocalPosition + helper.chunkPos) * 100f;
+            CreateInstance((voxelLocalPosition + Tables.CubeCorners[v0]),(voxelLocalPosition + Tables.CubeCorners[v1]), density[v0], density[v1], voxelLocalPosition, chance);
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void CreateInstance(int3 lowerEndPointPos, int3 higherEndPointPos, sbyte lowerEndPointDensity, sbyte higherEndPointDensity, int3 voxelLocalPosition, float chance){
+            //Surface shift
+            float3 instancePos;
+            float3 surfaceNormal;
+            float3 N0 = helper.GetVertexNormal(lowerEndPointPos, 1);
+            if(!lowerEndPointPos.Equals(higherEndPointPos)){
+                int t = (higherEndPointDensity << 8) / (higherEndPointDensity - lowerEndPointDensity);
+                int u = 0x0100 - t;
+                float3 N1 = helper.GetVertexNormal(higherEndPointPos, 1);
+                instancePos = (t * lowerEndPointPos + u * higherEndPointPos);
+                instancePos = instancePos * 0.00390625f;
+                surfaceNormal = (t * N0 + u * N1);
+            }else{
+                instancePos = lowerEndPointPos;
+                surfaceNormal = N0;
+            }
+            surfaceNormal = math.normalize(surfaceNormal);
+            var angle = math.dot(surfaceNormal, new float3(0,1,0));
+            for(int i2 = 0; i2 < 5; i2++){
+                var biome = BiomesGenerated.Get(i2);
+                if(biome.uniformDensity || biome.density == 0 || biome.maxLod < helper.negativeDepthMultiplier) continue;
+                if(angle > biome.angleLimit.x && angle < biome.angleLimit.y){
+                    if(chance < biome.density){
+                        //Debug.Log("Y");
+                        instancingData[i2].Add(new InstanceData(float4x4.TRS(instancePos + helper.chunkPos, Utils.AlignWithNormal(surfaceNormal, chance), math.lerp(biome.sizeVariation.c0, biome.sizeVariation.c1, chance*0.01f))));
+                        break;
+                    }
+                }
             }
         }
-    }*/
+    }
 
     internal class Tables
     {
