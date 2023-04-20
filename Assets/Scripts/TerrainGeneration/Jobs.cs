@@ -49,9 +49,6 @@ namespace Terraxel.WorldGeneration
                             if(!biome.uniformDensity || biome.density == 0 || biome.maxLod <= depthMultiplier) continue;
                             if(angle > biome.angleLimit.x && angle < biome.angleLimit.y){
                                 var chance = Utils.RandomValue(midPoint) * 100f;
-                                if(biome.uniformDensity){
-                                    if(math.any((int3)midPoint % Octree.depthMultipliers[TerraxelConstants.lodLevels-2] != 0)) continue;
-                                }
                                 if(chance < biome.density){
                                     instancingData[i2].Add(new InstanceData(float4x4.TRS(midPoint + chunkPos, Utils.AlignWithNormal(normal, chance), math.lerp(biome.sizeVariation.c0, biome.sizeVariation.c1, chance*0.01f))));
                                     //currentCell.hasInstancingPosition = true;
