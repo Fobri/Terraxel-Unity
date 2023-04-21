@@ -249,7 +249,10 @@ TextMeshProUGUI[] debugLabels;
                 Gizmos.DrawWireCube(bound.center, bound.bounds);
             }
         }
-        if(drawChunkVariables.draw ||drawChunkBounds){
+        if(drawChunkBounds){
+            ChunkManager.chunkTree.RenderBoundsRecursive();
+        }
+        if(drawChunkVariables.draw){
             GUI.color = Color.green;
             var chunkDatas = ChunkManager.GetDebugArray();
             for(int i = 0; i < chunkDatas.Count; i++){
@@ -277,9 +280,6 @@ TextMeshProUGUI[] debugLabels;
                 if(drawChunkVariables.dirMask){
                     offset.y += 4f;
                     Handles.Label(offset, Utils.DirectionMaskToString(chunkDatas[i].dirMask));
-                }
-                if(drawChunkBounds){
-                    Gizmos.DrawWireCube(chunkDatas[i].renderBounds.center, chunkDatas[i].renderBounds.size);
                 }
                 if(drawChunkVariables.type){
                     offset.y += 4f;

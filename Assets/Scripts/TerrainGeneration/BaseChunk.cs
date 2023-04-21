@@ -85,6 +85,7 @@ public abstract class BaseChunk : Octree
     protected void PushInstanceData(){
         if(this is Chunk2D && depth != TerraxelConstants.lodLevels - 2) return;
         for(int i = 0; i < 5; i++){
+            instanceRenderers[i]?.propertyBlock.SetVector("_WorldPos", new float4(WorldPosition, 1));
             instanceRenderers[i]?.PushData(instanceDatas[i]);
         }
         instanceDatas.Dispose();

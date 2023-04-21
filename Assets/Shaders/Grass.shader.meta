@@ -3,8 +3,7 @@ guid: 93256a0c8e94f174480a27dc8ef9f682
 ShaderImporter:
   externalObjects: {}
   defaultTextures:
-  - _RampTex: {instanceID: 0}
-  - _WindTex: {instanceID: 0}
+  - _MainTex: {instanceID: 0}
   nonModifiableTextures: []
   userData: 
   assetBundleName: 

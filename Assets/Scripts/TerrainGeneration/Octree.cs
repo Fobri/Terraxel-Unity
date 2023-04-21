@@ -155,13 +155,13 @@ public abstract class Octree : JobRunner
         var octs = CreateOctants(region);
         for(int i = 0; i < 8; i++){
             children[i].region = octs[i];
-            (children[i] as BaseChunk).RecalculateBounds();
             var octants = CreateOctants(children[i].region);
             for(int s = 0; s < 8; s++){
                 children[i].children[s] = instanceByPosition[(int3)octants[s].center - size / 2];
                 (children[i].children[s] as BaseChunk).onMeshReady = OnMeshReadyAction.DISPOSE_CHILDREN;
             }
         }
+        RecalculateBoundsRecursive();
     }
     public bool HasSubChunks{
         get{
@@ -275,6 +275,22 @@ public abstract class Octree : JobRunner
                     break;
                 }
             }*/
+        }
+    }
+    public void RecalculateBoundsRecursive(){
+        for(int i = 0; i < 8; i++){
+            if(children[i] != null){
+                children[i].RecalculateBoundsRecursive();
+                children[i].thisChunk.RecalculateBounds();
+            }
+        }
+    }
+    public void RenderBoundsRecursive(){
+        for(int i = 0; i < 8; i++){
+            if(children[i] != null){
+                children[i].RenderBoundsRecursive();
+                Gizmos.DrawWireCube(children[i].thisChunk.renderBounds.center, children[i].thisChunk.renderBounds.size);
+            }
         }
     }
     private BaseChunk thisChunk{
