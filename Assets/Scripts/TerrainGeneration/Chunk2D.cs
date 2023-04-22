@@ -107,12 +107,4 @@ public class Chunk2D : BaseChunk
             MemoryManager.ReturnSimpleMeshData(meshData);
         meshData = null;
     }
-    public static Chunk2D CreateCopy(BaseChunk source){
-        Chunk2D result = TerraxelWorld.ChunkManager.GetNewChunk2D(source.region, source.depth);
-        result.children = source.children;
-        result.onMeshReady = source.onMeshReady;
-        result.hasMesh = source.hasMesh;
-        result.parent = source.parent;
-        return result;
-    }
 }

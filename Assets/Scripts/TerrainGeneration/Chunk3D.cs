@@ -265,13 +265,4 @@ public class Chunk3D : BaseChunk{
                 oldMeshData = default;
             }
         }
-
-        public static Chunk3D CreateCopy(BaseChunk source){
-            Chunk3D result = TerraxelWorld.ChunkManager.GetNewChunk3D(source.region, source.depth);
-            result.children = source.children;
-            result.onMeshReady = source.onMeshReady;
-            result.hasMesh = source.hasMesh;
-            result.parent = source.parent;
-            return result;
-        }
     }

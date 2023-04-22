@@ -72,12 +72,12 @@ public class ChunkManager
             while(meshQueue.Count > 0 && MemoryManager.GetFreeVertexIndexBufferCount() > 0){
                 var nextMeshQueueIndex = meshQueue.PeekQueue();
                 if(currentMeshQueueIndex != nextMeshQueueIndex){
-                    if(TerraxelWorld.worldUpdatePending){
+                    /*if(TerraxelWorld.worldUpdatePending){
                         while(meshQueue.Count > 0){
-                            PoolChunk(meshQueue.Dequeue());
+                            DisposeChunk(meshQueue.Dequeue());
                             return false;
                         }
-                    }
+                    }*/
                     currentMeshQueueIndex = nextMeshQueueIndex;
                 }
                 if(meshQueue.TryDequeue(currentMeshQueueIndex, out var toBeProcessed)){
