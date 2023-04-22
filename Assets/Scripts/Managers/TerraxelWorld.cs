@@ -130,7 +130,9 @@ TextMeshProUGUI[] debugLabels;
         JobRunner.Update();
         if(debugMode){
             var chunkDatas = ChunkManager.GetDebugArray();
+            #if UNITY_EDITOR
             densityMapCount = TerraxelConstants.densityMapCount - MemoryManager.GetFreeDensityMapCount();
+            #endif
             memoryUsed = vertCount * sizeof(float) * 9 + vertCount * sizeof(int) + 
                         indexCount * sizeof(ushort) + 
                         (ChunkManager.chunkResolution) * (ChunkManager.chunkResolution) * (ChunkManager.chunkResolution) * sizeof(sbyte) * Octree.depthMultipliers[2] * Octree.depthMultipliers[2] * Octree.depthMultipliers[2];

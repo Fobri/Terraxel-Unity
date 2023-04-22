@@ -52,6 +52,10 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _NormalMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _OcclusionMap:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
@@ -71,7 +75,7 @@ Material:
     m_Ints: []
     m_Floats:
     - _BumpScale: 1
-    - _Cutoff: 0.427
+    - _Cutoff: 0.23
     - _Cutout: 0.2
     - _DetailNormalMapScale: 1
     - _DstBlend: 5
@@ -81,27 +85,32 @@ Material:
     - _HeightCutoff: 1.2
     - _HeightFactor: 1
     - _MeshDeformationLimit: 0.86
+    - _MeshDeformationLimitLow: 0.08
+    - _MeshDeformationLimitTop: 2
     - _Metallic: 0
     - _Mode: 1
     - _OcclusionStrength: 1
     - _Parallax: 0.02
-    - _Scale: 1.07
+    - _Scale: 1.49
+    - _Smoothness: 0.5
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 5
+    - _TextureStrength: 0
     - _UVSec: 0
     - _WaveAmp: 1
     - _WaveSpeed: 1
+    - _Wind: 0.5
     - _WindNoiseScale: 1
     - _WindStrength: 1
     - _ZWrite: 1
     m_Colors:
-    - _AOColor: {r: 1, g: 0, b: 1, a: 1}
+    - _AOColor: {r: 0.8603017, g: 0.9528302, b: 0.78653437, a: 1}
     - _Color: {r: 0.8207547, g: 0.8207547, b: 0.8207547, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _PrimaryCol: {r: 1, g: 1, b: 1, a: 1}
-    - _SecondaryCol: {r: 1, g: 0, b: 1, a: 1}
-    - _TipColor: {r: 0, g: 0, b: 1, a: 1}
+    - _PrimaryCol: {r: 0.7830189, g: 0.7773301, b: 0.53555536, a: 1}
+    - _SecondaryCol: {r: 0.6030138, g: 0.7075472, b: 0.56403524, a: 1}
+    - _TipColor: {r: 0.46543798, g: 0.5283019, b: 0.4012104, a: 1}
     - _WindSpeed: {r: 1, g: 0, b: 1, a: 0}
     - _WorldPos: {r: 0, g: 0, b: 0, a: 1}
     - _WorldSize: {r: 1, g: 1, b: 1, a: 1}
