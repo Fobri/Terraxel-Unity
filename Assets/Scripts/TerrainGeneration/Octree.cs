@@ -285,11 +285,11 @@ public abstract class Octree : JobRunner
             }
         }
     }
-    public void RenderBoundsRecursive(){
+    public void RenderBoundsRecursive(int level){
         for(int i = 0; i < 8; i++){
             if(children[i] != null){
-                children[i].RenderBoundsRecursive();
-                Gizmos.DrawWireCube(children[i].thisChunk.renderBounds.center, children[i].thisChunk.renderBounds.size);
+                children[i].RenderBoundsRecursive(level);
+                if(depth == level) Gizmos.DrawWireCube(children[i].thisChunk.renderBounds.center, children[i].thisChunk.renderBounds.size);
             }
         }
     }

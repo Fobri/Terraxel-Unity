@@ -75,6 +75,8 @@ public class TerraxelWorld : MonoBehaviour
     [SerializeField]
     private bool drawChunkBounds;
     [SerializeField]
+    private int lodlLevelDraw;
+    [SerializeField]
     private bool drawDensityMaps;
     [SerializeField]
     private ChunkDebugView drawChunkVariables;
@@ -252,7 +254,7 @@ TextMeshProUGUI[] debugLabels;
             }
         }
         if(drawChunkBounds){
-            ChunkManager.chunkTree.RenderBoundsRecursive();
+            ChunkManager.chunkTree.RenderBoundsRecursive(lodlLevelDraw);
         }
         if(drawChunkVariables.draw){
             GUI.color = Color.green;

@@ -496,6 +496,7 @@ MonoBehaviour:
   densityMapCount: 0
   drawPlayerBounds: 0
   drawChunkBounds: 0
+  lodlLevelDraw: 0
   drawDensityMaps: 0
   drawChunkVariables:
     position: 0

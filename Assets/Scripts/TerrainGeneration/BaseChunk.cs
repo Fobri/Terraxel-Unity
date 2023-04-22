@@ -143,6 +143,10 @@ public abstract class BaseChunk : Octree
         return "Chunk " + WorldPosition.ToString();
     }
     public void RecalculateBounds(){
-        renderBounds = new Bounds((boundSource.c1 - boundSource.c0) * 0.5f + WorldPosition + boundSource.c0, boundSource.c1 - boundSource.c0);
+        if(depth == TerraxelConstants.lodLevels -1 ){
+            renderBounds = new Bounds(region.center, region.bounds);
+        }else{
+            renderBounds = new Bounds(WorldPosition + (boundSource.c0 + boundSource.c1) * 0.5f, boundSource.c1 - boundSource.c0);
+        }
     }
 }
