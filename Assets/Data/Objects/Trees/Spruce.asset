@@ -30,6 +30,6 @@ MonoBehaviour:
       y: 3
       z: 1.2
   uniformDensity: 1
-  density: 2.3
+  density: 4
   maxLod: 7
   colliderObject: {fileID: 0}

@@ -18,15 +18,14 @@ namespace Terraxel.DataStructures
     public enum DisposeState { NOTHING, POOL, FREE_MESH }
     
     public struct DensityResultData{
-        
+        public enum RequestState { NOREQ, EMPTY, DATA, READY }
         //[NativeDisableParallelForRestriction, NativeDisableContainerSafetyRestriction, WriteOnly]
         public NativeArray<sbyte> densityMap;
         public ComputeBuffer gpuBuffer;
         public ComputeBuffer isFullOrEmpty;
         public int3 pos;
         public AsyncGPUReadbackRequest readbackRequest;
-        public bool hasRequest;
-        public bool isReady;
+        public RequestState requestState;
         /*[WriteOnly, NativeDisableParallelForRestriction]
         public NativeReference<bool> isEmpty;
         [WriteOnly, NativeDisableParallelForRestriction]

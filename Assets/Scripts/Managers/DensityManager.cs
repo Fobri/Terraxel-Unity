@@ -29,8 +29,6 @@ public class DensityManager : IDisposable {
     //Queue<DensityResultData> requestQueue = new Queue<DensityResultData>();
     //DensityResultData currentRequest;
     bool gpuProgramRunning;
-    float3 currentOrigin;
-    int currentRadius;
 
     public void Init(ComputeShader noiseShader){
         densityData = new DensityData();
@@ -114,29 +112,35 @@ public class DensityManager : IDisposable {
     void UpdateInternal(){
         bool allJobsReady = true;
         for(int i = 0; i < TerraxelConstants.maxConcurrentGPUOperations; i++){
-            if(currentlyGenerating[i].isReady) continue;
+            if(currentlyGenerating[i].requestState == DensityResultData.RequestState.READY) continue;
             allJobsReady = false;
-            if(!currentlyGenerating[i].hasRequest){
-                if(!currentlyGenerating[i].gpuBuffer.IsValid()) throw new Exception("Buffer not valid");
-                currentlyGenerating[i].readbackRequest = AsyncGPUReadback.Request(currentlyGenerating[i].gpuBuffer);
-                currentlyGenerating[i].hasRequest = true;
+            if(currentlyGenerating[i].requestState == DensityResultData.RequestState.NOREQ){
+                if(!currentlyGenerating[i].isFullOrEmpty.IsValid()) throw new Exception("Buffer not valid");
+                currentlyGenerating[i].readbackRequest = AsyncGPUReadback.Request(currentlyGenerating[i].isFullOrEmpty);
+                currentlyGenerating[i].requestState = DensityResultData.RequestState.EMPTY;
             }
 
             if(currentlyGenerating[i].readbackRequest.done){
                 if(currentlyGenerating[i].readbackRequest.hasError) {throw new Exception("Error in AsyncGPUReadback");}
-                int[] isEmptyOrFull = new int[2];
-                //TODO: causes lag
-                currentlyGenerating[i].isFullOrEmpty.GetData(isEmptyOrFull);
-                if(isEmptyOrFull[0] == 0 || isEmptyOrFull[1] == 0){
-                    //densityData.densities.Remove(currentlyGenerating[i].pos);
-                    //MemoryManager.ReturnDensityMap(currentlyGenerating[i].densityMap);
-                    if(isEmptyOrFull[0] == 0){
-                        densityData.fullChunks.Add(currentlyGenerating[i].pos);
+                if(currentlyGenerating[i].requestState == DensityResultData.RequestState.EMPTY){
+                    var isEmptyOrFull = currentlyGenerating[i].readbackRequest.GetData<int>();
+                    if(isEmptyOrFull[0] == 0 || isEmptyOrFull[1] == 0){
+                        //densityData.densities.Remove(currentlyGenerating[i].pos);
+                        //MemoryManager.ReturnDensityMap(currentlyGenerating[i].densityMap);
+                        if(isEmptyOrFull[0] == 0){
+                            densityData.fullChunks.Add(currentlyGenerating[i].pos);
+                        }
+                        else if(isEmptyOrFull[1] == 0){
+                            densityData.emptyChunks.Add(currentlyGenerating[i].pos);
+                        }
+                        currentlyGenerating[i].requestState = DensityResultData.RequestState.READY;
+                    }else{
+                        if(!currentlyGenerating[i].gpuBuffer.IsValid()) throw new Exception("Buffer not valid");
+                        currentlyGenerating[i].readbackRequest = AsyncGPUReadback.Request(currentlyGenerating[i].gpuBuffer);
+                        currentlyGenerating[i].requestState = DensityResultData.RequestState.DATA;
                     }
-                    else if(isEmptyOrFull[1] == 0){
-                        densityData.emptyChunks.Add(currentlyGenerating[i].pos);
-                    }
-                }else{
+                }
+                else if(currentlyGenerating[i].requestState == DensityResultData.RequestState.DATA){
                     if(MemoryManager.GetFreeDensityMapCount() > 0) {
                         currentlyGenerating[i].densityMap = MemoryManager.GetDensityMap();
                         currentlyGenerating[i].densityMap.CopyFrom(currentlyGenerating[i].readbackRequest.GetData<sbyte>());
@@ -144,8 +148,8 @@ public class DensityManager : IDisposable {
                         densityData.densities.Add(currentlyGenerating[i].pos, (IntPtr)NativeArrayUnsafeUtility.GetUnsafePtr(currentlyGenerating[i].densityMap));
                         }
                     }
+                    currentlyGenerating[i].requestState = DensityResultData.RequestState.READY;
                 }
-                currentlyGenerating[i].isReady = true;
             }
         }
         if(allJobsReady){
@@ -158,22 +162,18 @@ public class DensityManager : IDisposable {
         for(int i = 0; i < TerraxelConstants.maxConcurrentGPUOperations; i++){
             if(operationQueue.Count == 0){
                 gpuProgramRunning = false;
-                if(MemoryManager.GetFreeDensityMapCount() > 10){
-                    LoadDensityData(currentOrigin, ++currentRadius);
-                }
                 return;
             }
             var job = operationQueue.Dequeue();
             if(densityData.densities.ContainsKey(job)){
-                currentlyGenerating[i].isReady = true;
+                currentlyGenerating[i].requestState = DensityResultData.RequestState.READY;
                 continue;
             }
             var data = currentlyGenerating[i];
             computes[i].SetVector("offset", new float4(job, 0));
             //noiseCompute.Dispatch(kernel, 16, 1, 1);
             data.pos = job;
-            data.hasRequest = false;
-            data.isReady = false;
+            data.requestState = DensityResultData.RequestState.NOREQ;
             data.readbackRequest = default;
             data.isFullOrEmpty.SetData(new int[] {0,0});
             currentlyGenerating[i] = data;
@@ -219,8 +219,6 @@ public class DensityManager : IDisposable {
         operationQueue.Enqueue(pos);
     }
     public void LoadDensityData(float3 center, int radius){
-        this.currentOrigin = center;
-        this.currentRadius = radius;
         HashSet<int3> alreadyDataExists = new HashSet<int3>();
         int3 startPos = (int3)center - ChunkManager.chunkResolution * radius - ChunkManager.chunkResolution;
         for(int x = 0; x < radius * 2 + 2; x++){
