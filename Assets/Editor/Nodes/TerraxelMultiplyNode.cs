@@ -42,7 +42,7 @@ public class TerraxelMultiplyNode : TerraxelPreviewNode
 			values.scriptGenerator.functions = dataB.scriptGenerator.functions + values.scriptGenerator.functions;
 		}
 		values.scriptGenerator.body = "op"+base.computeOrder.ToString();
-		values.scriptGenerator.properties = dataA != null ? dataA.scriptGenerator.properties : "" + dataB != null ? dataB.scriptGenerator.properties : "";
+		values.scriptGenerator.properties = (dataA != null ? dataA.scriptGenerator.properties : "") + (dataB != null ? dataB.scriptGenerator.properties : "");
 		
 		values.computeGenerator.functions = "float op"+base.computeOrder.ToString()+" = ("+(dataA != null ? dataA.computeGenerator.body : A)+" * "+(dataB != null ? dataB.computeGenerator.body : B)+");" + System.Environment.NewLine;
 		if(dataA != null){
@@ -52,7 +52,7 @@ public class TerraxelMultiplyNode : TerraxelPreviewNode
 			values.computeGenerator.functions = dataB.computeGenerator.functions + values.computeGenerator.functions;
 		}
 		values.computeGenerator.body = "op"+base.computeOrder.ToString();
-		values.computeGenerator.properties = dataA != null ? dataA.computeGenerator.properties : "" + dataB != null ? dataB.computeGenerator.properties : "";
+		values.computeGenerator.properties = (dataA != null ? dataA.computeGenerator.properties : "") + (dataB != null ? dataB.computeGenerator.properties : "");
 	}
 	[CustomPortInput(nameof(A), typeof(NoiseGraphInput))]
 	void PullA(List< SerializableEdge > inputEdges)

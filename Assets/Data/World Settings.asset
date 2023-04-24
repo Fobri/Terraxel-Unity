@@ -13,13 +13,13 @@ MonoBehaviour:
   m_Name: World Settings
   m_EditorClassIdentifier: 
   placePlayerOnSurface: 1
-  seed: 123
+  seed: 0
   renderGrass: 1
   frustumCulling: 1
   generator: {fileID: 11400000, guid: 9f2d41799eafcf74f9944899bf6e2b03, type: 2}
   noise2D: {fileID: 7200000, guid: ab2a3f8816d72f346aa470bb546a0dbf, type: 3}
   noise3D: {fileID: 7200000, guid: 523bcf8637956e549bb16b209be05492, type: 3}
-  lodLevels: 5
+  lodLevels: 9
   maxGpuOperations: 32
-  densityCount: 128
+  densityCount: 256
   uniformDensityRes: 16

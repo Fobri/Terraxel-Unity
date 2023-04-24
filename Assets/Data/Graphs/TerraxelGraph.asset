@@ -23,6 +23,8 @@ MonoBehaviour:
   - rid: 7132472063311478788
   - rid: 7132472063311478789
   - rid: 7132472063311478790
+  - rid: 8148540604002336769
+  - rid: 8148540604002336770
   edges:
   - GUID: 578d9155-7269-476c-a4b4-2531b07523ce
     owner: {fileID: 11400000}
@@ -96,19 +98,35 @@ MonoBehaviour:
     outputFieldName: output
     inputPortIdentifier: 
     outputPortIdentifier: 
-  - GUID: 7acd3468-8477-4e39-bac8-15938f834450
-    owner: {fileID: 11400000}
-    inputNodeGUID: 11d7e164-7d19-44a4-8c99-4bca0c8165cd
-    outputNodeGUID: 49c50110-a9cd-4d8c-8ffe-ac86ad5be693
-    inputFieldName: input
-    outputFieldName: output
-    inputPortIdentifier: 
-    outputPortIdentifier: 
   - GUID: 37201612-066c-40de-aaa3-d9ae290ea7de
     owner: {fileID: 11400000}
     inputNodeGUID: 49c50110-a9cd-4d8c-8ffe-ac86ad5be693
     outputNodeGUID: ce0b35f0-7988-48a3-bdbf-2feb138bcad0
     inputFieldName: y
+    outputFieldName: output
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  - GUID: 059a92d0-852e-42f3-8215-1823e5bf4ee1
+    owner: {fileID: 11400000}
+    inputNodeGUID: 9e51a9c7-d4c1-4822-82e9-4c8b1516f341
+    outputNodeGUID: 49c50110-a9cd-4d8c-8ffe-ac86ad5be693
+    inputFieldName: A
+    outputFieldName: output
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  - GUID: c8493828-2cae-4622-a6aa-0bfe3e1bb8ea
+    owner: {fileID: 11400000}
+    inputNodeGUID: 11d7e164-7d19-44a4-8c99-4bca0c8165cd
+    outputNodeGUID: 9e51a9c7-d4c1-4822-82e9-4c8b1516f341
+    inputFieldName: input
+    outputFieldName: output
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  - GUID: 41222bf9-7cec-4654-95fe-cb92b3ba8d0a
+    owner: {fileID: 11400000}
+    inputNodeGUID: 9e51a9c7-d4c1-4822-82e9-4c8b1516f341
+    outputNodeGUID: eb1456f3-121f-44c4-835b-cc4cfa256b8e
+    inputFieldName: B
     outputFieldName: output
     inputPortIdentifier: 
     outputPortIdentifier: 
@@ -149,8 +167,8 @@ MonoBehaviour:
   serializedParameterList: []
   stickyNotes: []
   nodeInspectorReference: {fileID: 0}
-  position: {x: 185, y: 236, z: 0}
-  scale: {x: 0.49717674, y: 0.49717674, z: 1}
+  position: {x: -499, y: 35, z: 0}
+  scale: {x: 0.8695652, y: 0.8695652, z: 1}
   references:
     version: 2
     RefIds:
@@ -183,11 +201,11 @@ MonoBehaviour:
       data:
         nodeCustomName: 
         GUID: 11d7e164-7d19-44a4-8c99-4bca0c8165cd
-        computeOrder: 8
+        computeOrder: 10
         position:
           serializedVersion: 2
-          x: 1509.9503
-          y: -83.149994
+          x: 1812.5503
+          y: 40.500023
           width: 82
           height: 75
         expanded: 0
@@ -313,7 +331,7 @@ MonoBehaviour:
       data:
         nodeCustomName: 
         GUID: ce0b35f0-7988-48a3-bdbf-2feb138bcad0
-        computeOrder: 6
+        computeOrder: 7
         position:
           serializedVersion: 2
           x: 1128.6503
@@ -331,7 +349,7 @@ MonoBehaviour:
       data:
         nodeCustomName: 
         GUID: 49c50110-a9cd-4d8c-8ffe-ac86ad5be693
-        computeOrder: 7
+        computeOrder: 8
         position:
           serializedVersion: 2
           x: 1293.2001
@@ -349,4 +367,46 @@ MonoBehaviour:
         octaves: 3
         lacunarity: 5
         gain: 0.3
+        ad: 0
+    - rid: 8148540604002336769
+      type: {class: TerraxelAdd, ns: , asm: Assembly-CSharp-Editor}
+      data:
+        nodeCustomName: 
+        GUID: 9e51a9c7-d4c1-4822-82e9-4c8b1516f341
+        computeOrder: 9
+        position:
+          serializedVersion: 2
+          x: 1558
+          y: 77.75
+          width: 143
+          height: 227
+        expanded: 0
+        debug: 0
+        nodeLock: 0
+        output: 0
+        A: 0
+        B: 1
+    - rid: 8148540604002336770
+      type: {class: DensityNode, ns: , asm: Assembly-CSharp-Editor}
+      data:
+        nodeCustomName: 
+        GUID: eb1456f3-121f-44c4-835b-cc4cfa256b8e
+        computeOrder: 6
+        position:
+          serializedVersion: 2
+          x: 1265
+          y: 305.00003
+          width: 197
+          height: 371
+        expanded: 0
+        debug: 0
+        nodeLock: 0
+        output: 0
+        x: 1
+        y: 1
+        frequency: 1
+        amplitude: 10
+        octaves: 2
+        lacunarity: 2
+        gain: 2
         ad: 0
