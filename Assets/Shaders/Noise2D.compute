@@ -1,0 +1,12 @@
+#pragma kernel CSMain
+#include "Assets/Resources/Generated/TerraxelGenerated.hlsl"
+
+
+float4 offset;
+RWStructuredBuffer<float> Result;
+
+[numthreads(8,1,8)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    Result[id.x + id.z * 32] = finalNoise(id + offset.xyz);
+}

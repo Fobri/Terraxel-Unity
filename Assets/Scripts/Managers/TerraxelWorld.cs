@@ -28,8 +28,6 @@ public class TerraxelWorld : MonoBehaviour
     GameObject debugCanvas;
     int3 worldOffset = Int16.MaxValue;
     int3 playerOffset = Int16.MaxValue;
-
-    ComputeShader noiseShader;
     GameObject chunkPrefab;
     int baseChunkSize = ChunkManager.chunkResolution * Octree.depthMultipliers[TerraxelConstants.lodLevels - 2];
     
@@ -114,12 +112,11 @@ TextMeshProUGUI[] debugLabels;
         activeParent = new GameObject("Active Chunks").transform;
         activeParent.SetParent(transform);
         chunkPrefab = Resources.Load<GameObject>("Prefabs/Chunk");
-        noiseShader = Resources.Load<ComputeShader>("Generated/TerraxelGenerated");
         renderCamera = Camera.main;
         MemoryManager.Init();
         playerBounds = new BoundingBox(player.transform.position, new float3(ChunkManager.chunkResolution));
         DensityManager = new DensityManager();
-        DensityManager.Init(noiseShader);
+        DensityManager.Init(m_worldSettings.noise3D, m_worldSettings.noise2D);
         ChunkManager = new ChunkManager();
         ChunkManager.Init(poolParent, activeParent, chunkPrefab);
         player.SetActive(false);

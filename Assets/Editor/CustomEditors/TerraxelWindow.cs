@@ -94,6 +94,13 @@ public class TerraxelWindow : EditorWindow
         lodLevelsField.RegisterValueChangedCallback((change) => worldSettings.lodLevels = change.newValue);
         m_rightPanel.Add(lodLevelsField);
 
+        IntegerField uniformInstanceResolution = new IntegerField("Uniform instance density resolution");
+        uniformInstanceResolution.value = worldSettings.uniformDensityRes;
+        uniformInstanceResolution.RegisterValueChangedCallback((change) => worldSettings.uniformDensityRes = change.newValue);
+        m_rightPanel.Add(uniformInstanceResolution);
+        HelpBox resHelp = new HelpBox("The resolution of uniformly distributed instances (such as trees) can appear in", HelpBoxMessageType.Info);
+        m_rightPanel.Add(resHelp);
+
         IntegerField densityCount = new IntegerField("Max active density map count");
         densityCount.value = worldSettings.densityCount;
         densityCount.RegisterValueChangedCallback((change) => worldSettings.densityCount = change.newValue);
@@ -110,6 +117,18 @@ public class TerraxelWindow : EditorWindow
         compileButton.text = "Compile";
         compileButton.clicked += worldSettings.CompileConstants;
         m_rightPanel.Add(compileButton);
+
+        DrawHeader("Shaders");
+        ObjectField noise2D = new ObjectField("Noise2D");
+        noise2D.objectType = typeof(ComputeShader);
+        noise2D.value = worldSettings.noise2D;
+        noise2D.RegisterValueChangedCallback((change) => worldSettings.noise2D = change.newValue as ComputeShader);
+        m_rightPanel.Add(noise2D);
+        ObjectField noise3D = new ObjectField("Noise3D");
+        noise3D.objectType = typeof(ComputeShader);
+        noise3D.value = worldSettings.noise3D;
+        noise3D.RegisterValueChangedCallback((change) => worldSettings.noise3D = change.newValue as ComputeShader);
+        m_rightPanel.Add(noise3D);
     }
     void DrawTerraxelBiomesWindow(TerraxelWorldSettings worldSettings){
         DrawHeader("Biomes");

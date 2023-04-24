@@ -25,6 +25,7 @@ public class TerraxelWorldSettings : ScriptableObject
     [SerializeField]
     public bool frustumCulling;
     public WorldData generator;
+    public ComputeShader noise2D, noise3D;
 
     //CONSTANTS
     [SerializeField]
@@ -33,6 +34,8 @@ public class TerraxelWorldSettings : ScriptableObject
     public int maxGpuOperations;
     [SerializeField]
     public int densityCount;
+    [SerializeField]
+    public int uniformDensityRes;
 
     public void CompileConstants(){
         #if UNITY_EDITOR
@@ -44,6 +47,7 @@ public class TerraxelWorldSettings : ScriptableObject
         fullGeneratorString = fullGeneratorString.Replace("LOD_LEVELS", lodLevels.ToString());
         fullGeneratorString = fullGeneratorString.Replace("MAX_GPU", maxGpuOperations.ToString());
         fullGeneratorString = fullGeneratorString.Replace("DENSITY_COUNT", densityCount.ToString());
+        fullGeneratorString = fullGeneratorString.Replace("UNIFORM_RES", uniformDensityRes.ToString());
 
         using(StreamWriter sw = new StreamWriter(string.Format(Application.dataPath + "/Resources/Generated/TerraxelConstants.cs"))) {
             sw.Write(fullGeneratorString);

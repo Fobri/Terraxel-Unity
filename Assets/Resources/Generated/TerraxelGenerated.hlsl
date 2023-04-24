@@ -1,9 +1,6 @@
 #pragma kernel CSMain
 #include "Assets/Shaders/FastNoiseLite/FastNoiseLite.hlsl"
 
-RWStructuredBuffer<int> Result;
-RWStructuredBuffer<int> FullOrEmpty;
-float4 offset;
 int seed;
 
 float noise(float2 worldPos, float amplitude, fnl_state props){
@@ -18,9 +15,7 @@ static const fnl_state props5 = fnlCreateState(seed, 0.0005f, 4, 3.0000f, 0.5000
 static const fnl_state props7 = fnlCreateState(seed, 0.0004f, 3, 5.0000f, 0.3000f);
 
 
-
-int noiseGenerated(int3 pos){
-    pos += offset.xyz;
+float finalNoise(int3 pos){
     float op0 = noise(pos.xz + float2(253.0000f,43.0000f), 19.2000f, props0);
 float op1 = noise(pos.xz, 19.2000f, props1);
 float op2 = noise(pos.xz + float2(op1,op0), 48.0000f, props2);
@@ -32,30 +27,5 @@ float op7 = noise(pos.xz + float2(op6,op6), 120.0000f, props7);
 
 
     float value = op7;
-    value = (value - pos.y) * 0.5f;
-    int density = clamp(value * -127, -127, 127);
-    if(density != -127){
-        FullOrEmpty[0] = 1;
-    }
-    if(density != 127){
-        FullOrEmpty[1] = 1;
-    }
-    density = (density & 127) | ((density >> 24) & 128);
-    return density;
-}
-
-uint3 indexToPosition(uint id){
-    return uint3(
-                id % 32,
-                id / 1024,
-                id / 32 % 32);
-}
-
-[numthreads(512,1,1)]
-void CSMain (uint3 id : SV_DispatchThreadID)
-{
-    uint idx = id.x;
-    int result = ((noiseGenerated(indexToPosition(idx * 4+3))) << 24) | ((noiseGenerated(indexToPosition(idx * 4 + 2))) << 16) 
-                | ((noiseGenerated(indexToPosition(idx * 4 + 1))) << 8) | ((noiseGenerated(indexToPosition(idx * 4 + 0))));
-    Result[id.x] = result;
+    return value;
 }

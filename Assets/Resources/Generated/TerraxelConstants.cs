@@ -9,4 +9,5 @@ public class TerraxelConstants
     public const int lodLevels = 5;
     public const int maxConcurrentGPUOperations = 32;
     public const int densityMapCount = 128;
+    public const int uniformInstanceResolution = 16;
 }

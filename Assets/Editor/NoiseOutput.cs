@@ -23,7 +23,7 @@ public class NoiseOutput : BaseNode
 	{
 		if(data == null || !CustomToolbarView.shouldCompileGraph) return;
 		CustomToolbarView.shouldCompileGraph = false;
-		CreateFromTemplate(data.computeGenerator, "ComputeTemplate.txt", "TerraxelGenerated.compute");
+		CreateFromTemplate(data.computeGenerator, "ComputeTemplate.txt", "TerraxelGenerated.hlsl");
 		CreateFromTemplate(data.scriptGenerator, "ScriptTemplate.txt", "TerraxelGenerated.cs");
         AssetDatabase.Refresh();
 	}

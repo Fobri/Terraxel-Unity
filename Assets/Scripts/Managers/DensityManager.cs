@@ -30,7 +30,7 @@ public class DensityManager : IDisposable {
     //DensityResultData currentRequest;
     bool gpuProgramRunning;
 
-    public void Init(ComputeShader noiseShader){
+    public void Init(ComputeShader noiseShader, ComputeShader noise2D){
         densityData = new DensityData();
         densityData.densities = new NativeHashMap<int3, IntPtr>(50, Allocator.Persistent);
         densityData.emptyChunks = new NativeHashSet<int3>(100, Allocator.Persistent);
