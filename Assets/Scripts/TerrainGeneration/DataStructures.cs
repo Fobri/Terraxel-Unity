@@ -374,7 +374,7 @@ namespace Terraxel.DataStructures
             return math.sqrt(res) * 0.5f;
         }
         public static string floatToString(float value){
-            return value.ToString("F4", new CultureInfo("en-US"))+"f";
+            return value.ToString("F5", new CultureInfo("en-US"))+"f";
         }
         public static string float2ToString(float2 value){
             return "new float2("+Utils.floatToString(value.x)+", "+Utils.floatToString(value.y)+")";

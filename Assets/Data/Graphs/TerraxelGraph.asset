@@ -130,6 +130,22 @@ MonoBehaviour:
     outputFieldName: output
     inputPortIdentifier: 
     outputPortIdentifier: 
+  - GUID: c17a9e35-b86b-41e1-a45d-6a9bc47caa1b
+    owner: {fileID: 11400000}
+    inputNodeGUID: eb1456f3-121f-44c4-835b-cc4cfa256b8e
+    outputNodeGUID: ce0b35f0-7988-48a3-bdbf-2feb138bcad0
+    inputFieldName: x
+    outputFieldName: output
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  - GUID: e86a2b92-2938-4f5e-aecd-306e258316c4
+    owner: {fileID: 11400000}
+    inputNodeGUID: eb1456f3-121f-44c4-835b-cc4cfa256b8e
+    outputNodeGUID: ce0b35f0-7988-48a3-bdbf-2feb138bcad0
+    inputFieldName: y
+    outputFieldName: output
+    inputPortIdentifier: 
+    outputPortIdentifier: 
   groups: []
   stackNodes: []
   pinnedElements:
@@ -167,8 +183,8 @@ MonoBehaviour:
   serializedParameterList: []
   stickyNotes: []
   nodeInspectorReference: {fileID: 0}
-  position: {x: -499, y: 35, z: 0}
-  scale: {x: 0.8695652, y: 0.8695652, z: 1}
+  position: {x: -1232, y: 181, z: 0}
+  scale: {x: 1.3225, y: 1.3225, z: 1}
   references:
     version: 2
     RefIds:
@@ -331,7 +347,7 @@ MonoBehaviour:
       data:
         nodeCustomName: 
         GUID: ce0b35f0-7988-48a3-bdbf-2feb138bcad0
-        computeOrder: 7
+        computeOrder: 6
         position:
           serializedVersion: 2
           x: 1128.6503
@@ -363,7 +379,7 @@ MonoBehaviour:
         x: 0
         y: 0
         frequency: 2
-        amplitude: 5
+        amplitude: 3
         octaves: 3
         lacunarity: 5
         gain: 0.3
@@ -391,7 +407,7 @@ MonoBehaviour:
       data:
         nodeCustomName: 
         GUID: eb1456f3-121f-44c4-835b-cc4cfa256b8e
-        computeOrder: 6
+        computeOrder: 7
         position:
           serializedVersion: 2
           x: 1265
@@ -402,11 +418,11 @@ MonoBehaviour:
         debug: 0
         nodeLock: 0
         output: 0
-        x: 1
-        y: 1
-        frequency: 1
-        amplitude: 10
+        x: 0
+        y: 0
+        frequency: 0.15
+        amplitude: 100
         octaves: 2
         lacunarity: 2
-        gain: 2
+        gain: 0.5
         ad: 0

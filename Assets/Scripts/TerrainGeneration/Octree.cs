@@ -27,10 +27,10 @@ public abstract class Octree : JobRunner
         }
     }
     public static readonly int[] depthMultipliers = {
-        1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024
+        1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384
     };
     public static readonly float[] negativeDepthMultipliers = {
-        1, 0.5f, 0.25f, 0.125f, 0.0625f, 0.03125f, 0.015625f
+        1, 0.5f, 0.25f, 0.125f, 0.0625f, 0.03125f, 0.015625f, 0.0078125f, 0.00390625f, 0.001953125f
     };
     public Octree(BoundingBox size, int depth)
     {
@@ -203,7 +203,7 @@ public abstract class Octree : JobRunner
         parent?.CheckSubMeshesReady();
     }
     const float dstModifier = 45.2548f;//55.42562f;
-    public static readonly float[] maxDistances = { 0, 60,150f, 340, 780, 1500, 3000*2, 3000*4, 3000*8, 3000*16, 3000*32, };
+    public static readonly float[] maxDistances = { 0, 60,150f, 340, 780, 1500, 3000, 3000*2, 3000*4, 3000*8, 3000*16, 3000*32, 3000*64, 3000*128, 3000*256 };
     public void UpdateTreeRecursive()
     {
         /*var maxCoord = TerraxelWorld.playerBounds.center + ChunkManager.chunkResolution * depthMultiplier * 0.8f;
