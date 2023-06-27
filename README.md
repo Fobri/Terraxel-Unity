@@ -20,7 +20,8 @@ Textures and 3D models shown on the video are not included.
 - Burst compiled Transvoxel implementation using Unity Jobs
 - Chunk and LOD management using an octree
 - Collider baking in Jobs
-- Simple graph editor for terrain shape
+- Simple graph editor for terrain shape that compiles into a compute shader
+- GPU noise generation
 - Very simple instanced renderer to demonstrate grass rendering
 
 ## Used in the project
