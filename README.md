@@ -34,9 +34,11 @@ Textures and 3D models shown on the video are not included.
 
 The version of Unity I used with the project is 2022.3, but earlier versions should work fine too.
 
-Download the source, open it in Unity and open the sample scene. Features are shown on the video, that should be enough to get started.
+1. Download the source, open it in Unity and open the sample scene.
+2. Enable unsafe code in Player settings. There will be compile errors otherwise.
+3. Create a layer called "Terrain" and assign it to the chunk prefab in Assets/Resources/Prefabs/Chunk.
 
-You can cut the terrain with C and fill it with F.
+Other features are shown on the video, that should be enough to get started. You can cut the terrain with C and fill it with F.
     
 ## Acknowledgements
 
