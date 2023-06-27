@@ -29,6 +29,7 @@ public abstract class BaseChunk : Octree
     public InstancedRenderer[] instanceRenderers;
     public abstract bool CanBeCreated{get;}
     protected MaterialPropertyBlock propertyBlock;
+    protected int treeDepth = 4;
     
     //public NativeList<Matrix4x4> grassPositions;
     protected SubMeshDescriptor desc = new SubMeshDescriptor();
@@ -42,7 +43,7 @@ public abstract class BaseChunk : Octree
         instanceRenderers = new InstancedRenderer[5];
         propertyBlock = new MaterialPropertyBlock();
         rng = new Unity.Mathematics.Random((uint)TerraxelWorld.seed);
-        if(this is Chunk2D && depth != TerraxelConstants.lodLevels - 2) return;
+        if(this is Chunk2D && depth != treeDepth) return;
         for(int i = 0; i < 5; i++){
             if(BiomesGenerated.Get(i).density > 0){
                 instanceRenderers[i] = new InstancedRenderer(biomeData.instances[i].renderData, ShadowCastingMode.On);
@@ -64,7 +65,7 @@ public abstract class BaseChunk : Octree
         TerraxelWorld.ChunkManager.DisposeChunk(this);
     }
     protected void RenderInstances(){
-        if(!TerraxelWorld.renderGrass || (this is Chunk2D && depth != TerraxelConstants.lodLevels - 2)) return;
+        if(!TerraxelWorld.renderGrass || (this is Chunk2D && depth != treeDepth)) return;
         for(int i = 0; i < 5; i++){
             instanceRenderers[i]?.Render();
         }
@@ -83,7 +84,7 @@ public abstract class BaseChunk : Octree
         PushInstanceData();
     }
     protected void PushInstanceData(){
-        if(this is Chunk2D && depth != TerraxelConstants.lodLevels - 2) return;
+        if(this is Chunk2D && depth != treeDepth) return;
         for(int i = 0; i < 5; i++){
             instanceRenderers[i]?.propertyBlock.SetVector("_WorldPos", new float4(WorldPosition, 1));
             instanceRenderers[i]?.PushData(instanceDatas[i]);
@@ -97,7 +98,7 @@ public abstract class BaseChunk : Octree
         idxCount = 0;
         chunkState = ChunkState.DIRTY;
         genTime = Time.realtimeSinceStartup;
-        if(this is Chunk3D || (this is Chunk2D && depth == TerraxelConstants.lodLevels - 2)){
+        if(this is Chunk3D || (this is Chunk2D && depth == treeDepth)){
             for(int i = 0; i < 5; i++){
                 if(BiomesGenerated.Get(i).density > 0){
                     instanceDatas[i] = MemoryManager.GetInstancingData();
@@ -114,7 +115,7 @@ public abstract class BaseChunk : Octree
     public abstract void ApplyMesh();
     protected abstract void OnFreeBuffers();
     public void FreeBuffers(){
-        if(depth < TerraxelConstants.lodLevels - 2){
+        if(depth < treeDepth){
             for(int i = 0; i < 5; i++){
                 instanceRenderers?[i]?.Dispose();
             }

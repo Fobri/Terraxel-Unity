@@ -114,22 +114,6 @@ MonoBehaviour:
     outputFieldName: output
     inputPortIdentifier: 
     outputPortIdentifier: 
-  - GUID: c8493828-2cae-4622-a6aa-0bfe3e1bb8ea
-    owner: {fileID: 11400000}
-    inputNodeGUID: 11d7e164-7d19-44a4-8c99-4bca0c8165cd
-    outputNodeGUID: 9e51a9c7-d4c1-4822-82e9-4c8b1516f341
-    inputFieldName: input
-    outputFieldName: output
-    inputPortIdentifier: 
-    outputPortIdentifier: 
-  - GUID: 41222bf9-7cec-4654-95fe-cb92b3ba8d0a
-    owner: {fileID: 11400000}
-    inputNodeGUID: 9e51a9c7-d4c1-4822-82e9-4c8b1516f341
-    outputNodeGUID: eb1456f3-121f-44c4-835b-cc4cfa256b8e
-    inputFieldName: B
-    outputFieldName: output
-    inputPortIdentifier: 
-    outputPortIdentifier: 
   - GUID: c17a9e35-b86b-41e1-a45d-6a9bc47caa1b
     owner: {fileID: 11400000}
     inputNodeGUID: eb1456f3-121f-44c4-835b-cc4cfa256b8e
@@ -143,6 +127,22 @@ MonoBehaviour:
     inputNodeGUID: eb1456f3-121f-44c4-835b-cc4cfa256b8e
     outputNodeGUID: ce0b35f0-7988-48a3-bdbf-2feb138bcad0
     inputFieldName: y
+    outputFieldName: output
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  - GUID: 72c0ad98-f0aa-4811-9e09-5d7a9f0d1687
+    owner: {fileID: 11400000}
+    inputNodeGUID: 11d7e164-7d19-44a4-8c99-4bca0c8165cd
+    outputNodeGUID: 9e51a9c7-d4c1-4822-82e9-4c8b1516f341
+    inputFieldName: input
+    outputFieldName: output
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  - GUID: f80342ed-bfa5-4465-9c89-0dcb98837cd3
+    owner: {fileID: 11400000}
+    inputNodeGUID: 9e51a9c7-d4c1-4822-82e9-4c8b1516f341
+    outputNodeGUID: eb1456f3-121f-44c4-835b-cc4cfa256b8e
+    inputFieldName: B
     outputFieldName: output
     inputPortIdentifier: 
     outputPortIdentifier: 
@@ -183,8 +183,8 @@ MonoBehaviour:
   serializedParameterList: []
   stickyNotes: []
   nodeInspectorReference: {fileID: 0}
-  position: {x: -1232, y: 181, z: 0}
-  scale: {x: 1.3225, y: 1.3225, z: 1}
+  position: {x: -615, y: 143, z: 0}
+  scale: {x: 0.7561437, y: 0.7561437, z: 1}
   references:
     version: 2
     RefIds:
@@ -401,7 +401,7 @@ MonoBehaviour:
         nodeLock: 0
         output: 0
         A: 0
-        B: 1
+        B: 0
     - rid: 8148540604002336770
       type: {class: DensityNode, ns: , asm: Assembly-CSharp-Editor}
       data:
@@ -421,7 +421,7 @@ MonoBehaviour:
         x: 0
         y: 0
         frequency: 0.15
-        amplitude: 100
+        amplitude: 40
         octaves: 2
         lacunarity: 2
         gain: 0.5

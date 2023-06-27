@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Albedo
   m_EditorClassIdentifier: 
   textures:
-  - {fileID: 2800000, guid: 8fadce37710d2c442a7b4ba3bb811c04, type: 3}
-  - {fileID: 2800000, guid: d7b9ca5f8256ba04eb112b636f09f339, type: 3}
+  - {fileID: 2800000, guid: c7a75cc1347ab14479a9e191589f1427, type: 3}
+  - {fileID: 2800000, guid: 70dff72459e979944ba4a76ca242f861, type: 3}
   textureFormat: 4
   useSourceFormat: 1
   normal: 0

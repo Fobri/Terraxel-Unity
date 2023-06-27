@@ -66,7 +66,7 @@ public class Chunk2D : BaseChunk
             instancingData = instanceDatas,
             rng = base.rng,
             renderBounds = renderBoundsData,
-            generateInstances = depth == TerraxelConstants.lodLevels - 2
+            generateInstances = depth == treeDepth
         };
         base.ScheduleJobFor(meshJob, vertexCount, true);
     }
@@ -95,7 +95,7 @@ public class Chunk2D : BaseChunk
     }
     public override void RenderChunk()
     {
-        if(depth == TerraxelConstants.lodLevels - 2) base.RenderInstances();
+        if(depth == treeDepth) base.RenderInstances();
         if(!active || chunkState != ChunkState.READY) return;
         Graphics.DrawMesh(chunkMesh, localMatrix, chunkMaterial, 0, null, 0, propertyBlock, true, true, true);
     }

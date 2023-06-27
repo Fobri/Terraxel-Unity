@@ -14,7 +14,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   biomeName: Test Biome
   instances:
-  - {fileID: 11400000, guid: f42391f1df53d844395d09b8c70b0ede, type: 2}
-  - {fileID: 11400000, guid: 3f607f4bf02b335458bc002bdd635d62, type: 2}
   - {fileID: 11400000, guid: aad4671741c7f2344b0663eb44b1e6c6, type: 2}
-  - {fileID: 11400000, guid: e85d97bc4b0fc994aa153138b2c0cdda, type: 2}

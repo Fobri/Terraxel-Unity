@@ -29,7 +29,7 @@ float op3 = (op2 * 2);
 float op4 = DensityGenerator.SurfaceNoise2D(pos2D + new float2(op3,op3), 24.00000f, props4, seed);
 float op5 = DensityGenerator.SurfaceNoise2D(pos2D + new float2(op4,op4), 192.00000f, props5, seed);
 float op6 = (op5 * 2);
-float op7 = DensityGenerator.SurfaceNoise2D(pos2D + new float2(op6,op6), 2400.00000f, props7, seed);
+float op7 = DensityGenerator.SurfaceNoise2D(pos2D + new float2(op6,op6), 960.00000f, props7, seed);
 float op8 = DensityGenerator.SurfaceNoise2D(pos2D + new float2(op6,op6), 72.00000f, props8, seed);
 float op9 = (op8 + op7);
 
