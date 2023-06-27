@@ -35,6 +35,8 @@ Textures and 3D models shown on the video are not included.
 The version of Unity I used with the project is 2022.3, but earlier versions should work fine too.
 
 Download the source, open it in Unity and open the sample scene. Features are shown on the video, that should be enough to get started.
+
+You can cut the terrain with C and fill it with F.
     
 ## Acknowledgements
 
